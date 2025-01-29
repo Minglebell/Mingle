@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:device_preview/device_preview.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 void main() {
   runApp(
     DevicePreview(
-      enabled: true, // Set to true for development purposes
+      enabled: true,
       builder: (context) => const MyApp(),
     ),
   );
@@ -18,7 +19,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       builder: DevicePreview.appBuilder,
-      locale: DevicePreview.locale(context), // Support locale simulation
+      locale: DevicePreview.locale(context),
       home: const ProfileSetupPage(),
       theme: ThemeData(primarySwatch: Colors.blue),
     );
@@ -33,35 +34,16 @@ class ProfileSetupPage extends StatefulWidget {
 }
 
 class _ProfileSetupPageState extends State<ProfileSetupPage> {
-  final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _birthdayController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  DateTime? _selectedDate;
+  final TextEditingController _ageController = TextEditingController();
+  File? _image;
 
-  bool _isFormValid = false;
-
-  void _validateForm() {
-    setState(() {
-      _isFormValid = _nameController.text.isNotEmpty &&
-          _birthdayController.text.isNotEmpty &&
-          _emailController.text.isNotEmpty;
-    });
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-    );
-
-    if (pickedDate != null) {
+  Future<void> _pickImage() async {
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
       setState(() {
-        _selectedDate = pickedDate;
-        _birthdayController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
-        _validateForm();
+        _image = File(pickedFile.path);
       });
     }
   }
@@ -69,178 +51,140 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.lightBlue[100],
       appBar: AppBar(
-        title: const Text(
-          'Setting up your profiles',
-          style: TextStyle(fontFamily: 'Roboto'),
-        ),
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Name',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(fontFamily: 'Roboto'),
-                ),
-                TextFormField(
-                  controller: _nameController,
-                  onChanged: (value) => _validateForm(),
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                  ),
-                  style: const TextStyle(fontFamily: 'Roboto'),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Birthday',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(fontFamily: 'Roboto'),
-                ),
-                TextFormField(
-                  controller: _birthdayController,
-                  readOnly: true,
-                  onTap: () => _selectDate(context),
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                  style: const TextStyle(fontFamily: 'Roboto'),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Email',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(fontFamily: 'Roboto'),
-                ),
-                TextFormField(
-                  controller: _emailController,
-                  onChanged: (value) => _validateForm(),
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                  ),
-                  style: const TextStyle(fontFamily: 'Roboto'),
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 4),
-                  child: Text(
-                    'Warning: This cannot be changed',
-                    style: TextStyle(
-                        color: Colors.red, fontSize: 12, fontFamily: 'Roboto'),
-                    textAlign: TextAlign.left,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isFormValid
-                        ? () {
-                            final name = _nameController.text;
-                            final birthday = _selectedDate!;
-                            final age = DateTime.now().year - birthday.year;
-
-                            final profile = Profile(name: name, age: age);
-
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ProfileDetailsPage(profile: profile),
-                              ),
-                            );
-                          }
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      disabledBackgroundColor: Colors.grey[400],
-                    ),
-                    child: const Text(
-                      'Confirm',
-                      textAlign: TextAlign.center,
-                      style:
-                          TextStyle(color: Colors.white, fontFamily: 'Roboto'),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class Profile {
-  final String name;
-  final int age;
-
-  Profile({required this.name, required this.age});
-}
-
-
-class ProfileDetailsPage extends StatelessWidget {
-  final Profile profile;
-
-  const ProfileDetailsPage({super.key, required this.profile});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile Details'),
+        title: const Text('Profile Setup',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Name: ${profile.name}', style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 8),
-            Text('Age: ${profile.age}', style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); 
-              },
-              child: const Text('Back'),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.white,
+                      backgroundImage: _image != null
+                          ? FileImage(_image!)
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: const CircleAvatar(
+                          backgroundColor: Colors.black,
+                          radius: 15,
+                          child: Icon(Icons.add, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildTextField('Name', _nameController),
+              _buildTextField('Age', _ageController, isNumeric: true),
+              _buildAddableField('Gender'),
+              _buildAddableField('Interest'),
+              _buildAddableField('Education'),
+              _buildAddableField('Pet'),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Save',
+                      style: TextStyle(color: Colors.white, fontSize: 18)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home, color: Colors.purple),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat, color: Colors.purple),
+            label: 'Chat',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person, color: Colors.purple),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller,
+      {bool isNumeric = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          TextField(
+            controller: controller,
+            keyboardType: isNumeric ? TextInputType.number : null,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddableField(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              decoration: InputDecoration(
+                labelText: label,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          CircleAvatar(
+            backgroundColor: Colors.purple,
+            radius: 18,
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+        ],
       ),
     );
   }
 }
 
-
-class MatchingPage extends StatelessWidget {
-  const MatchingPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Matching Interests'),
-      ),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: const Text('Back'),
-        ),
-      ),
-    );
-  }
-  
-}

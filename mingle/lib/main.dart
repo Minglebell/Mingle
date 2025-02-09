@@ -47,7 +47,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     setState(() {
       _isFormValid = _nameController.text.isNotEmpty &&
           _birthdayController.text.isNotEmpty &&
-          _emailController.text.isNotEmpty;
+          _emailController.text.isNotEmpty &&
+          RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+").hasMatch(_emailController.text) &&
+          _selectedDate != null;
     });
   }
 
@@ -140,7 +142,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         child:
                           TextFormField(
                           controller: _emailController,
-                         onChanged: (value) => _validateForm(),
+                          onChanged: (value) => _validateForm(),
                           decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                         ),
@@ -179,7 +181,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
-                                ProfileDetailsPage(profile: profile),
+                                ProfileEditPage(profile: profile),
                           ),
                         );
                       }
@@ -203,25 +205,32 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   }
 }
 
-class ProfileDetailsPage extends StatefulWidget {
+
+
+class ProfileEditPage extends StatefulWidget {
   final Profile profile;
 
-  const ProfileDetailsPage({super.key, required this.profile});
+  const ProfileEditPage({super.key, required this.profile});
 
   @override
-  State<ProfileDetailsPage> createState() => _ProfileDetailsPageState();
+  State<ProfileEditPage> createState() => _ProfileEditPageState();
 }
 
-class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
-  final TextEditingController petController = TextEditingController();
-  final TextEditingController exerciseController = TextEditingController();
-  final TextEditingController alcoholController = TextEditingController();
-  final TextEditingController smokingController = TextEditingController();
+class _ProfileEditPageState extends State<ProfileEditPage> {
   XFile? _image;
+
+  List<String> genderPreferences = [];
+  List<String> interestPreferences = [];
+  List<String> educationPreferences = [];
+  List<String> petPreferences = [];
+  List<String> exercisePreferences = [];
+  List<String> alcoholPreferences = [];
+  List<String> smokingPreferences = [];
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
-    final XFile? pickedImage = await picker.pickImage(source: ImageSource.gallery);
+    final XFile? pickedImage =
+        await picker.pickImage(source: ImageSource.gallery);
     if (pickedImage != null) {
       setState(() {
         _image = pickedImage;
@@ -239,45 +248,33 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 40),
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.white,
-                    backgroundImage: _image != null ? FileImage(File(_image!.path)) as ImageProvider : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(Icons.add_a_photo, color: Colors.black),
-                      onPressed: _pickImage,
-                    ),
-                  ),
-                ],
-              ),
+              _buildProfileHeader(),
               const SizedBox(height: 20),
-              _buildTextField("Name", widget.profile.name, enabled: false),
-              _buildTextField("Age", widget.profile.age.toString(), enabled: false),
-              _buildTextField("Pet", ""),
-              _buildTextField("Exercise", ""),
-              _buildTextField("Alcoholic", ""),
-              _buildTextField("Smoking", ""),
+              _buildTextFieldWithAddButton("Gender", genderPreferences),
+              _buildTextFieldWithAddButton("Interest", interestPreferences),
+              _buildTextFieldWithAddButton("Education", educationPreferences),
+              _buildTextFieldWithAddButton("Pet", petPreferences),
+              _buildTextFieldWithAddButton("Exercise", exercisePreferences),
+              _buildTextFieldWithAddButton("Alcoholic", alcoholPreferences),
+              _buildTextFieldWithAddButton("Smoking", smokingPreferences),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 ),
-                child: const Text("Save", style: TextStyle(color: Colors.white, fontSize: 18)),
+                child: const Text("Save",
+                    style: TextStyle(
+                        color: Colors.white, fontSize: 18, fontFamily: 'Itim')),
               ),
             ],
           ),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 2,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
@@ -289,20 +286,143 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
     );
   }
 
-  Widget _buildTextField(String label, String value, {bool enabled = true}) {
+  Widget _buildProfileHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Stack(
+          children: [
+            CircleAvatar(
+              radius: 60,
+              backgroundColor: Colors.white,
+              backgroundImage: _image != null
+                  ? FileImage(File(_image!.path)) as ImageProvider
+                  : null,
+            ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: IconButton(
+                icon: const Icon(Icons.add_a_photo, color: Colors.black),
+                onPressed: _pickImage,
+              ),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.profile.name,
+                  style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Itim')),
+              Text("Age: ${widget.profile.age}",
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.normal,
+                      fontFamily: 'Itim')),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextFieldWithAddButton(String label, List<String> preferences) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          TextField(
-            controller: TextEditingController(text: value),
-            enabled: enabled,
-            decoration: const InputDecoration(border: OutlineInputBorder()),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.all(6),
+            child: Column(
+              children: [
+                Wrap(
+                  spacing: 6.0,
+                  runSpacing: 6.0,
+                  children: preferences.map((preference) {
+                    return Chip(
+                      label: Text(preference),
+                      onDeleted: () {
+                        setState(() {
+                          preferences.remove(preference);
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () {
+                      _showAddPreferenceDialog(label);
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  void _showAddPreferenceDialog(String label) {
+    TextEditingController _controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Add $label"),
+          content: TextField(
+            controller: _controller,
+            decoration: InputDecoration(hintText: "Enter $label"),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_controller.text.isNotEmpty) {
+                  setState(() {
+                    if (label == "Gender") {
+                      genderPreferences.add(_controller.text);
+                    } else if (label == "Interest") {
+                      interestPreferences.add(_controller.text);
+                    } else if (label == "Education") {
+                      educationPreferences.add(_controller.text);
+                    } else if (label == "Pet") {
+                      petPreferences.add(_controller.text);
+                    } else if (label == "Exercise") {
+                      exercisePreferences.add(_controller.text);
+                    } else if (label == "Alcoholic") {
+                      alcoholPreferences.add(_controller.text);
+                    } else if (label == "Smoking") {
+                      smokingPreferences.add(_controller.text);
+                    }
+                  });
+                }
+                Navigator.of(context).pop();
+              },
+              child: const Text("Confirm"),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -312,6 +432,7 @@ class Profile {
   final int age;
   Profile({required this.name, required this.age});
 }
+
 
 class MatchingPage extends StatelessWidget {
   const MatchingPage({super.key});

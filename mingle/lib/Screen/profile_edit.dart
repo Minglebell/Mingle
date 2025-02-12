@@ -3,7 +3,8 @@ import 'package:image_picker/image_picker.dart'; // For image picking
 import 'dart:io';
 
 class ProfileEditPage extends StatefulWidget {
-  final Map<String, dynamic> profile; // Accept a Map instead of a Profile object
+  final Map<String, dynamic>
+      profile; // Accept a Map instead of a Profile object
 
   const ProfileEditPage({super.key, required this.profile});
 
@@ -61,7 +62,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     });
 
     // Show confirmation dialog
-     // Show a SnackBar notification instead of a dialog
+    // Show a SnackBar notification instead of a dialog
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Changes applied successfully!"),
@@ -74,65 +75,77 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
   void _toggleEditMode() {
     setState(() {
-      isEditMode = true; // Switch back to edit mode
+      isEditMode = true;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 184, 211),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _buildProfileHeader(),
-              const SizedBox(height: 20),
-              if (isEditMode) ...[
-                _buildTextFieldWithAddButton("Gender", genderPreferences),
-                _buildTextFieldWithAddButton("Interest", interestPreferences),
-                _buildTextFieldWithAddButton("Education", educationPreferences),
-                _buildTextFieldWithAddButton("Pet", petPreferences),
-                _buildTextFieldWithAddButton("Exercise", exercisePreferences),
-                _buildTextFieldWithAddButton("Alcoholic", alcoholPreferences),
-                _buildTextFieldWithAddButton("Smoking", smokingPreferences),
-              ] else ...[
-                _buildProfileDisplay(),
-              ],
-              const SizedBox(height: 20),
-              if (isEditMode)
-                ElevatedButton(
-                  onPressed: _saveProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 50, vertical: 15),
-                  ),
-                  child: const Text("Save",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontFamily: 'Itim')),
-                )
-              else
-                ElevatedButton(
-                  onPressed: _toggleEditMode,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 50, vertical: 15),
-                  ),
-                  child: const Text("Edit",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontFamily: 'Itim')),
+      backgroundColor: const Color.fromARGB(255, 255, 228, 225),
+      body: Column(
+        children: [
+          Expanded(
+            // Ensures the main content takes up remaining space
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _buildProfileHeader(),
+                    const SizedBox(height: 20),
+                    if (isEditMode) ...[
+                      _buildTextFieldWithAddButton("Gender", genderPreferences),
+                      _buildTextFieldWithAddButton(
+                          "Interest", interestPreferences),
+                      _buildTextFieldWithAddButton(
+                          "Education", educationPreferences),
+                      _buildTextFieldWithAddButton("Pet", petPreferences),
+                      _buildTextFieldWithAddButton(
+                          "Exercise", exercisePreferences),
+                      _buildTextFieldWithAddButton(
+                          "Alcoholic", alcoholPreferences),
+                      _buildTextFieldWithAddButton(
+                          "Smoking", smokingPreferences),
+                    ] else ...[
+                      _buildProfileDisplay(),
+                    ],
+                    const SizedBox(height: 20),
+                    if (isEditMode)
+                      ElevatedButton(
+                        onPressed: _saveProfile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 50, vertical: 15),
+                        ),
+                        child: const Text("Save",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontFamily: 'Itim')),
+                      )
+                    else
+                      ElevatedButton(
+                        onPressed: _toggleEditMode,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 50, vertical: 15),
+                        ),
+                        child: const Text("Edit",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontFamily: 'Itim')),
+                      ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 2,
@@ -143,6 +156,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         ],
         selectedItemColor: Colors.purple,
         unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        selectedLabelStyle: const TextStyle(fontSize: 10),
+        unselectedLabelStyle: const TextStyle(fontSize: 10),
       ),
     );
   }
@@ -160,14 +176,15 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                   ? FileImage(File(_image!.path)) as ImageProvider
                   : null,
             ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: IconButton(
-                icon: const Icon(Icons.add_a_photo, color: Colors.black),
-                onPressed: _pickImage,
+            if (isEditMode) // Only show the edit button in edit mode
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.add_a_photo, color: Colors.black),
+                  onPressed: _pickImage,
+                ),
               ),
-            ),
           ],
         ),
         Padding(
@@ -175,14 +192,14 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.profile['name'], // Access name from the Map
+              Text(widget.profile['name'],
                   style: const TextStyle(
-                      fontSize: 20,
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Itim')),
-              Text("Age: ${widget.profile['age']}", // Access age from the Map
+              Text("Age: ${widget.profile['age']}",
                   style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 22,
                       fontWeight: FontWeight.normal,
                       fontFamily: 'Itim')),
             ],
@@ -206,62 +223,63 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               fontFamily: 'Itim',
             ),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 255, 228, 225),
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.all(8),
-                  child: Wrap(
-                    spacing: 8.0,
-                    runSpacing: 8.0,
-                    children: preferences.map((preference) {
-                      return Chip(
-                        label: Text(
-                          preference,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black,
-                          ),
-                        ),
-                        backgroundColor: Colors.white,
-                        deleteIconColor: Colors.black,
-                        onDeleted: () {
-                          setState(() {
-                            preferences.remove(preference);
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(
+                  255, 255, 228, 225), // Match background color
+              border: Border.all(
+                  color: Colors.grey), // Add a border for better visibility
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.all(8), // Adjust padding
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8.0, // Adjust spacing between chips
+                        runSpacing: 8.0, // Adjust spacing between lines
+                        alignment: WrapAlignment.start, // Left-align the chips
+                        children: preferences.map((preference) {
+                          return Chip(
+                            label: Text(
+                              preference,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.black,
+                              ),
+                            ),
+                            backgroundColor:
+                                Colors.white, // Chip background color
+                            deleteIconColor: Colors.black, // Delete icon color
+                            onDeleted: () {
+                              setState(() {
+                                preferences.remove(preference);
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add, color: Colors.black),
+                      onPressed: () {
+                        _showAddPreferenceDialog(label);
+                      },
+                    ),
+                  ],
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add, color: Colors.black),
-                onPressed: () {
-                  _showAddPreferenceDialog(label);
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
- Widget _buildProfileDisplay() {
-  return Container(
-    padding: const EdgeInsets.all(16.0),
-    decoration: BoxDecoration(
-      color: const Color.fromARGB(255, 255, 228, 225), // Match background color
-      borderRadius: BorderRadius.circular(8.0),
-      border: Border.all(color: Colors.grey),
-    ),
-    child: Column(
+  Widget _buildProfileDisplay() {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildPreferenceDisplay("Gender", widget.profile['gender']),
@@ -272,41 +290,48 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         _buildPreferenceDisplay("Alcoholic", widget.profile['alcoholic']),
         _buildPreferenceDisplay("Smoking", widget.profile['smoking']),
       ],
-    ),
-  );
-}
+    );
+  }
 
-Widget _buildPreferenceDisplay(String label, List<String>? preferences) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "$label ",
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Itim',
+  Widget _buildPreferenceDisplay(String label, List<String>? preferences) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, // Ensure alignment
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Itim',
+            ),
           ),
-        ),
-        if (preferences != null && preferences.isNotEmpty)
-          ...preferences.map((preference) => Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: Text(
-                  preference,
-                  style: const TextStyle(fontSize: 16),
-                ),
-              )),
-        if (preferences == null || preferences.isEmpty)
-          const Text(
-            "None",
-            style: TextStyle(fontSize: 16),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 15.0,
+              runSpacing: 15.0,
+              children: (preferences ?? []).map((preference) {
+                return Chip(
+                  label: Text(
+                    preference,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      color: Colors.black,
+                    ),
+                  ),
+                  backgroundColor: const Color.fromARGB(255, 255, 194, 187),
+                );
+              }).toList(),
+            ),
           ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
+
   void _showAddPreferenceDialog(String label) {
     TextEditingController _controller = TextEditingController();
     showDialog(

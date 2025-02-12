@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For date formatting
-import 'profile_edit.dart'; // Import the ProfileEditPage
+import 'profile_edit.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -23,7 +23,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       _isFormValid = _nameController.text.isNotEmpty &&
           _birthdayController.text.isNotEmpty &&
           _emailController.text.isNotEmpty &&
-          RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+").hasMatch(_emailController.text) &&
+          RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
+              .hasMatch(_emailController.text) &&
           _selectedDate != null;
     });
   }
@@ -52,7 +53,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       appBar: AppBar(
         title: const Text(
           'Setting up your profiles',
-          style: TextStyle(fontFamily: 'Itim', fontSize: 26, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              fontFamily: 'Itim', fontSize: 26, fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color.fromARGB(255, 255, 228, 225),
         elevation: 0,
@@ -72,7 +74,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                       const Text(
                         'Name',
                         textAlign: TextAlign.left,
-                        style: TextStyle(fontSize: 20, fontFamily: 'Itim', fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontFamily: 'Itim',
+                            fontWeight: FontWeight.bold),
                       ),
                       Padding(
                         padding: const EdgeInsets.only(top: 6, bottom: 6),
@@ -82,14 +87,18 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                           ),
-                          style: const TextStyle(fontSize: 18, fontFamily: 'Itim'),
+                          style:
+                              const TextStyle(fontSize: 18, fontFamily: 'Itim'),
                         ),
                       ),
                       const SizedBox(height: 16),
                       const Text(
                         'Birthday',
                         textAlign: TextAlign.left,
-                        style: TextStyle(fontSize: 20, fontFamily: 'Itim', fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontFamily: 'Itim',
+                            fontWeight: FontWeight.bold),
                       ),
                       Padding(
                         padding: const EdgeInsets.only(top: 6, bottom: 6),
@@ -104,32 +113,38 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                               onPressed: () => _selectDate(context),
                             ),
                           ),
-                          style: const TextStyle(fontSize: 18, fontFamily: 'Itim'),
+                          style:
+                              const TextStyle(fontSize: 18, fontFamily: 'Itim'),
                         ),
                       ),
                       const SizedBox(height: 16),
                       const Text(
                         'Email',
                         textAlign: TextAlign.left,
-                        style: TextStyle(fontSize: 20, fontFamily: 'Itim', fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontFamily: 'Itim',
+                            fontWeight: FontWeight.bold),
                       ),
-                      Padding(padding: const EdgeInsets.only(top: 6, bottom: 6),
-                        child:
-                          TextFormField(
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6, bottom: 6),
+                        child: TextFormField(
                           controller: _emailController,
                           onChanged: (value) => _validateForm(),
                           decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
+                            border: OutlineInputBorder(),
+                          ),
+                          style: const TextStyle(fontFamily: 'Itim'),
                         ),
-                        style: const TextStyle(fontFamily: 'Itim'),
                       ),
-                      ),  
                       const Padding(
                         padding: EdgeInsets.only(top: 4),
                         child: Text(
                           'Warning: This cannot be changed',
                           style: TextStyle(
-                              color: Colors.red, fontSize: 12, fontFamily: 'Itim'),
+                              color: Colors.red,
+                              fontSize: 12,
+                              fontFamily: 'Itim'),
                           textAlign: TextAlign.left,
                         ),
                       ),
@@ -140,7 +155,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(24.0),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -150,8 +165,16 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         final birthday = _selectedDate!;
                         final age = DateTime.now().year - birthday.year;
 
-                        final profile = Profile(name: name, age: age);
+                        // Create a Map with the profile data
+                        final profile = {
+                          'name': name,
+                          'age': age,
+                          'email': _emailController.text,
+                          'birthday': birthday
+                              .toIso8601String(), // Convert DateTime to a string
+                        };
 
+                        // Navigate to the ProfileEditPage and pass the Map
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -168,8 +191,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 child: const Text(
                   'Confirm',
                   textAlign: TextAlign.center,
-                  style:
-                      TextStyle(color: Colors.white, fontFamily: 'Itim', fontSize: 24),
+                  style: TextStyle(
+                      color: Colors.white, fontFamily: 'Itim', fontSize: 24),
                 ),
               ),
             ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; // For image picking
-import 'dart:io'; 
+import 'dart:io';
 
 class ProfileEditPage extends StatefulWidget {
-  final Profile profile;
+  final Map<String, dynamic> profile;
 
   const ProfileEditPage({super.key, required this.profile});
 
@@ -13,6 +13,7 @@ class ProfileEditPage extends StatefulWidget {
 
 class _ProfileEditPageState extends State<ProfileEditPage> {
   XFile? _image;
+  bool isEditing = true;
 
   List<String> genderPreferences = [];
   List<String> interestPreferences = [];
@@ -21,6 +22,18 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   List<String> exercisePreferences = [];
   List<String> alcoholPreferences = [];
   List<String> smokingPreferences = [];
+
+  @override
+  void initState() {
+    super.initState();
+    genderPreferences = List<String>.from(widget.profile['gender'] ?? []);
+    interestPreferences = List<String>.from(widget.profile['interest'] ?? []);
+    educationPreferences = List<String>.from(widget.profile['education'] ?? []);
+    petPreferences = List<String>.from(widget.profile['pet'] ?? []);
+    exercisePreferences = List<String>.from(widget.profile['exercise'] ?? []);
+    alcoholPreferences = List<String>.from(widget.profile['alcoholic'] ?? []);
+    smokingPreferences = List<String>.from(widget.profile['smoking'] ?? []);
+  }
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -31,6 +44,19 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         _image = pickedImage;
       });
     }
+  }
+
+  void _saveProfile() {
+    setState(() {
+      isEditing = false;
+      widget.profile['gender'] = genderPreferences;
+      widget.profile['interest'] = interestPreferences;
+      widget.profile['education'] = educationPreferences;
+      widget.profile['pet'] = petPreferences;
+      widget.profile['exercise'] = exercisePreferences;
+      widget.profile['alcoholic'] = alcoholPreferences;
+      widget.profile['smoking'] = smokingPreferences;
+    });
   }
 
   @override
@@ -54,29 +80,27 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               _buildTextFieldWithAddButton("Smoking", smokingPreferences),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  if (isEditing) {
+                    _saveProfile();
+                  } else {
+                    setState(() {
+                      isEditing = true;
+                    });
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 ),
-                child: const Text("Save",
-                    style: TextStyle(
-                        color: Colors.white, fontSize: 18, fontFamily: 'Itim')),
+                child: Text(
+                  isEditing ? "Save" : "Edit",
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'Itim'),
+                ),
               ),
             ],
           ),
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-        ],
-        selectedItemColor: Colors.purple,
-        unselectedItemColor: Colors.grey,
       ),
     );
   }
@@ -109,16 +133,12 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.profile.name,
+              Text(widget.profile['name'],
                   style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Itim')),
-              Text("Age: ${widget.profile.age}",
+                      fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Itim')),
+              Text("Age: ${widget.profile['age']}",
                   style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.normal,
-                      fontFamily: 'Itim')),
+                      fontSize: 18, fontWeight: FontWeight.normal, fontFamily: 'Itim')),
             ],
           ),
         ),
@@ -147,23 +167,26 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                   children: preferences.map((preference) {
                     return Chip(
                       label: Text(preference),
-                      onDeleted: () {
-                        setState(() {
-                          preferences.remove(preference);
-                        });
-                      },
+                      onDeleted: isEditing
+                          ? () {
+                              setState(() {
+                                preferences.remove(preference);
+                              });
+                            }
+                          : null,
                     );
                   }).toList(),
                 ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: () {
-                      _showAddPreferenceDialog(label);
-                    },
+                if (isEditing)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () {
+                        _showAddPreferenceDialog(label, preferences);
+                      },
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -172,7 +195,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 
-  void _showAddPreferenceDialog(String label) {
+  void _showAddPreferenceDialog(String label, List<String> preferences) {
     TextEditingController _controller = TextEditingController();
     showDialog(
       context: context,
@@ -185,30 +208,14 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text("Cancel"),
             ),
             ElevatedButton(
               onPressed: () {
                 if (_controller.text.isNotEmpty) {
                   setState(() {
-                    if (label == "Gender") {
-                      genderPreferences.add(_controller.text);
-                    } else if (label == "Interest") {
-                      interestPreferences.add(_controller.text);
-                    } else if (label == "Education") {
-                      educationPreferences.add(_controller.text);
-                    } else if (label == "Pet") {
-                      petPreferences.add(_controller.text);
-                    } else if (label == "Exercise") {
-                      exercisePreferences.add(_controller.text);
-                    } else if (label == "Alcoholic") {
-                      alcoholPreferences.add(_controller.text);
-                    } else if (label == "Smoking") {
-                      smokingPreferences.add(_controller.text);
-                    }
+                    preferences.add(_controller.text);
                   });
                 }
                 Navigator.of(context).pop();
@@ -222,8 +229,3 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   }
 }
 
-class Profile {
-  final String name;
-  final int age;
-  Profile({required this.name, required this.age});
-}

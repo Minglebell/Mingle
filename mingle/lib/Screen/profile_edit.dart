@@ -3,7 +3,7 @@ import 'package:image_picker/image_picker.dart'; // For image picking
 import 'dart:io';
 
 class ProfileEditPage extends StatefulWidget {
-  final Map<String, dynamic> profile;
+  final Map<String, dynamic> profile; // Accept a Map instead of a Profile object
 
   const ProfileEditPage({super.key, required this.profile});
 
@@ -13,7 +13,7 @@ class ProfileEditPage extends StatefulWidget {
 
 class _ProfileEditPageState extends State<ProfileEditPage> {
   XFile? _image;
-  bool isEditing = true;
+  bool isEditMode = true; // Track whether the page is in edit mode
 
   List<String> genderPreferences = [];
   List<String> interestPreferences = [];
@@ -26,6 +26,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   @override
   void initState() {
     super.initState();
+    // Initialize lists with existing profile data, providing default empty lists if null
     genderPreferences = List<String>.from(widget.profile['gender'] ?? []);
     interestPreferences = List<String>.from(widget.profile['interest'] ?? []);
     educationPreferences = List<String>.from(widget.profile['education'] ?? []);
@@ -47,8 +48,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   }
 
   void _saveProfile() {
+    // Update the profile information
     setState(() {
-      isEditing = false;
       widget.profile['gender'] = genderPreferences;
       widget.profile['interest'] = interestPreferences;
       widget.profile['education'] = educationPreferences;
@@ -56,13 +57,31 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       widget.profile['exercise'] = exercisePreferences;
       widget.profile['alcoholic'] = alcoholPreferences;
       widget.profile['smoking'] = smokingPreferences;
+      isEditMode = false;
+    });
+
+    // Show confirmation dialog
+     // Show a SnackBar notification instead of a dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Changes applied successfully!"),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _toggleEditMode() {
+    setState(() {
+      isEditMode = true; // Switch back to edit mode
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 228, 225),
+      backgroundColor: const Color.fromARGB(255, 255, 184, 211),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -71,36 +90,59 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             children: [
               _buildProfileHeader(),
               const SizedBox(height: 20),
-              _buildTextFieldWithAddButton("Gender", genderPreferences),
-              _buildTextFieldWithAddButton("Interest", interestPreferences),
-              _buildTextFieldWithAddButton("Education", educationPreferences),
-              _buildTextFieldWithAddButton("Pet", petPreferences),
-              _buildTextFieldWithAddButton("Exercise", exercisePreferences),
-              _buildTextFieldWithAddButton("Alcoholic", alcoholPreferences),
-              _buildTextFieldWithAddButton("Smoking", smokingPreferences),
+              if (isEditMode) ...[
+                _buildTextFieldWithAddButton("Gender", genderPreferences),
+                _buildTextFieldWithAddButton("Interest", interestPreferences),
+                _buildTextFieldWithAddButton("Education", educationPreferences),
+                _buildTextFieldWithAddButton("Pet", petPreferences),
+                _buildTextFieldWithAddButton("Exercise", exercisePreferences),
+                _buildTextFieldWithAddButton("Alcoholic", alcoholPreferences),
+                _buildTextFieldWithAddButton("Smoking", smokingPreferences),
+              ] else ...[
+                _buildProfileDisplay(),
+              ],
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  if (isEditing) {
-                    _saveProfile();
-                  } else {
-                    setState(() {
-                      isEditing = true;
-                    });
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+              if (isEditMode)
+                ElevatedButton(
+                  onPressed: _saveProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 50, vertical: 15),
+                  ),
+                  child: const Text("Save",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontFamily: 'Itim')),
+                )
+              else
+                ElevatedButton(
+                  onPressed: _toggleEditMode,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 50, vertical: 15),
+                  ),
+                  child: const Text("Edit",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontFamily: 'Itim')),
                 ),
-                child: Text(
-                  isEditing ? "Save" : "Edit",
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'Itim'),
-                ),
-              ),
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 2,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
+        ],
+        selectedItemColor: Colors.purple,
+        unselectedItemColor: Colors.grey,
       ),
     );
   }
@@ -133,12 +175,16 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.profile['name'],
+              Text(widget.profile['name'], // Access name from the Map
                   style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Itim')),
-              Text("Age: ${widget.profile['age']}",
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Itim')),
+              Text("Age: ${widget.profile['age']}", // Access age from the Map
                   style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.normal, fontFamily: 'Itim')),
+                      fontSize: 18,
+                      fontWeight: FontWeight.normal,
+                      fontFamily: 'Itim')),
             ],
           ),
         ),
@@ -152,50 +198,116 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(),
-              borderRadius: BorderRadius.circular(10),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Itim',
             ),
-            padding: const EdgeInsets.all(6),
-            child: Column(
-              children: [
-                Wrap(
-                  spacing: 6.0,
-                  runSpacing: 6.0,
-                  children: preferences.map((preference) {
-                    return Chip(
-                      label: Text(preference),
-                      onDeleted: isEditing
-                          ? () {
-                              setState(() {
-                                preferences.remove(preference);
-                              });
-                            }
-                          : null,
-                    );
-                  }).toList(),
-                ),
-                if (isEditing)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: () {
-                        _showAddPreferenceDialog(label, preferences);
-                      },
-                    ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 255, 228, 225),
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-              ],
-            ),
+                  padding: const EdgeInsets.all(8),
+                  child: Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children: preferences.map((preference) {
+                      return Chip(
+                        label: Text(
+                          preference,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black,
+                          ),
+                        ),
+                        backgroundColor: Colors.white,
+                        deleteIconColor: Colors.black,
+                        onDeleted: () {
+                          setState(() {
+                            preferences.remove(preference);
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add, color: Colors.black),
+                onPressed: () {
+                  _showAddPreferenceDialog(label);
+                },
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  void _showAddPreferenceDialog(String label, List<String> preferences) {
+ Widget _buildProfileDisplay() {
+  return Container(
+    padding: const EdgeInsets.all(16.0),
+    decoration: BoxDecoration(
+      color: const Color.fromARGB(255, 255, 228, 225), // Match background color
+      borderRadius: BorderRadius.circular(8.0),
+      border: Border.all(color: Colors.grey),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildPreferenceDisplay("Gender", widget.profile['gender']),
+        _buildPreferenceDisplay("Interest", widget.profile['interest']),
+        _buildPreferenceDisplay("Education", widget.profile['education']),
+        _buildPreferenceDisplay("Pet", widget.profile['pet']),
+        _buildPreferenceDisplay("Exercise", widget.profile['exercise']),
+        _buildPreferenceDisplay("Alcoholic", widget.profile['alcoholic']),
+        _buildPreferenceDisplay("Smoking", widget.profile['smoking']),
+      ],
+    ),
+  );
+}
+
+Widget _buildPreferenceDisplay(String label, List<String>? preferences) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$label ",
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Itim',
+          ),
+        ),
+        if (preferences != null && preferences.isNotEmpty)
+          ...preferences.map((preference) => Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: Text(
+                  preference,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              )),
+        if (preferences == null || preferences.isEmpty)
+          const Text(
+            "None",
+            style: TextStyle(fontSize: 16),
+          ),
+      ],
+    ),
+  );
+}
+  void _showAddPreferenceDialog(String label) {
     TextEditingController _controller = TextEditingController();
     showDialog(
       context: context,
@@ -208,14 +320,30 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
               child: const Text("Cancel"),
             ),
             ElevatedButton(
               onPressed: () {
                 if (_controller.text.isNotEmpty) {
                   setState(() {
-                    preferences.add(_controller.text);
+                    if (label == "Gender") {
+                      genderPreferences.add(_controller.text);
+                    } else if (label == "Interest") {
+                      interestPreferences.add(_controller.text);
+                    } else if (label == "Education") {
+                      educationPreferences.add(_controller.text);
+                    } else if (label == "Pet") {
+                      petPreferences.add(_controller.text);
+                    } else if (label == "Exercise") {
+                      exercisePreferences.add(_controller.text);
+                    } else if (label == "Alcoholic") {
+                      alcoholPreferences.add(_controller.text);
+                    } else if (label == "Smoking") {
+                      smokingPreferences.add(_controller.text);
+                    }
                   });
                 }
                 Navigator.of(context).pop();
@@ -228,4 +356,3 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 }
-

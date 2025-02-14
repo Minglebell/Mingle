@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart'; // For image picking
 import 'dart:io';
+import 'dart:convert'; // For JSON encoding
+import 'package:http/http.dart' as http; // For HTTP requests
+import 'package:mingle/utils/logger.dart';
+import 'package:mingle/Screen/match_selection.dart';
 
 class ProfileEditPage extends StatefulWidget {
-  final Map<String, dynamic>
-      profile; // Accept a Map instead of a Profile object
+  final Map<String, dynamic> profile;
 
   const ProfileEditPage({super.key, required this.profile});
 
@@ -14,7 +17,7 @@ class ProfileEditPage extends StatefulWidget {
 
 class _ProfileEditPageState extends State<ProfileEditPage> {
   XFile? _image;
-  bool isEditMode = true; // Track whether the page is in edit mode
+  bool isEditMode = true;
 
   List<String> genderPreferences = [];
   List<String> interestPreferences = [];
@@ -27,7 +30,10 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   @override
   void initState() {
     super.initState();
-    // Initialize lists with existing profile data, providing default empty lists if null
+    setupLogger(); // Initialize the logger
+    logger.info('ProfileEditPage initialized'); // Log initialization
+
+    // Initialize lists with existing profile data
     genderPreferences = List<String>.from(widget.profile['gender'] ?? []);
     interestPreferences = List<String>.from(widget.profile['interest'] ?? []);
     educationPreferences = List<String>.from(widget.profile['education'] ?? []);
@@ -45,6 +51,30 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       setState(() {
         _image = pickedImage;
       });
+      logger.info('Profile image updated'); // Log image update
+    }
+  }
+
+  Future<void> sendProfileData(Map<String, dynamic> profile) async {
+    final String profileJson = jsonEncode(profile);
+    final Uri url = Uri.parse('empty... w8 for import');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: profileJson,
+      );
+
+      if (response.statusCode == 200) {
+        logger.info('Profile data updated successfully'); // Log success
+      } else {
+        logger.severe('Failed to update profile data. Error: ${response.statusCode}'); // Log error
+      }
+    } catch (e) {
+      logger.severe('Error updating profile data: $e'); // Log exception
     }
   }
 
@@ -61,8 +91,10 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       isEditMode = false;
     });
 
+    // Send the updated profile data to the backend
+    sendProfileData(widget.profile);
+
     // Show confirmation dialog
-    // Show a SnackBar notification instead of a dialog
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Changes applied successfully!"),
@@ -71,12 +103,15 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         backgroundColor: Colors.green,
       ),
     );
+
+    logger.info('Profile changes saved'); // Log profile save
   }
 
   void _toggleEditMode() {
     setState(() {
       isEditMode = true;
     });
+    logger.info('Edit mode toggled'); // Log edit mode toggle
   }
 
   @override
@@ -86,7 +121,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       body: Column(
         children: [
           Expanded(
-            // Ensures the main content takes up remaining space
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -156,9 +190,16 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         ],
         selectedItemColor: Colors.purple,
         unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
+        type: BottomNavigationBarType.fixed,  // Fixed bottom navigation bar
         selectedLabelStyle: const TextStyle(fontSize: 10),
         unselectedLabelStyle: const TextStyle(fontSize: 10),
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.of(context).pushReplacement(MaterialPageRoute(
+              builder: (context) => const MatchInterestPage(),
+            ));
+          }
+        },
       ),
     );
   }

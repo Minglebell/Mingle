@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For date formatting
 import 'profile_edit.dart';
+import 'dart:convert'; // For JSON encoding
+import 'package:http/http.dart' as http; // For HTTP requests
+import 'package:mingle/utils/logger.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -18,6 +21,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
   bool _isFormValid = false;
 
+  @override
+  void initState() {
+    super.initState();
+    setupLogger(); // Initialize the logger
+    logger.info('ProfileSetupPage initialized'); // Log initialization
+  }
+
   void _validateForm() {
     setState(() {
       _isFormValid = _nameController.text.isNotEmpty &&
@@ -27,9 +37,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               .hasMatch(_emailController.text) &&
           _selectedDate != null;
     });
+    logger.info('Form validation status: $_isFormValid'); // Log form validation status
   }
 
   Future<void> _selectDate(BuildContext context) async {
+    logger.info('Date picker opened'); // Log date picker opening
     DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
@@ -43,6 +55,34 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         _birthdayController.text = DateFormat('dd/MM/yyyy').format(pickedDate);
         _validateForm();
       });
+      logger.info('Selected date: ${_birthdayController.text}'); // Log selected date
+    } else {
+      logger.info('Date picker closed without selection'); // Log no date selected
+    }
+  }
+
+  // Function to send profile data to the backend
+  Future<void> sendProfileData(Map<String, dynamic> profile) async {
+    final String profileJson = jsonEncode(profile);
+    final Uri url = Uri.parse('https://your-backend-api.com/profile');
+
+    try {
+      logger.info('Sending profile data to the backend...'); // Log sending data
+      final response = await http.post(
+        url,
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: profileJson,
+      );
+
+      if (response.statusCode == 200) {
+        logger.info('Profile data sent successfully'); // Log success
+      } else {
+        logger.severe('Failed to send profile data. Error: ${response.statusCode}'); // Log error
+      }
+    } catch (e) {
+      logger.severe('Error sending profile data: $e'); // Log exception
     }
   }
 
@@ -83,7 +123,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         padding: const EdgeInsets.only(top: 6, bottom: 6),
                         child: TextFormField(
                           controller: _nameController,
-                          onChanged: (value) => _validateForm(),
+                          onChanged: (value) {
+                            _validateForm();
+                            logger.info('Name updated: $value'); // Log name update
+                          },
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                           ),
@@ -130,7 +173,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         padding: const EdgeInsets.only(top: 6, bottom: 6),
                         child: TextFormField(
                           controller: _emailController,
-                          onChanged: (value) => _validateForm(),
+                          onChanged: (value) {
+                            _validateForm();
+                            logger.info('Email updated: $value'); // Log email update
+                          },
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                           ),
@@ -170,9 +216,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                           'name': name,
                           'age': age,
                           'email': _emailController.text,
-                          'birthday': birthday
-                              .toIso8601String(), // Convert DateTime to a string
+                          'birthday': birthday.toIso8601String(),
                         };
+
+                        logger.info('Profile data: $profile'); // Log profile data
+
+                        // Send the profile data to the backend
+                        sendProfileData(profile);
 
                         // Navigate to the ProfileEditPage and pass the Map
                         Navigator.push(

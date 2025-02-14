@@ -28,6 +28,15 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     _loadProfileData();
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _birthdayController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  /// Validates the form and updates the `_isFormValid` state.
   void _validateForm() {
     setState(() {
       _isFormValid = _nameController.text.isNotEmpty &&
@@ -39,10 +48,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     });
   }
 
-  
-
+  /// Opens a date picker to select the user's birthday.
   Future<void> _selectDate(BuildContext context) async {
-    DateTime? pickedDate = await showDatePicker(
+    final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime(1900),
@@ -58,14 +66,16 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     }
   }
 
+  /// Sends the profile data to the backend API.
   Future<void> sendProfileData(Map<String, dynamic> profile) async {
-    final Uri url = Uri.parse('https://your-backend-api.com/profile');
+    const String apiUrl = 'https://your-backend-api.com/profile';
     try {
       final response = await http.post(
-        url,
+        Uri.parse(apiUrl),
         headers: {'Content-Type': 'application/json; charset=UTF-8'},
         body: jsonEncode(profile),
       );
+
       if (response.statusCode == 200) {
         logger.info('Profile data sent successfully');
       } else {
@@ -76,14 +86,16 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     }
   }
 
+  /// Saves the profile data to local storage using SharedPreferences.
   Future<void> _saveProfileData(Map<String, dynamic> profile) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString('name', profile['name']);
-    prefs.setInt('age', profile['age']);
-    prefs.setString('email', profile['email']);
-    prefs.setString('birthday', profile['birthday']);
+    await prefs.setString('name', profile['name']);
+    await prefs.setInt('age', profile['age']);
+    await prefs.setString('email', profile['email']);
+    await prefs.setString('birthday', profile['birthday']);
   }
 
+  /// Loads the profile data from local storage and populates the form fields.
   Future<void> _loadProfileData() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -97,25 +109,29 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     _validateForm();
   }
 
-  // ignore: unused_element
+  /// Submits the profile data and navigates to the profile edit page.
   void _submitProfile() {
-    final name = _nameController.text;
-    final birthday = _selectedDate!;
-    final age = DateTime.now().year - birthday.year;
+    final String name = _nameController.text;
+    final DateTime birthday = _selectedDate!;
+    final int age = DateTime.now().year - birthday.year;
 
-    final profile = {
+    final Map<String, dynamic> profile = {
       'name': name,
       'age': age,
       'email': _emailController.text,
       'birthday': birthday.toIso8601String(),
     };
 
+    logger.info('Profile data: $profile'); // Log profile data
+
     sendProfileData(profile);
     _saveProfileData(profile);
 
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ProfileEditPage(profile: profile)),
+      MaterialPageRoute(
+        builder: (context) => ProfileEditPage(profile: profile),
+      ),
     );
   }
 
@@ -144,77 +160,29 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 16),
-                      const Text(
-                        'Name',
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontFamily: 'Itim',
-                            fontWeight: FontWeight.bold),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6, bottom: 6),
-                        child: TextFormField(
-                          controller: _nameController,
-                          onChanged: (value) {
-                            _validateForm();
-                            logger.info('Name updated: $value'); // Log name update
-                          },
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                          ),
-                          style:
-                              const TextStyle(fontSize: 18, fontFamily: 'Itim'),
-                        ),
+                      ProfileTextField(
+                        label: 'Name',
+                        controller: _nameController,
+                        onChanged: (value) {
+                          _validateForm();
+                          logger.info('Name updated: $value');
+                        },
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Birthday',
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontFamily: 'Itim',
-                            fontWeight: FontWeight.bold),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6, bottom: 6),
-                        child: TextFormField(
-                          controller: _birthdayController,
-                          onTap: () => _selectDate(context),
-                          readOnly: true,
-                          decoration: InputDecoration(
-                            border: const OutlineInputBorder(),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.calendar_today),
-                              onPressed: () => _selectDate(context),
-                            ),
-                          ),
-                          style:
-                              const TextStyle(fontSize: 18, fontFamily: 'Itim'),
-                        ),
+                      ProfileTextField(
+                        label: 'Birthday',
+                        controller: _birthdayController,
+                        onTap: () => _selectDate(context),
+                        readOnly: true,
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Email',
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontFamily: 'Itim',
-                            fontWeight: FontWeight.bold),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6, bottom: 6),
-                        child: TextFormField(
-                          controller: _emailController,
-                          onChanged: (value) {
-                            _validateForm();
-                            logger.info('Email updated: $value'); // Log email update
-                          },
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                          ),
-                          style: const TextStyle(fontFamily: 'Itim'),
-                        ),
+                      ProfileTextField(
+                        label: 'Email',
+                        controller: _emailController,
+                        onChanged: (value) {
+                          _validateForm();
+                          logger.info('Email updated: $value');
+                        },
                       ),
                       const Padding(
                         padding: EdgeInsets.only(top: 4),
@@ -238,35 +206,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isFormValid
-                    ? () {
-                        final name = _nameController.text;
-                        final birthday = _selectedDate!;
-                        final age = DateTime.now().year - birthday.year;
-
-                        // Create a Map with the profile data
-                        final profile = {
-                          'name': name,
-                          'age': age,
-                          'email': _emailController.text,
-                          'birthday': birthday.toIso8601String(),
-                        };
-
-                        logger.info('Profile data: $profile'); // Log profile data
-
-                        // Send the profile data to the backend
-                        sendProfileData(profile);
-
-                        // Navigate to the ProfileEditPage and pass the Map
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                ProfileEditPage(profile: profile),
-                          ),
-                        );
-                      }
-                    : null,
+                onPressed: _isFormValid ? _submitProfile : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
                   disabledBackgroundColor: Colors.grey[400],
@@ -282,6 +222,56 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A reusable widget for profile text fields.
+class ProfileTextField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  final ValueChanged<String>? onChanged;
+
+  const ProfileTextField({
+    required this.label,
+    required this.controller,
+    this.readOnly = false,
+    this.onTap,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+              fontSize: 20, fontFamily: 'Itim', fontWeight: FontWeight.bold),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 6, bottom: 6),
+          child: TextFormField(
+            controller: controller,
+            onTap: onTap,
+            readOnly: readOnly,
+            onChanged: onChanged,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              suffixIcon: onTap != null
+                  ? IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: onTap,
+                    )
+                  : null,
+            ),
+            style: const TextStyle(fontSize: 18, fontFamily: 'Itim'),
+          ),
+        ),
+      ],
     );
   }
 }

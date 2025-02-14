@@ -4,10 +4,13 @@ import 'dart:io';
 import 'dart:convert'; // For JSON encoding
 import 'package:http/http.dart' as http; // For HTTP requests
 import 'package:mingle/utils/logger.dart';
-import 'package:mingle/Screen/match_selection.dart';
+import 'package:mingle/Widget/bottom_navigation_bar.dart';
+
+
 
 class ProfileEditPage extends StatefulWidget {
   final Map<String, dynamic> profile;
+
 
   const ProfileEditPage({super.key, required this.profile});
 
@@ -33,6 +36,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     setupLogger(); // Initialize the logger
     logger.info('ProfileEditPage initialized'); // Log initialization
 
+
     // Initialize lists with existing profile data
     genderPreferences = List<String>.from(widget.profile['gender'] ?? []);
     interestPreferences = List<String>.from(widget.profile['interest'] ?? []);
@@ -42,6 +46,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     alcoholPreferences = List<String>.from(widget.profile['alcoholic'] ?? []);
     smokingPreferences = List<String>.from(widget.profile['smoking'] ?? []);
   }
+
+
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -71,12 +77,15 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       if (response.statusCode == 200) {
         logger.info('Profile data updated successfully'); // Log success
       } else {
-        logger.severe('Failed to update profile data. Error: ${response.statusCode}'); // Log error
+        logger.severe(
+            'Failed to update profile data. Error: ${response.statusCode}'); // Log error
       }
     } catch (e) {
       logger.severe('Error updating profile data: $e'); // Log exception
     }
   }
+
+  
 
   void _saveProfile() {
     // Update the profile information
@@ -181,26 +190,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-        ],
-        selectedItemColor: Colors.purple,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,  // Fixed bottom navigation bar
-        selectedLabelStyle: const TextStyle(fontSize: 10),
-        unselectedLabelStyle: const TextStyle(fontSize: 10),
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.of(context).pushReplacement(MaterialPageRoute(
-              builder: (context) => const MatchInterestPage(),
-            ));
-          }
-        },
-      ),
+      bottomNavigationBar: const BottomNavBar(currentIndex: 2),
     );
   }
 
@@ -422,3 +412,5 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 }
+
+

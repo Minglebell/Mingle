@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:mingle/Screen/match_selection.dart';
-import 'package:mingle/Screen/profile_edit.dart';
+import 'package:mingle/Screen/profile.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
 
   const BottomNavBar({super.key, required this.currentIndex});
 
-  void _onItemTapped(BuildContext context, int index) {
-    if (index == currentIndex) return; // Prevent unnecessary navigation
+  void _onItemTapped(BuildContext context, int index) async {
+    if (index == currentIndex) return;
 
     switch (index) {
       case 0:
@@ -20,9 +20,16 @@ class BottomNavBar extends StatelessWidget {
       case 1:
         break;
       case 2:
+        // Load profile data asynchronously
+        
+
+        // Navigate to ProfileEditPage with the loaded profile data
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const ProfileEditPage(profile: {},)),
+          MaterialPageRoute(
+            builder: (context) =>
+                ProfileEditPage(profile: {},)
+          ),
         );
         break;
     }
@@ -46,4 +53,3 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 }
-

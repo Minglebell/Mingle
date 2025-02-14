@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // For date formatting
-import 'profile_edit.dart';
-import 'dart:convert'; // For JSON encoding
-import 'package:http/http.dart' as http; // For HTTP requests
+import 'package:intl/intl.dart';
+import 'profile.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:mingle/utils/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -18,14 +19,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   final TextEditingController _birthdayController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   DateTime? _selectedDate;
-
   bool _isFormValid = false;
 
   @override
   void initState() {
     super.initState();
-    setupLogger(); // Initialize the logger
-    logger.info('ProfileSetupPage initialized'); // Log initialization
+    setupLogger();
+    _loadProfileData();
   }
 
   void _validateForm() {
@@ -33,15 +33,15 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       _isFormValid = _nameController.text.isNotEmpty &&
           _birthdayController.text.isNotEmpty &&
           _emailController.text.isNotEmpty &&
-          RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
+          RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
               .hasMatch(_emailController.text) &&
           _selectedDate != null;
     });
-    logger.info('Form validation status: $_isFormValid'); // Log form validation status
   }
 
+  
+
   Future<void> _selectDate(BuildContext context) async {
-    logger.info('Date picker opened'); // Log date picker opening
     DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
@@ -55,35 +55,68 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         _birthdayController.text = DateFormat('dd/MM/yyyy').format(pickedDate);
         _validateForm();
       });
-      logger.info('Selected date: ${_birthdayController.text}'); // Log selected date
-    } else {
-      logger.info('Date picker closed without selection'); // Log no date selected
     }
   }
 
-  // Function to send profile data to the backend
   Future<void> sendProfileData(Map<String, dynamic> profile) async {
-    final String profileJson = jsonEncode(profile);
     final Uri url = Uri.parse('https://your-backend-api.com/profile');
-
     try {
-      logger.info('Sending profile data to the backend...'); // Log sending data
       final response = await http.post(
         url,
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: profileJson,
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: jsonEncode(profile),
       );
-
       if (response.statusCode == 200) {
-        logger.info('Profile data sent successfully'); // Log success
+        logger.info('Profile data sent successfully');
       } else {
-        logger.severe('Failed to send profile data. Error: ${response.statusCode}'); // Log error
+        logger.severe('Failed to send profile data: ${response.statusCode}');
       }
     } catch (e) {
-      logger.severe('Error sending profile data: $e'); // Log exception
+      logger.severe('Error sending profile data: $e');
     }
+  }
+
+  Future<void> _saveProfileData(Map<String, dynamic> profile) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('name', profile['name']);
+    prefs.setInt('age', profile['age']);
+    prefs.setString('email', profile['email']);
+    prefs.setString('birthday', profile['birthday']);
+  }
+
+  Future<void> _loadProfileData() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _nameController.text = prefs.getString('name') ?? "";
+      _emailController.text = prefs.getString('email') ?? "";
+      _birthdayController.text = prefs.getString('birthday') ?? "";
+      if (prefs.getString('birthday') != null) {
+        _selectedDate = DateTime.parse(prefs.getString('birthday')!);
+      }
+    });
+    _validateForm();
+  }
+
+  // ignore: unused_element
+  void _submitProfile() {
+    final name = _nameController.text;
+    final birthday = _selectedDate!;
+    final age = DateTime.now().year - birthday.year;
+
+    final profile = {
+      'name': name,
+      'age': age,
+      'email': _emailController.text,
+      'birthday': birthday.toIso8601String(),
+    };
+
+    sendProfileData(profile);
+    _saveProfileData(profile);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ProfileEditPage(profile: profile)),
+    );
   }
 
   @override

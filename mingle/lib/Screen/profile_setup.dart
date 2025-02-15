@@ -138,14 +138,14 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 228, 225),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
           'Setting up your profiles',
           style: TextStyle(
               fontFamily: 'Itim', fontSize: 26, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color.fromARGB(255, 255, 228, 225),
+        backgroundColor: Colors.white,
         elevation: 0,
       ),
       body: Column(
@@ -208,14 +208,15 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               child: ElevatedButton(
                 onPressed: _isFormValid ? _submitProfile : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
+                  backgroundColor: Color(0xFFFFB6AE),
                   disabledBackgroundColor: Colors.grey[400],
                 ),
-                child: const Text(
+                child: Text(
                   'Confirm',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: Colors.white, fontFamily: 'Itim', fontSize: 24),
+                      color: _isFormValid ? const Color(0xFF333333) : Colors.white,
+                      fontFamily: 'Itim', fontSize: 24),
                 ),
               ),
             ),

@@ -1,8 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:mingle/Widget/bottom_navigation_bar.dart';
 
-class MatchInterestPage extends StatelessWidget {
+class MatchInterestPage extends StatefulWidget {
   const MatchInterestPage({super.key});
+
+  @override
+  _MatchInterestPageState createState() => _MatchInterestPageState();
+}
+
+class _MatchInterestPageState extends State<MatchInterestPage> {
+  String? selectedGender;
+  String? selectedCategory;
+  String? selectedInterest;
+  double minAge = 18;
+  double maxAge = 25;
+  bool isChipSelected(String label) => selectedChips.contains(label);
+  List<String> selectedChips = [];
+
+  final List<String> genders = ['Male', 'Female', 'Any genders'];
+  final List<String> categories = ['Sports', 'Music', 'Food', 'Technology'];
+  final List<String> interests = ['Football', 'Guitar', 'Sushi', 'Coding'];
+  final List<String> chips = ['Badminton', 'Basketball', 'Thai Food'];
 
   @override
   Widget build(BuildContext context) {
@@ -25,67 +43,67 @@ class MatchInterestPage extends StatelessWidget {
             const Text(
               'Select an option',
               style: TextStyle(
-                  fontSize: 20,
-                  fontFamily: 'Itim',
-                  fontWeight: FontWeight.bold),
+                  fontSize: 20, fontFamily: 'Itim', fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildDropdown('Categories'),
+            _buildDropdown('Genders', genders, selectedGender, (value) {
+              setState(() => selectedGender = value);
+            }),
             const SizedBox(height: 16),
-            _buildDropdown('Interests'),
+            _buildDropdown('Categories', categories, selectedCategory, (value) {
+              setState(() => selectedCategory = value);
+            }),
+            const SizedBox(height: 16),
+            _buildDropdown('Interests', interests, selectedInterest, (value) {
+              setState(() => selectedInterest = value);
+            }),
             const SizedBox(height: 16),
             const Text(
               'Age Range',
               style: TextStyle(
-                  fontSize: 20,
-                  fontFamily: 'Itim',
-                  fontWeight: FontWeight.bold),
+                  fontSize: 20, fontFamily: 'Itim', fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                const Text(
-                  '18',
-                  style: TextStyle(fontSize: 18, fontFamily: 'Itim'),
-                ),
                 Expanded(
-                  child: Slider(
-                    value: 21.5, // Example value
-                    min: 18,
-                    max: 25,
+                  child: TextField(
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Min Age',
+                    ),
                     onChanged: (value) {
-                      // Handle slider change
+                      setState(() => minAge = double.tryParse(value) ?? 18);
                     },
                   ),
                 ),
-                const Text(
-                  '25',
-                  style: TextStyle(fontSize: 18, fontFamily: 'Itim'),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextField(
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Max Age',
+                    ),
+                    onChanged: (value) {
+                      setState(() => maxAge = double.tryParse(value) ?? 25);
+                    },
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             const Text(
-              'Distance',
+              'Select Interests',
               style: TextStyle(
-                  fontSize: 20,
-                  fontFamily: 'Itim',
-                  fontWeight: FontWeight.bold),
+                  fontSize: 20, fontFamily: 'Itim', fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              '20 km',
-              style: TextStyle(fontSize: 18, fontFamily: 'Itim'),
-            ),
-            const SizedBox(height: 16),
             Wrap(
               spacing: 8.0,
               runSpacing: 8.0,
-              children: [
-                _buildChip('Badminton'),
-                _buildChip('Basketball'),
-                _buildChip('Thai Food'),
-              ],
+              children: chips.map((chip) => _buildChip(chip)).toList(),
             ),
             const Spacer(),
             SizedBox(
@@ -101,9 +119,7 @@ class MatchInterestPage extends StatelessWidget {
                 child: const Text(
                   'Start',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Itim',
-                      fontSize: 24),
+                      color: Colors.white, fontFamily: 'Itim', fontSize: 24),
                 ),
               ),
             ),
@@ -114,34 +130,40 @@ class MatchInterestPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDropdown(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey),
+  Widget _buildDropdown(
+      String label, List<String> items, String? selectedValue, ValueChanged<String?> onChanged) {
+    return DropdownButtonFormField<String>(
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 18, fontFamily: 'Itim'),
-          ),
-          const Icon(Icons.arrow_drop_down),
-        ],
-      ),
+      value: selectedValue,
+      hint: Text(label, style: const TextStyle(fontSize: 18, fontFamily: 'Itim')),
+      items: items.map((item) {
+        return DropdownMenuItem<String>(
+          value: item,
+          child: Text(item, style: const TextStyle(fontSize: 18, fontFamily: 'Itim')),
+        );
+      }).toList(),
+      onChanged: onChanged,
     );
   }
 
   Widget _buildChip(String label) {
-    return Chip(
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 16, fontFamily: 'Itim'),
-      ),
-      backgroundColor: const Color.fromARGB(255, 255, 194, 187),
+    return ChoiceChip(
+      label: Text(label, style: const TextStyle(fontSize: 16, fontFamily: 'Itim')),
+      selected: isChipSelected(label),
+      onSelected: (selected) {
+        setState(() {
+          if (selected) {
+            selectedChips.add(label);
+          } else {
+            selectedChips.remove(label);
+          }
+        });
+      },
+      selectedColor: const Color.fromARGB(255, 255, 194, 187),
     );
   }
 }

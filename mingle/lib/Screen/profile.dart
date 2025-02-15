@@ -126,7 +126,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 228, 225),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           Expanded(
@@ -159,13 +159,13 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                       ElevatedButton(
                         onPressed: _saveProfile,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: Color(0xFFFFB6AE),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 50, vertical: 15),
                         ),
                         child: const Text("Save",
                             style: TextStyle(
-                                color: Colors.white,
+                                color: Color(0xFF333333),
                                 fontSize: 18,
                                 fontFamily: 'Itim')),
                       )
@@ -173,13 +173,13 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                       ElevatedButton(
                         onPressed: _toggleEditMode,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: Color(0xFFFFB6AE),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 50, vertical: 15),
                         ),
                         child: const Text("Edit",
                             style: TextStyle(
-                                color: Colors.white,
+                                color: Color(0xFF333333),
                                 fontSize: 18,
                                 fontFamily: 'Itim')),
                       ),
@@ -202,7 +202,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           children: [
             CircleAvatar(
               radius: 60,
-              backgroundColor: Colors.white,
+              backgroundColor: Color(0xFFFFB6AE),
               backgroundImage: _image != null
                   ? FileImage(File(_image!.path)) as ImageProvider
                   : null,
@@ -256,8 +256,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           ),
           Container(
             decoration: BoxDecoration(
-              color: const Color.fromARGB(
-                  255, 255, 228, 225), // Match background color
+              color: Color(0xFFFFB6AE), // Chip background color
               border: Border.all(
                   color: Colors.grey), // Add a border for better visibility
               borderRadius: BorderRadius.circular(10),
@@ -282,7 +281,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                               ),
                             ),
                             backgroundColor:
-                                Colors.white, // Chip background color
+                                Color(0xFFFFE4E1), // Chip background color
                             deleteIconColor: Colors.black, // Delete icon color
                             onDeleted: () {
                               setState(() {
@@ -325,6 +324,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   }
 
   Widget _buildPreferenceDisplay(String label, List<String>? preferences) {
+    if (preferences == null || preferences.isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(
@@ -344,7 +346,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             child: Wrap(
               spacing: 15.0,
               runSpacing: 15.0,
-              children: (preferences ?? []).map((preference) {
+              children: (preferences).map((preference) {
                 return Chip(
                   label: Text(
                     preference,
@@ -412,5 +414,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 }
+
 
 

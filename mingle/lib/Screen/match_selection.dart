@@ -14,7 +14,6 @@ class _MatchInterestPageState extends State<MatchInterestPage> {
   String? selectedInterest;
   double minAge = 18;
   double maxAge = 25;
-  bool isChipSelected(String label) => selectedChips.contains(label);
   List<String> selectedChips = [];
 
   final List<String> genders = ['Male', 'Female', 'Any genders'];
@@ -22,131 +21,170 @@ class _MatchInterestPageState extends State<MatchInterestPage> {
   final List<String> interests = ['Football', 'Guitar', 'Sushi', 'Coding'];
   final List<String> chips = ['Badminton', 'Basketball', 'Thai Food'];
 
+  bool isChipSelected(String label) => selectedChips.contains(label);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 228, 225),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
           'Match your interest',
           style: TextStyle(
               fontFamily: 'Itim', fontSize: 26, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color.fromARGB(255, 255, 228, 225),
+        backgroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false, // Remove back button
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Select an option',
-              style: TextStyle(
-                  fontSize: 20, fontFamily: 'Itim', fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            _buildDropdown('Genders', genders, selectedGender, (value) {
-              setState(() => selectedGender = value);
-            }),
-            const SizedBox(height: 16),
-            _buildDropdown('Categories', categories, selectedCategory, (value) {
-              setState(() => selectedCategory = value);
-            }),
-            const SizedBox(height: 16),
-            _buildDropdown('Interests', interests, selectedInterest, (value) {
-              setState(() => selectedInterest = value);
-            }),
-            const SizedBox(height: 16),
-            const Text(
-              'Age Range',
-              style: TextStyle(
-                  fontSize: 20, fontFamily: 'Itim', fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      labelText: 'Min Age',
+      body: SingleChildScrollView(  // Fix dropdown overlapping issue
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionTitle('Select Gender'),
+              _buildDropdown(genders, selectedGender, (value) {
+                setState(() => selectedGender = value);
+              }),
+              const SizedBox(height: 20),
+
+              _buildSectionTitle('Select Category'),
+              _buildDropdown(categories, selectedCategory, (value) {
+                setState(() => selectedCategory = value);
+              }),
+              const SizedBox(height: 20),
+
+              _buildSectionTitle('Select Interest'),
+              _buildDropdown(interests, selectedInterest, (value) {
+                setState(() => selectedInterest = value);
+              }),
+              const SizedBox(height: 20),
+
+              _buildSectionTitle('Age Range'),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        labelText: 'Min Age',
+                        filled: true,
+                        fillColor: Colors.white,  // Fixed background color
+                      ),
+                      onChanged: (value) {
+                        double? age = double.tryParse(value);
+                        if (age != null && age >= 18 && age <= 100) {
+                          setState(() => minAge = age);
+                        }
+                      },
                     ),
-                    onChanged: (value) {
-                      setState(() => minAge = double.tryParse(value) ?? 18);
-                    },
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      labelText: 'Max Age',
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextField(
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        labelText: 'Max Age',
+                        filled: true,
+                        fillColor: Colors.white,  // Fixed background color
+                      ),
+                      onChanged: (value) {
+                        double? age = double.tryParse(value);
+                        if (age != null && age >= 18 && age <= 100) {
+                          setState(() => maxAge = age);
+                        }
+                      },
                     ),
-                    onChanged: (value) {
-                      setState(() => maxAge = double.tryParse(value) ?? 25);
-                    },
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Select Interests',
-              style: TextStyle(
-                  fontSize: 20, fontFamily: 'Itim', fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              children: chips.map((chip) => _buildChip(chip)).toList(),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Handle start button press
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text(
-                  'Start',
-                  style: TextStyle(
-                      color: Colors.white, fontFamily: 'Itim', fontSize: 24),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              _buildSectionTitle('Select Interests'),
+              Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                children: chips.map((chip) => _buildChip(chip)).toList(),
+              ),
+              const SizedBox(height: 20),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Handle start button press
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFFFB6AE), // Changed button color
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Start',
+                    style: TextStyle(
+                        color: Colors.white, fontFamily: 'Itim', fontSize: 24),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: const BottomNavBar(currentIndex: 0),
     );
   }
 
-  Widget _buildDropdown(
-      String label, List<String> items, String? selectedValue, ValueChanged<String?> onChanged) {
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        title,
+        style: const TextStyle(
+            fontSize: 20, fontFamily: 'Itim', fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+    Widget _buildDropdown(List<String> items, String? selectedValue, ValueChanged<String?> onChanged) {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
       value: selectedValue,
-      hint: Text(label, style: const TextStyle(fontSize: 18, fontFamily: 'Itim')),
+      hint: const Text('Select', style: TextStyle(fontSize: 18, fontFamily: 'Itim')),
+      
+      // Ensures selected item stays in the dropdown box
+      selectedItemBuilder: (BuildContext context) {
+        return items.map<Widget>((String item) {
+          return Text(
+            item,
+            style: const TextStyle(fontSize: 18, fontFamily: 'Itim'),
+          );
+        }).toList();
+      },
+
       items: items.map((item) {
         return DropdownMenuItem<String>(
           value: item,
           child: Text(item, style: const TextStyle(fontSize: 18, fontFamily: 'Itim')),
         );
       }).toList(),
+
       onChanged: onChanged,
+      isExpanded: true, // Ensures text is not cut off
     );
   }
 
@@ -156,14 +194,14 @@ class _MatchInterestPageState extends State<MatchInterestPage> {
       selected: isChipSelected(label),
       onSelected: (selected) {
         setState(() {
-          if (selected) {
-            selectedChips.add(label);
-          } else {
-            selectedChips.remove(label);
-          }
+          selected ? selectedChips.add(label) : selectedChips.remove(label);
         });
       },
-      selectedColor: const Color.fromARGB(255, 255, 194, 187),
+      selectedColor: Color(0xFFFFB6AE),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
     );
   }
 }

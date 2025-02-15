@@ -45,11 +45,13 @@ class BottomNavBar extends StatelessWidget {
         BottomNavigationBarItem(icon: Icon(Icons.chat), label: "Chat"),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
       ],
-      selectedItemColor: Color(0xFFFFE4E1),
+      selectedItemColor: Color.fromARGB(255, 255, 212, 206),
       unselectedItemColor: Color(0xFFFFB6AE),
       type: BottomNavigationBarType.fixed,
       selectedLabelStyle: const TextStyle(fontSize: 10),
       unselectedLabelStyle: const TextStyle(fontSize: 10),
+      backgroundColor: Color.fromARGB(255, 234, 234, 234),
     );
   }
 }
+

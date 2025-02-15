@@ -6,11 +6,8 @@ import 'package:http/http.dart' as http; // For HTTP requests
 import 'package:mingle/utils/logger.dart';
 import 'package:mingle/Widget/bottom_navigation_bar.dart';
 
-
-
 class ProfileEditPage extends StatefulWidget {
   final Map<String, dynamic> profile;
-
 
   const ProfileEditPage({super.key, required this.profile});
 
@@ -36,7 +33,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     setupLogger(); // Initialize the logger
     logger.info('ProfileEditPage initialized'); // Log initialization
 
-
     // Initialize lists with existing profile data
     genderPreferences = List<String>.from(widget.profile['gender'] ?? []);
     interestPreferences = List<String>.from(widget.profile['interest'] ?? []);
@@ -46,8 +42,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     alcoholPreferences = List<String>.from(widget.profile['alcoholic'] ?? []);
     smokingPreferences = List<String>.from(widget.profile['smoking'] ?? []);
   }
-
-
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -84,8 +78,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       logger.severe('Error updating profile data: $e'); // Log exception
     }
   }
-
-  
 
   void _saveProfile() {
     // Update the profile information
@@ -195,48 +187,90 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   }
 
   Widget _buildProfileHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Stack(
-          children: [
-            CircleAvatar(
-              radius: 60,
-              backgroundColor: Color(0xFFFFB6AE),
-              backgroundImage: _image != null
-                  ? FileImage(File(_image!.path)) as ImageProvider
-                  : null,
-            ),
-            if (isEditMode) // Only show the edit button in edit mode
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: IconButton(
-                  icon: const Icon(Icons.add_a_photo, color: Colors.black),
-                  onPressed: _pickImage,
-                ),
-              ),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
             children: [
-              Text(widget.profile['name'],
-                  style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Itim')),
-              Text("Age: ${widget.profile['age']}",
-                  style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.normal,
-                      fontFamily: 'Itim')),
+              CircleAvatar(
+                radius: 80, // Increased size
+                backgroundColor: Color(0xFFFFB6AE),
+                backgroundImage: _image != null
+                    ? FileImage(File(_image!.path)) as ImageProvider
+                    : null,
+              ),
+              if (isEditMode) // Only show the edit button in edit mode
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: IconButton(
+                    icon: const Icon(Icons.add_a_photo, color: Colors.black),
+                    onPressed: _pickImage,
+                  ),
+                ),
             ],
           ),
-        ),
-      ],
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16.0),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(width: 1, color: Colors.grey),
+                  borderRadius: BorderRadius.circular(10),
+                  color: const Color(0xFFFFE4E1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Name",
+                      style: TextStyle(
+                        fontSize: 26, // Increased size
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Itim',
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        widget.profile['name'],
+                        style: const TextStyle(
+                          fontSize: 24, // Increased size
+                          fontWeight: FontWeight.normal,
+                          fontFamily: 'Itim',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Age",
+                      style: TextStyle(
+                        fontSize: 26, // Increased size
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Itim',
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        widget.profile['age'].toString(),
+                        style: const TextStyle(
+                          fontSize: 24, // Increased size
+                          fontWeight: FontWeight.normal,
+                          fontFamily: 'Itim',
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -414,6 +448,3 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 }
-
-
-

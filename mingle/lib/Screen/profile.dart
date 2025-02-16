@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http; // For HTTP requests
 import 'package:mingle/utils/logger.dart';
 import 'package:mingle/Widget/bottom_navigation_bar.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class ProfileEditPage extends StatefulWidget {
   final Map<String, dynamic> profile;
 
@@ -32,6 +34,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     super.initState();
     setupLogger(); // Initialize the logger
     logger.info('ProfileEditPage initialized'); // Log initialization
+    _loadProfileData();
 
     // Initialize lists with existing profile data
     genderPreferences = List<String>.from(widget.profile['gender'] ?? []);
@@ -41,6 +44,20 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     exercisePreferences = List<String>.from(widget.profile['exercise'] ?? []);
     alcoholPreferences = List<String>.from(widget.profile['alcoholic'] ?? []);
     smokingPreferences = List<String>.from(widget.profile['smoking'] ?? []);
+  }
+
+  Future<void> _loadProfileData() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      
+      genderPreferences = prefs.getStringList('gender') ?? [];
+      interestPreferences = prefs.getStringList('interest') ?? [];
+      educationPreferences = prefs.getStringList('education') ?? [];
+      petPreferences = prefs.getStringList('pet') ?? [];
+      exercisePreferences = prefs.getStringList('exercise') ?? [];
+      alcoholPreferences = prefs.getStringList('alcoholic') ?? [];
+      smokingPreferences = prefs.getStringList('smoking') ?? [];
+    });
   }
 
   Future<void> _pickImage() async {
@@ -92,6 +109,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       isEditMode = false;
     });
 
+    // Save the updated profile data to local storage
+    _saveProfileDataToLocalStorage(widget.profile);
+
     // Send the updated profile data to the backend
     sendProfileData(widget.profile);
 
@@ -112,13 +132,29 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     setState(() {
       isEditMode = true;
     });
-    logger.info('Edit mode toggled'); // Log edit mode toggle
+    logger.info('Edit mode toggled');
+  }
+
+  Future<void> _saveProfileDataToLocalStorage(
+      Map<String, dynamic> profile) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('name', profile['name']);
+    await prefs.setInt('age', profile['age']);
+    await prefs.setString('email', profile['email']);
+    await prefs.setString('birthday', profile['birthday']);
+    await prefs.setStringList('gender', profile['gender'].cast<String>());
+    await prefs.setStringList('interest', profile['interest'].cast<String>());
+    await prefs.setStringList('education', profile['education'].cast<String>());
+    await prefs.setStringList('pet', profile['pet'].cast<String>());
+    await prefs.setStringList('exercise', profile['exercise'].cast<String>());
+    await prefs.setStringList('alcoholic', profile['alcoholic'].cast<String>());
+    await prefs.setStringList('smoking', profile['smoking'].cast<String>());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFF0F4F8),
       body: Column(
         children: [
           Expanded(
@@ -151,7 +187,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                       ElevatedButton(
                         onPressed: _saveProfile,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFFFFB6AE),
+                          backgroundColor: Color(0xFF6C9BCF),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 50, vertical: 15),
                         ),
@@ -165,7 +201,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                       ElevatedButton(
                         onPressed: _toggleEditMode,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFFFFB6AE),
+                          backgroundColor: Color(0xFF6C9BCF),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 50, vertical: 15),
                         ),
@@ -197,7 +233,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             children: [
               CircleAvatar(
                 radius: 80, // Increased size
-                backgroundColor: Color(0xFFFFB6AE),
+                backgroundColor: Color(0xFFA8D1F0),
                 backgroundImage: _image != null
                     ? FileImage(File(_image!.path)) as ImageProvider
                     : null,
@@ -221,7 +257,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                 decoration: BoxDecoration(
                   border: Border.all(width: 1, color: Colors.grey),
                   borderRadius: BorderRadius.circular(10),
-                  color: const Color(0xFFFFE4E1),
+                  color: const Color(0xFFA8D1F0),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,7 +326,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           ),
           Container(
             decoration: BoxDecoration(
-              color: Color(0xFFFFB6AE), // Chip background color
+              color: Color(0xFF6C9BCF), // Chip background color
               border: Border.all(
                   color: Colors.grey), // Add a border for better visibility
               borderRadius: BorderRadius.circular(10),
@@ -315,7 +351,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                               ),
                             ),
                             backgroundColor:
-                                Color(0xFFFFE4E1), // Chip background color
+                                Color(0xFFA8D1F0), // Chip background color
                             deleteIconColor: Colors.black, // Delete icon color
                             onDeleted: () {
                               setState(() {
@@ -389,7 +425,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                       color: Colors.black,
                     ),
                   ),
-                  backgroundColor: const Color.fromARGB(255, 255, 194, 187),
+                  backgroundColor: Color(0xFFA8D1F0),
                 );
               }).toList(),
             ),

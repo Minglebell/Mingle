@@ -25,6 +25,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   void initState() {
     super.initState();
     setupLogger();
+    _clearProfileData();
     _loadProfileData();
   }
 
@@ -109,6 +110,22 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     _validateForm();
   }
 
+  /// Clears the profile data from local storage.
+  /// This is called when the user navigates to the profile setup page.
+  Future<void> _clearProfileData() async {
+    
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
+    setState(() {
+      _nameController.text = '';
+      _emailController.text = '';
+      _birthdayController.text = '';
+      _selectedDate = null;
+    });
+    _validateForm();
+  }
+
   /// Submits the profile data and navigates to the profile edit page.
   void _submitProfile() {
     final String name = _nameController.text;
@@ -138,14 +155,14 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFF0F4F8),
       appBar: AppBar(
         title: const Text(
           'Setting up your profiles',
           style: TextStyle(
               fontFamily: 'Itim', fontSize: 26, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFFF0F4F8),
         elevation: 0,
       ),
       body: Column(
@@ -208,7 +225,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               child: ElevatedButton(
                 onPressed: _isFormValid ? _submitProfile : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFFFB6AE),
+                  backgroundColor: Color(0xFF6C9BCF),
                   disabledBackgroundColor: Colors.grey[400],
                 ),
                 child: Text(

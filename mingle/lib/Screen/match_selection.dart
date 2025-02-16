@@ -25,14 +25,14 @@ class _MatchInterestPageState extends State<MatchInterestPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 228, 225),
+      backgroundColor: Color(0xFFF0F4F8),
       appBar: AppBar(
         title: const Text(
           'Match your interest',
           style: TextStyle(
               fontFamily: 'Itim', fontSize: 26, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color.fromARGB(255, 255, 228, 225),
+        backgroundColor: Color(0xFFF0F4F8),
         elevation: 0,
       ),
       body: Padding(
@@ -163,7 +163,7 @@ class _MatchInterestPageState extends State<MatchInterestPage> {
           }
         });
       },
-      selectedColor: const Color.fromARGB(255, 255, 194, 187),
+      selectedColor: Color(0xFFA8D1F0),
     );
   }
 }

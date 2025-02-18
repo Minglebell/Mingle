@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:minglev2_1/Screen/profile_start_setup_page.dart';
 
 final otpProvider = StateNotifierProvider<OtpNotifier, OtpState>(
@@ -48,9 +49,28 @@ class ProfileOtp extends ConsumerWidget {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
 
-  void _navigateToSetupProfile(BuildContext context) {
+  Future<void> _saveUserToFirestore(String phoneNumber) async {
+    FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    try {
+      await firestore.collection('users').doc(phoneNumber).set({
+        'phoneNumber': phoneNumber,
+        'createdAt': FieldValue.serverTimestamp(),
+        'isVerified': true,
+      });
+      debugPrint('User data saved successfully');
+    } catch (e) {
+      debugPrint('Error saving user data: $e');
+    }
+  }
+
+  void _navigateToSetupProfile(BuildContext context, String phoneNumber) async {
+    await _saveUserToFirestore(phoneNumber);
+
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const SetupProfile()),
+      MaterialPageRoute(
+        builder: (context) => SetupProfile(phoneNumber: phoneNumber),
+      ),
     );
   }
 
@@ -67,11 +87,7 @@ class ProfileOtp extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset(
-                'assets/images/OTP.png',
-                width: 200,
-                height: 200,
-              ),
+              Image.asset('assets/images/OTP.png', width: 200, height: 200),
               const SizedBox(height: 16),
               const Align(
                 alignment: Alignment.center,
@@ -180,7 +196,10 @@ class ProfileOtp extends ConsumerWidget {
                                               ),
                                             ),
                                           );
-                                          _navigateToSetupProfile(context);
+                                          _navigateToSetupProfile(
+                                            context,
+                                            _phoneController.text,
+                                          ); // Pass phone number
                                         } else {
                                           ScaffoldMessenger.of(
                                             context,
@@ -228,4 +247,3 @@ class ProfileOtp extends ConsumerWidget {
     );
   }
 }
-

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:minglev2_1/Screen/profile_customization_page.dart';
 
 final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>(
@@ -7,7 +8,9 @@ final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>(
 );
 
 class SetupProfile extends ConsumerStatefulWidget {
-  const SetupProfile({Key? key}) : super(key: key);
+  final String phoneNumber; // Added to pass phone number from OTP screen
+
+  const SetupProfile({Key? key, required this.phoneNumber}) : super(key: key);
 
   @override
   ConsumerState<SetupProfile> createState() => _SetupProfileState();
@@ -16,24 +19,41 @@ class SetupProfile extends ConsumerStatefulWidget {
 class _SetupProfileState extends ConsumerState<SetupProfile> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late TextEditingController _birthdayController;
+  late TextEditingController _nameController;
 
   @override
   void initState() {
     super.initState();
-    // Initialize the controller with the current birthday value
-    _birthdayController = TextEditingController(
-      text: ref.read(profileProvider).birthday,
-    );
+    final profile = ref.read(profileProvider);
+    _birthdayController = TextEditingController(text: profile.birthday);
+    _nameController = TextEditingController(text: profile.name);
   }
 
   @override
   void dispose() {
-    // Dispose the controller to avoid memory leaks
     _birthdayController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
-  void _navigateToProfileCustom(BuildContext context) {
+  Future<void> _saveUserProfile() async {
+    FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final profileState = ref.read(profileProvider);
+
+    try {
+      await firestore.collection('users').doc(widget.phoneNumber).update({
+        'name': profileState.name,
+        'birthday': profileState.birthday,
+      });
+
+      debugPrint('User profile updated successfully');
+    } catch (e) {
+      debugPrint('Error updating profile: $e');
+    }
+  }
+
+  void _navigateToProfileCustom(BuildContext context) async {
+    await _saveUserProfile(); // Ensure data is saved before navigating
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const ProfileEditPage()),
@@ -67,7 +87,6 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 40),
-            // Explanatory Text
             const Text(
               'Please enter your name and birthday to continue',
               style: TextStyle(
@@ -87,27 +106,23 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
                       decoration: const InputDecoration(
                         labelText: 'Name',
                         labelStyle: TextStyle(
-                          color: const Color(0xFF333333),
+                          color: Color(0xFF333333),
                           fontSize: 18,
                         ),
-                        enabledBorder: const OutlineInputBorder(
+                        enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Color(0xFF6C9BCF)),
                         ),
-                        focusedBorder: const OutlineInputBorder(
+                        focusedBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Color(0xFF6C9BCF)),
                         ),
                       ),
-                      initialValue: profileState.name,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Name is required';
-                        }
-                        return null;
-                      },
-                      onSaved: (value) => profileNotifier.updateName(value!),
+                      controller: _nameController,
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Name is required' : null,
+                      onChanged: (value) => profileNotifier.updateName(value),
                     ),
                     const SizedBox(height: 16),
-                    // Birthday Field with Calendar Icon
+                    // Birthday Field
                     TextFormField(
                       decoration: InputDecoration(
                         labelText: 'Birthday',
@@ -127,7 +142,6 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
                             color: Color(0xFF333333),
                           ),
                           onPressed: () async {
-                            // Show date picker
                             final DateTime? pickedDate = await showDatePicker(
                               context: context,
                               initialDate: DateTime.now(),
@@ -135,27 +149,19 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
                               lastDate: DateTime.now(),
                             );
 
-                            // Update the state and controller with the selected date
                             if (pickedDate != null) {
                               final formattedDate =
                                   "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
                               profileNotifier.updateBirthday(formattedDate);
-                              _birthdayController.text =
-                                  formattedDate; // Update the controller
+                              _birthdayController.text = formattedDate;
                             }
                           },
                         ),
                       ),
                       controller: _birthdayController,
-                      readOnly: true, // Make the field read-only
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Birthday is required';
-                        }
-                        return null;
-                      },
-                      onSaved:
-                          (value) => profileNotifier.updateBirthday(value!),
+                      readOnly: true,
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Birthday is required' : null,
                     ),
                   ],
                 ),
@@ -168,7 +174,6 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
               child: ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
                     _navigateToProfileCustom(context);
                   }
                 },

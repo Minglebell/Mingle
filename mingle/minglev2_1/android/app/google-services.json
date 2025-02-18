@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "410780510942",
+    "project_id": "mingle-6db44",
+    "storage_bucket": "mingle-6db44.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:410780510942:android:35403f8eaab7d8a7e5b04f",
+        "android_client_info": {
+          "package_name": "com.example.mingle"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvAfk_kLliZzJMUQ9sTEpscEbMcGMt3I4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:410780510942:android:9a6efaefac81c099e5b04f",
+        "android_client_info": {
+          "package_name": "com.example.minglev2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvAfk_kLliZzJMUQ9sTEpscEbMcGMt3I4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:410780510942:android:f73c2578f8342123e5b04f",
+        "android_client_info": {
+          "package_name": "com.example.minglev2_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvAfk_kLliZzJMUQ9sTEpscEbMcGMt3I4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

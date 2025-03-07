@@ -53,7 +53,7 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
   }
 
   void _navigateToProfileCustom(BuildContext context) async {
-    await _saveUserProfile(); // Ensure data is saved before navigating
+    await _saveUserProfile(); 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const ProfileEditPage()),
@@ -62,7 +62,6 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
 
   @override
   Widget build(BuildContext context) {
-    final profileState = ref.watch(profileProvider);
     final profileNotifier = ref.read(profileProvider.notifier);
 
     return Scaffold(
@@ -117,8 +116,11 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
                         ),
                       ),
                       controller: _nameController,
-                      validator: (value) =>
-                          value == null || value.isEmpty ? 'Name is required' : null,
+                      validator:
+                          (value) =>
+                              value == null || value.isEmpty
+                                  ? 'Name is required'
+                                  : null,
                       onChanged: (value) => profileNotifier.updateName(value),
                     ),
                     const SizedBox(height: 16),
@@ -160,8 +162,11 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
                       ),
                       controller: _birthdayController,
                       readOnly: true,
-                      validator: (value) =>
-                          value == null || value.isEmpty ? 'Birthday is required' : null,
+                      validator:
+                          (value) =>
+                              value == null || value.isEmpty
+                                  ? 'Birthday is required'
+                                  : null,
                     ),
                   ],
                 ),

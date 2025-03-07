@@ -1,23 +1,70 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 // Riverpod StateNotifier for managing profile state
 class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
   ProfileNotifier()
-    : super({
-        'name': 'Matt',
-        'age': 22,
-        'gender': <String>[],
-        'interest': <String>[],
-        'education': <String>[],
-        'pet': <String>[],
-        'exercise': <String>[],
-        'alcoholic': <String>[],
-        'smoking': <String>[],
-      });
+      : super({
+          'name': '',
+          'age': '',
+          'gender': <String>[],
+          'interest': <String>[],
+          'education': <String>[],
+          'pet': <String>[],
+          'exercise': <String>[],
+          'alcoholic': <String>[],
+          'smoking': <String>[],
+        }) {
+    _fetchProfile(); // Fetch profile data when the notifier is created
+  }
+
+  Future<void> _fetchProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final phoneNumber = prefs.getString('phoneNumber');
+
+      if (phoneNumber == null) {
+        debugPrint('Phone number not found in SharedPreferences');
+        return;
+      }
+
+      final profileRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(phoneNumber);
+
+      final profileDoc = await profileRef.get();
+
+      if (profileDoc.exists) {
+        final data = profileDoc.data()!;
+        final birthday =
+            data['birthday'] != null ? DateFormat('M/d/yyyy').parse(data['birthday']) : null;
+        final age = birthday != null ? DateTime.now().year - birthday.year : '';
+
+        state = {
+          'name': data['name'] ?? '',
+          'age': age,
+          'gender': List<String>.from(data['gender'] ?? <String>[]),
+          'interest': List<String>.from(data['interest'] ?? <String>[]),
+          'education': List<String>.from(data['education'] ?? <String>[]),
+          'pet': List<String>.from(data['pet'] ?? <String>[]),
+          'exercise': List<String>.from(data['exercise'] ?? <String>[]),
+          'alcoholic': List<String>.from(data['alcoholic'] ?? <String>[]),
+          'smoking': List<String>.from(data['smoking'] ?? <String>[]),
+        };
+
+        debugPrint('Profile data fetched successfully: $state');
+      } else {
+        debugPrint('Firestore document does not exist for phoneNumber: $phoneNumber');
+      }
+    } catch (e) {
+      debugPrint('Error fetching profile: $e');
+    }
+  }
 
   void updateName(String name) {
     state = {...state, 'name': name};
@@ -69,58 +116,30 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
     if (state[category] is List<String>) {
       state = {
         ...state,
-        category:
-            (state[category] as List<String>)
-                .where((item) => item != preference)
-                .toList(),
+        category: (state[category] as List<String>)
+            .where((item) => item != preference)
+            .toList(),
       };
     }
   }
 
-  Future<void> loadProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = {
-      'name': prefs.getString('name') ?? 'Matt',
-      'age': prefs.getInt('age') ?? 22,
-      'gender': prefs.getStringList('gender') ?? <String>[],
-      'interest': prefs.getStringList('interest') ?? <String>[],
-      'education': prefs.getStringList('education') ?? <String>[],
-      'pet': prefs.getStringList('pet') ?? <String>[],
-      'exercise': prefs.getStringList('exercise') ?? <String>[],
-      'alcoholic': prefs.getStringList('alcoholic') ?? <String>[],
-      'smoking': prefs.getStringList('smoking') ?? <String>[],
-    };
-  }
-
   Future<void> saveProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setString('name', state['name']);
-    prefs.setInt('age', state['age']);
-    prefs.setStringList(
-      'gender',
-      List<String>.from(state['gender'] ?? <String>[]),
-    );
-    prefs.setStringList(
-      'interest',
-      List<String>.from(state['interest'] ?? <String>[]),
-    );
-    prefs.setStringList(
-      'education',
-      List<String>.from(state['education'] ?? <String>[]),
-    );
-    prefs.setStringList('pet', List<String>.from(state['pet'] ?? <String>[]));
-    prefs.setStringList(
-      'exercise',
-      List<String>.from(state['exercise'] ?? <String>[]),
-    );
-    prefs.setStringList(
-      'alcoholic',
-      List<String>.from(state['alcoholic'] ?? <String>[]),
-    );
-    prefs.setStringList(
-      'smoking',
-      List<String>.from(state['smoking'] ?? <String>[]),
-    );
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setString('name', state['name']);
+      prefs.setInt('age', state['age']);
+      prefs.setStringList('gender', List<String>.from(state['gender'] ?? <String>[]));
+      prefs.setStringList('interest', List<String>.from(state['interest'] ?? <String>[]));
+      prefs.setStringList('education', List<String>.from(state['education'] ?? <String>[]));
+      prefs.setStringList('pet', List<String>.from(state['pet'] ?? <String>[]));
+      prefs.setStringList('exercise', List<String>.from(state['exercise'] ?? <String>[]));
+      prefs.setStringList('alcoholic', List<String>.from(state['alcoholic'] ?? <String>[]));
+      prefs.setStringList('smoking', List<String>.from(state['smoking'] ?? <String>[]));
+
+      debugPrint('Profile saved successfully: $state');
+    } catch (e) {
+      debugPrint('Error saving profile: $e');
+    }
   }
 }
 
@@ -140,6 +159,15 @@ class ProfileEditPage extends ConsumerStatefulWidget {
 class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   XFile? _image;
   bool isEditMode = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch profile data when the page is loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(profileProvider.notifier)._fetchProfile();
+    });
+  }
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();

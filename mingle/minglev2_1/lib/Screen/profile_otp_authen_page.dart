@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:minglev2_1/Screen/profile_start_setup_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final otpProvider = StateNotifierProvider<OtpNotifier, OtpState>(
   (ref) => OtpNotifier(),
@@ -58,6 +59,10 @@ class ProfileOtp extends ConsumerWidget {
         'createdAt': FieldValue.serverTimestamp(),
         'isVerified': true,
       });
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('phoneNumber', phoneNumber);
+
       debugPrint('User data saved successfully');
     } catch (e) {
       debugPrint('Error saving user data: $e');
@@ -139,47 +144,52 @@ class ProfileOtp extends ConsumerWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          if (otpState.isOtpVerified)
+                            return; // Prevent multiple taps if already verified
+
+                          final phoneNumber = _phoneController.text;
+                          if (phoneNumber.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter your phone number'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final firestore = FirebaseFirestore.instance;
+                          final docRef = firestore
+                              .collection('users')
+                              .doc(phoneNumber);
+                          final doc = await docRef.get();
+
+                          if (doc.exists) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'This phone number is already registered',
+                                ),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                            return;
+                          }
+
+                          otpNotifier.sendOtp();
+
                           if (_formKey.currentState!.validate()) {
                             showDialog(
                               context: context,
                               builder: (context) {
                                 final otpController = TextEditingController();
                                 return AlertDialog(
-                                  title: const Text(
-                                    'Enter OTP',
-                                    style: TextStyle(
-                                      color: Color(0xFF333333),
-                                      fontSize: 24,
-                                      fontFamily: 'Itim',
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  title: const Text('Enter OTP'),
                                   content: TextFormField(
                                     decoration: const InputDecoration(
                                       labelText: 'Enter received OTP',
-                                      labelStyle: TextStyle(
-                                        color: Color(0xFF333333),
-                                        fontSize: 16,
-                                        fontFamily: 'Itim',
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: Color(0xFF6C9BCF),
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: Color(0xFF6C9BCF),
-                                        ),
-                                      ),
                                     ),
                                     controller: otpController,
-                                    validator:
-                                        (value) =>
-                                            value == null || value.isEmpty
-                                                ? 'Please enter the OTP'
-                                                : null,
                                   ),
                                   actions: [
                                     TextButton(
@@ -198,8 +208,8 @@ class ProfileOtp extends ConsumerWidget {
                                           );
                                           _navigateToSetupProfile(
                                             context,
-                                            _phoneController.text,
-                                          ); // Pass phone number
+                                            phoneNumber,
+                                          );
                                         } else {
                                           ScaffoldMessenger.of(
                                             context,
@@ -208,6 +218,8 @@ class ProfileOtp extends ConsumerWidget {
                                               content: Text('Invalid OTP'),
                                             ),
                                           );
+                                          otpController
+                                              .clear(); // Clear on invalid OTP
                                         }
                                       },
                                       child: const Text('Submit'),

@@ -5,6 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:minglev2_1/Screen/chat_list_page.dart';
+import 'package:minglev2_1/Screen/match_menu_page.dart';
+
+import '../Widget/bottom_navigation_bar.dart';
 
 // Riverpod StateNotifier for managing profile state
 class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
@@ -13,12 +17,8 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
           'name': '',
           'age': '',
           'gender': <String>[],
-          'interest': <String>[],
-          'education': <String>[],
-          'pet': <String>[],
-          'exercise': <String>[],
-          'alcoholic': <String>[],
-          'smoking': <String>[],
+          'favourite food': <String>[],
+          'allergies': <String>[],
         }) {
     _fetchProfile(); // Fetch profile data when the notifier is created
   }
@@ -49,12 +49,8 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
           'name': data['name'] ?? '',
           'age': age,
           'gender': List<String>.from(data['gender'] ?? <String>[]),
-          'interest': List<String>.from(data['interest'] ?? <String>[]),
-          'education': List<String>.from(data['education'] ?? <String>[]),
-          'pet': List<String>.from(data['pet'] ?? <String>[]),
-          'exercise': List<String>.from(data['exercise'] ?? <String>[]),
-          'alcoholic': List<String>.from(data['alcoholic'] ?? <String>[]),
-          'smoking': List<String>.from(data['smoking'] ?? <String>[]),
+          'favourite food': List<String>.from(data['favourite food'] ?? <String>[]),
+          'allergies': List<String>.from(data['allergies'] ?? <String>[]),
         };
 
         debugPrint('Profile data fetched successfully: $state');
@@ -75,27 +71,23 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
   }
 
   void addPreference(String category, String preference) {
-    if (category == 'gender' ||
-        category == 'education' ||
-        category == 'exercise' ||
-        category == 'alcoholic' ||
-        category == 'smoking') {
+    if (category == 'gender' ) {
       // Only one selection allowed for these categories
       state = {
         ...state,
         category: [preference],
       };
-    } else if (category == 'interest') {
-      // Allow up to 5 selections for interests
+    } else if (category == 'favourite food') {
+      // Allow up to 3 selections for favourite food
       if (state[category] is List<String> &&
-          (state[category] as List<String>).length < 5) {
+          (state[category] as List<String>).length < 3) {
         state = {
           ...state,
           category: [...state[category] as List<String>, preference],
         };
       }
-    } else if (category == 'pet') {
-      // Allow up to 5 selections for pets, but if "None" is selected, no other options are allowed
+    } else if (category == 'allergies') {
+      // Allow up to 3 selections for food allergies, but if "None" is selected, no other options are allowed
       if (preference == 'None') {
         state = {
           ...state,
@@ -129,12 +121,9 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
       prefs.setString('name', state['name']);
       prefs.setInt('age', state['age']);
       prefs.setStringList('gender', List<String>.from(state['gender'] ?? <String>[]));
-      prefs.setStringList('interest', List<String>.from(state['interest'] ?? <String>[]));
-      prefs.setStringList('education', List<String>.from(state['education'] ?? <String>[]));
-      prefs.setStringList('pet', List<String>.from(state['pet'] ?? <String>[]));
-      prefs.setStringList('exercise', List<String>.from(state['exercise'] ?? <String>[]));
-      prefs.setStringList('alcoholic', List<String>.from(state['alcoholic'] ?? <String>[]));
-      prefs.setStringList('smoking', List<String>.from(state['smoking'] ?? <String>[]));
+      prefs.setStringList('favourite food', List<String>.from(state['favourite food'] ?? <String>[]));
+      prefs.setStringList('allergies', List<String>.from(state['allergies'] ?? <String>[]));
+
 
       debugPrint('Profile saved successfully: $state');
     } catch (e) {
@@ -151,6 +140,7 @@ final profileProvider =
 
 class ProfileEditPage extends ConsumerStatefulWidget {
   const ProfileEditPage({super.key});
+  
 
   @override
   ConsumerState<ProfileEditPage> createState() => _ProfileEditPageState();
@@ -159,6 +149,7 @@ class ProfileEditPage extends ConsumerStatefulWidget {
 class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   XFile? _image;
   bool isEditMode = true;
+  int currentPageIndex = 2;
 
   @override
   void initState() {
@@ -188,6 +179,26 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
+      bottomNavigationBar: CustomBottomNavBar(
+        currentIndex: currentPageIndex,
+        onDestinationSelected: (int index) {
+          setState(() {
+            currentPageIndex = index;
+          });
+          // Navigate to other pages based on the index
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => MatchMenuPage()),
+            );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => ChatListPage()),
+            );
+          }
+        },
+      ),
       body: Column(
         children: [
           Expanded(
@@ -206,33 +217,13 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                         profileNotifier,
                       ),
                       _buildPreferenceSection(
-                        "Interest",
-                        profile['interest'] as List<String>,
+                        "Favourite food",
+                        profile['favourite food'] as List<String>,
                         profileNotifier,
                       ),
                       _buildPreferenceSection(
-                        "Education",
-                        profile['education'] as List<String>,
-                        profileNotifier,
-                      ),
-                      _buildPreferenceSection(
-                        "Pet",
-                        profile['pet'] as List<String>,
-                        profileNotifier,
-                      ),
-                      _buildPreferenceSection(
-                        "Exercise",
-                        profile['exercise'] as List<String>,
-                        profileNotifier,
-                      ),
-                      _buildPreferenceSection(
-                        "Alcoholic",
-                        profile['alcoholic'] as List<String>,
-                        profileNotifier,
-                      ),
-                      _buildPreferenceSection(
-                        "Smoking",
-                        profile['smoking'] as List<String>,
+                        "Allergies",
+                        profile['allergies'] as List<String>,
                         profileNotifier,
                       ),
                     ] else ...[
@@ -240,14 +231,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                     ],
                     const SizedBox(height: 20),
 
-                    // ปุ่ม Save / Edit
-                    if (isEditMode)
-                      ElevatedButton(
-                        onPressed: () {
+                    // Save/Edit Button
+                    ElevatedButton(
+                      onPressed: () {
+                        if (isEditMode) {
                           profileNotifier.saveProfile();
-                          setState(() {
-                            isEditMode = false;
-                          });
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text("Changes applied successfully!"),
@@ -255,46 +243,27 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                               backgroundColor: Colors.green,
                             ),
                           );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C9BCF),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 50,
-                            vertical: 15,
-                          ),
-                        ),
-                        child: const Text(
-                          "Save",
-                          style: TextStyle(
-                            color: Color(0xFF333333),
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      )
-                    else
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            isEditMode = true;
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C9BCF),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 50,
-                            vertical: 15,
-                          ),
-                        ),
-                        child: const Text(
-                          "Edit",
-                          style: TextStyle(
-                            color: Color(0xFF333333),
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        }
+                        setState(() {
+                          isEditMode = !isEditMode;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C9BCF),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 50,
+                          vertical: 15,
                         ),
                       ),
+                      child: Text(
+                        isEditMode ? "Save" : "Edit",
+                        style: const TextStyle(
+                          color: Color(0xFF333333),
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -456,12 +425,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildPreferenceDisplay("Gender", profile['gender']),
-          _buildPreferenceDisplay("Interest", profile['interest']),
-          _buildPreferenceDisplay("Education", profile['education']),
-          _buildPreferenceDisplay("Pet", profile['pet']),
-          _buildPreferenceDisplay("Exercise", profile['exercise']),
-          _buildPreferenceDisplay("Alcoholic", profile['alcoholic']),
-          _buildPreferenceDisplay("Smoking", profile['smoking']),
+          _buildPreferenceDisplay("Favourite food", profile['favourite food']),
+          _buildPreferenceDisplay("Allergies", profile['allergies']),
         ],
       ),
     );
@@ -507,12 +472,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   void _showAddPreferenceDialog(String label, ProfileNotifier notifier) {
     final Map<String, List<String>> options = {
       'Gender': ['Male', 'Female', 'Other'],
-      'Interest': ['Sports', 'Music', 'Reading', 'Travel', 'Game', 'Eating'],
-      'Education': ['High School', 'Bachelor', 'Master', 'PhD'],
-      'Pet': ['Dog', 'Cat', 'Bird', 'Rabbit', 'Fish', 'None'],
-      'Exercise': ['Frequently', 'Occasionally', 'Rarely', 'Never'],
-      'Alcoholic': ['Frequently', 'Occasionally', 'Rarely', 'Never'],
-      'Smoking': ['Frequently', 'Occasionally', 'Rarely', 'Never'],
+      'Favourite food' : ['Thai food', 'Japanese Food', 'Korean food', 'Italian food'],
+      'Allergies': ['Peanuts', 'Eggs', 'Fish', 'Shellfish', 'Tree nuts', 'None'],
     };
 
     String? selectedValue; // This variable needs to update dynamically
@@ -553,17 +514,17 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   final currentPreferences =
                       ref.read(profileProvider)[label.toLowerCase()]
                           as List<String>;
-                  if (label == 'Pet' && currentPreferences.contains('None')) {
+                  if (label == 'Allergies' && currentPreferences.contains('None')) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          "Cannot add more pets when 'None' is selected.",
+                          "Cannot add more allergies when 'None' is selected.",
                         ),
                         duration: Duration(seconds: 2),
                         backgroundColor: Colors.red,
                       ),
                     );
-                  } else if ((label == 'Interest' || label == 'Pet') &&
+                  } else if ((label == 'Favourite food' || label == 'Allergies') &&
                       currentPreferences.length >= 5) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -586,4 +547,5 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     );
   }
 }
+
 

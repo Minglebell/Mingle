@@ -14,6 +14,7 @@ class _MatchMenuPageState extends State<MatchMenuPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Text('Matchmaking'),
       ),
       bottomNavigationBar: CustomBottomNavBar(

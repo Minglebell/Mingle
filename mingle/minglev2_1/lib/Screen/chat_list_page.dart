@@ -17,6 +17,7 @@ class _ChatListPageState extends State<ChatListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Chat List'),
       ),
       bottomNavigationBar: CustomBottomNavBar(

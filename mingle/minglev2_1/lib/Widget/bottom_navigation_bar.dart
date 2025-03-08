@@ -1,4 +1,3 @@
-// widgets/custom_bottom_nav_bar.dart
 import 'package:flutter/material.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
@@ -15,7 +14,7 @@ class CustomBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return NavigationBar(
       onDestinationSelected: onDestinationSelected,
-      indicatorColor: const Color.fromARGB(255, 85, 193, 255), // Adjust the indicator color
+      indicatorColor: const Color.fromARGB(255, 85, 193, 255),
       selectedIndex: currentIndex,
       destinations: const <Widget>[
         NavigationDestination(

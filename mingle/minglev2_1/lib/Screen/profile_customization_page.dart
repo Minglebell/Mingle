@@ -13,13 +13,13 @@ import '../Widget/bottom_navigation_bar.dart';
 // Riverpod StateNotifier for managing profile state
 class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
   ProfileNotifier()
-      : super({
-          'name': '',
-          'age': '',
-          'gender': <String>[],
-          'favourite food': <String>[],
-          'allergies': <String>[],
-        }) {
+    : super({
+        'name': '',
+        'age': '',
+        'gender': <String>[],
+        'favourite food': <String>[],
+        'allergies': <String>[],
+      }) {
     _fetchProfile(); // Fetch profile data when the notifier is created
   }
 
@@ -42,20 +42,26 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
       if (profileDoc.exists) {
         final data = profileDoc.data()!;
         final birthday =
-            data['birthday'] != null ? DateFormat('M/d/yyyy').parse(data['birthday']) : null;
+            data['birthday'] != null
+                ? DateFormat('M/d/yyyy').parse(data['birthday'])
+                : null;
         final age = birthday != null ? DateTime.now().year - birthday.year : '';
 
         state = {
           'name': data['name'] ?? '',
           'age': age,
           'gender': List<String>.from(data['gender'] ?? <String>[]),
-          'favourite food': List<String>.from(data['favourite food'] ?? <String>[]),
+          'favourite food': List<String>.from(
+            data['favourite food'] ?? <String>[],
+          ),
           'allergies': List<String>.from(data['allergies'] ?? <String>[]),
         };
 
         debugPrint('Profile data fetched successfully: $state');
       } else {
-        debugPrint('Firestore document does not exist for phoneNumber: $phoneNumber');
+        debugPrint(
+          'Firestore document does not exist for phoneNumber: $phoneNumber',
+        );
       }
     } catch (e) {
       debugPrint('Error fetching profile: $e');
@@ -71,36 +77,35 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
   }
 
   void addPreference(String category, String preference) {
-    if (category == 'gender' ) {
-      // Only one selection allowed for these categories
-      state = {
-        ...state,
-        category: [preference],
-      };
-    } else if (category == 'favourite food') {
-      // Allow up to 3 selections for favourite food
-      if (state[category] is List<String> &&
-          (state[category] as List<String>).length < 3) {
+    switch (category) {
+      case 'gender':
         state = {
           ...state,
-          category: [...state[category] as List<String>, preference],
+          category: [preference],
         };
-      }
-    } else if (category == 'allergies') {
-      // Allow up to 3 selections for food allergies, but if "None" is selected, no other options are allowed
-      if (preference == 'None') {
-        state = {
-          ...state,
-          category: ['None'],
-        };
-      } else if (state[category] is List<String> &&
-          !(state[category] as List<String>).contains('None') &&
-          (state[category] as List<String>).length < 5) {
-        state = {
-          ...state,
-          category: [...state[category] as List<String>, preference],
-        };
-      }
+        break;
+      case 'favourite food':
+        if ((state[category] as List<String>).length < 3) {
+          state = {
+            ...state,
+            category: [...state[category] as List<String>, preference],
+          };
+        }
+        break;
+      case 'allergies':
+        if (preference == 'None') {
+          state = {
+            ...state,
+            category: ['None'],
+          };
+        } else if (!(state[category] as List<String>).contains('None') &&
+            (state[category] as List<String>).length < 5) {
+          state = {
+            ...state,
+            category: [...state[category] as List<String>, preference],
+          };
+        }
+        break;
     }
   }
 
@@ -108,9 +113,10 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
     if (state[category] is List<String>) {
       state = {
         ...state,
-        category: (state[category] as List<String>)
-            .where((item) => item != preference)
-            .toList(),
+        category:
+            (state[category] as List<String>)
+                .where((item) => item != preference)
+                .toList(),
       };
     }
   }
@@ -120,10 +126,18 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
       final prefs = await SharedPreferences.getInstance();
       prefs.setString('name', state['name']);
       prefs.setInt('age', state['age']);
-      prefs.setStringList('gender', List<String>.from(state['gender'] ?? <String>[]));
-      prefs.setStringList('favourite food', List<String>.from(state['favourite food'] ?? <String>[]));
-      prefs.setStringList('allergies', List<String>.from(state['allergies'] ?? <String>[]));
-
+      prefs.setStringList(
+        'gender',
+        List<String>.from(state['gender'] ?? <String>[]),
+      );
+      prefs.setStringList(
+        'favourite food',
+        List<String>.from(state['favourite food'] ?? <String>[]),
+      );
+      prefs.setStringList(
+        'allergies',
+        List<String>.from(state['allergies'] ?? <String>[]),
+      );
 
       debugPrint('Profile saved successfully: $state');
     } catch (e) {
@@ -140,7 +154,6 @@ final profileProvider =
 
 class ProfileEditPage extends ConsumerStatefulWidget {
   const ProfileEditPage({super.key});
-  
 
   @override
   ConsumerState<ProfileEditPage> createState() => _ProfileEditPageState();
@@ -149,6 +162,7 @@ class ProfileEditPage extends ConsumerStatefulWidget {
 class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   XFile? _image;
   bool isEditMode = true;
+  bool showBottomNavBar = true; // Controls visibility of the bottom nav bar
   int currentPageIndex = 2;
 
   @override
@@ -179,26 +193,36 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: currentPageIndex,
-        onDestinationSelected: (int index) {
-          setState(() {
-            currentPageIndex = index;
-          });
-          // Navigate to other pages based on the index
-          if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => MatchMenuPage()),
-            );
-          } else if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => ChatListPage()),
-            );
-          }
-        },
-      ),
+      bottomNavigationBar:
+          showBottomNavBar
+              ? CustomBottomNavBar(
+                currentIndex: currentPageIndex,
+                onDestinationSelected: (int index) {
+                  setState(() {
+                    currentPageIndex = index;
+                  });
+                  // Navigate to other pages based on the index
+                  if (index == 0) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => MatchMenuPage()),
+                    );
+                  } else if (index == 1) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => ChatListPage()),
+                    );
+                  } else if (index == 2) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfileEditPage(),
+                      ),
+                    );
+                  }
+                },
+              )
+              : null, // Hide the bottom nav bar
       body: Column(
         children: [
           Expanded(
@@ -246,6 +270,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                         }
                         setState(() {
                           isEditMode = !isEditMode;
+                          showBottomNavBar = !isEditMode;
                         });
                       },
                       style: ElevatedButton.styleFrom(
@@ -381,28 +406,30 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Wrap(
-                  spacing: 8.0,
-                  runSpacing: 8.0,
-                  children:
-                      preferences.map((preference) {
-                        return Chip(
-                          label: Text(
-                            preference,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              color: Color(0xFF333333),
-                            ),
-                          ),
-                          backgroundColor: const Color(0xFFA8D1F0),
-                          deleteIconColor: Color(0xFF333333),
-                          onDeleted:
-                              () => notifier.removePreference(
-                                label.toLowerCase(),
-                                preference,
+                Expanded(
+                  child: Wrap(
+                    spacing: 8.0,
+                    runSpacing: 8.0,
+                    children:
+                        preferences.map((preference) {
+                          return Chip(
+                            label: Text(
+                              preference,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                color: Color(0xFF333333),
                               ),
-                        );
-                      }).toList(),
+                            ),
+                            backgroundColor: const Color(0xFFA8D1F0),
+                            deleteIconColor: const Color(0xFF333333),
+                            onDeleted:
+                                () => notifier.removePreference(
+                                  label.toLowerCase(),
+                                  preference,
+                                ),
+                          );
+                        }).toList(),
+                  ),
                 ),
                 if (preferences.length < 3)
                   IconButton(
@@ -472,11 +499,23 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   void _showAddPreferenceDialog(String label, ProfileNotifier notifier) {
     final Map<String, List<String>> options = {
       'Gender': ['Male', 'Female', 'Other'],
-      'Favourite food' : ['Thai food', 'Japanese Food', 'Korean food', 'Italian food'],
-      'Allergies': ['Peanuts', 'Eggs', 'Fish', 'Shellfish', 'Tree nuts', 'None'],
+      'Favourite food': [
+        'Thai food',
+        'Japanese Food',
+        'Korean food',
+        'Italian food',
+      ],
+      'Allergies': [
+        'Peanuts',
+        'Eggs',
+        'Fish',
+        'Shellfish',
+        'Tree nuts',
+        'None',
+      ],
     };
 
-    String? selectedValue; // This variable needs to update dynamically
+    String? selectedValue;
 
     showDialog(
       context: context,
@@ -496,7 +535,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                     }).toList(),
                 onChanged: (value) {
                   setState(() {
-                    selectedValue = value; // Updates when user selects
+                    selectedValue = value;
                   });
                 },
                 decoration: const InputDecoration(hintText: "Choose an option"),
@@ -514,7 +553,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   final currentPreferences =
                       ref.read(profileProvider)[label.toLowerCase()]
                           as List<String>;
-                  if (label == 'Allergies' && currentPreferences.contains('None')) {
+                  if (label == 'Allergies' &&
+                      currentPreferences.contains('None')) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
@@ -524,7 +564,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                         backgroundColor: Colors.red,
                       ),
                     );
-                  } else if ((label == 'Favourite food' || label == 'Allergies') &&
+                  } else if ((label == 'Favourite food' ||
+                          label == 'Allergies') &&
                       currentPreferences.length >= 5) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -537,6 +578,14 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                     notifier.addPreference(label.toLowerCase(), selectedValue!);
                     Navigator.of(context).pop();
                   }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Please select an option."),
+                      duration: Duration(seconds: 2),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                 }
               },
               child: const Text("Add"),
@@ -547,5 +596,3 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     );
   }
 }
-
-

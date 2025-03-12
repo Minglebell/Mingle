@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
 
-import '../../Widget/bottom_navigation_bar.dart';
+import '../Widget/bottom_navigation_bar.dart';
 
 // Riverpod StateNotifier for managing profile state
 class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {

@@ -1,46 +1,43 @@
 import 'package:flutter/material.dart';
-import '../../Widget/bottom_navigation_bar.dart';
+import '../Widget/bottom_navigation_bar.dart';
+import 'package:minglev2_1/Screen/match_menu_page.dart';
+import 'package:minglev2_1/Screen/searching_page.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/profile_customization_page.dart';
 
-class FoundPage extends StatefulWidget {
+class NotFoundPage extends StatefulWidget {
   @override
-  _FoundPageState createState() => _FoundPageState();
+  _NotFoundPageState createState() => _NotFoundPageState();
 }
 
-class _FoundPageState extends State<FoundPage> {
-  int currentPageIndex = 0; 
+class _NotFoundPageState extends State<NotFoundPage> {
+  int currentPageIndex = 0; // Track the current index for the bottom navigation bar
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Partner Found!'),
+        title: Text('Not Found'),
         automaticallyImplyLeading: false, // Remove back button
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Icon(Icons.celebration, size: 50, color: Colors.green),
+            Icon(Icons.error_outline, size: 50, color: Colors.red),
             SizedBox(height: 20),
             Text(
-              'Jennifer',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 20),
-            Text(
-              'Partner Found!',
-              style: TextStyle(fontSize: 20),
+              'No matches found. Please try again or go back to the match menu.',
+              style: TextStyle(fontSize: 16),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                // Start Chatting: Navigate to the chat page
+                // Try Again: Navigate back to SearchingPage
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => ChatListPage()),
+                  MaterialPageRoute(builder: (context) => SearchingPage()),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -51,7 +48,31 @@ class _FoundPageState extends State<FoundPage> {
                 ),
               ),
               child: Text(
-                'Start Chatting',
+                'Try Again',
+                style: TextStyle(
+                  fontSize: 24,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                // Go Back to Match Menu
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => FindMatchPage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 50,
+                  vertical: 15,
+                ),
+              ),
+              child: Text(
+                'Go Back to Match Menu',
                 style: TextStyle(
                   fontSize: 24,
                   color: Colors.white,

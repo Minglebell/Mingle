@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../Widget/bottom_navigation_bar.dart';
+import '../Widget/bottom_navigation_bar.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/profile_customization_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';

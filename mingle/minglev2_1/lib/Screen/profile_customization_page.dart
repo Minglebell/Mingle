@@ -205,7 +205,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   if (index == 0) {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => MatchMenuPage()),
+                      MaterialPageRoute(builder: (context) => FindMatchPage()),
                     );
                   } else if (index == 1) {
                     Navigator.pushReplacement(

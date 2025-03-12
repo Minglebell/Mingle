@@ -30,7 +30,7 @@ class _ChatListPageState extends State<ChatListPage> {
           if (index == 0) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => MatchMenuPage()),
+              MaterialPageRoute(builder: (context) => FindMatchPage()),
             );
           } else if (index == 2) {
             Navigator.pushReplacement(

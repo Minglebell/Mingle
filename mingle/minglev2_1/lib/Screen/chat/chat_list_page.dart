@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
 import 'package:minglev2_1/Screen/profile_customization_page.dart';
-import '../Widget/bottom_navigation_bar.dart';
+import '../../Widget/bottom_navigation_bar.dart';
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({Key? key}) : super(key: key);

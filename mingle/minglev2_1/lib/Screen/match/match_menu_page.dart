@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../Widget/bottom_navigation_bar.dart';
+import '../../Widget/bottom_navigation_bar.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/profile_customization_page.dart';
+import 'package:minglev2_1/Screen/searching_page.dart';
 
 class FindMatchPage extends StatefulWidget {
   const FindMatchPage({Key? key}) : super(key: key);
@@ -211,7 +212,9 @@ class _FindMatchPageState extends State<FindMatchPage> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: ElevatedButton(
         onPressed: () {
-          // Implement find matches logic here
+           Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => SearchingPage()),
+            );
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blue,

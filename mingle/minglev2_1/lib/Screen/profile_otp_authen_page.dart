@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:minglev2_1/Screen/profile_start_setup_page.dart';
@@ -134,11 +135,21 @@ class ProfileOtp extends ConsumerWidget {
                         fillColor: const Color(0xFFF0F4F8),
                       ),
                       controller: _phoneController,
-                      validator:
-                          (value) =>
-                              value == null || value.isEmpty
-                                  ? 'Please enter your phone number'
-                                  : null,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter
+                            .digitsOnly, // Only allow digits
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your phone number';
+                        } else if (value.length != 10) {
+                          return 'Phone number must be 10 digits long';
+                        } else if (!value.startsWith('0')) {
+                          return 'Phone number must start with 0';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     SizedBox(

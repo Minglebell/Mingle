@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../Widget/bottom_navigation_bar.dart';
 
 class ChatPage extends StatefulWidget {
   final String chatPersonName;
@@ -48,7 +47,7 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.chatPersonName),
-        automaticallyImplyLeading: true, // Enable the back button
+        automaticallyImplyLeading: true,
       ),
       
       body: Column(

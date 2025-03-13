@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../Widget/bottom_navigation_bar.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
-import 'package:minglev2_1/Screen/profile_customization_page.dart';
+import 'package:minglev2_1/Screen/profile_display_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
-import 'package:minglev2_1/Screen/found_page.dart'; // Import the new FoundPage
+import 'package:minglev2_1/Screen/found_page.dart'; 
 
 class SearchingPage extends StatefulWidget {
   @override
@@ -101,7 +101,7 @@ class _SearchingPageState extends State<SearchingPage>
           } else if (index == 2) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => ProfileEditPage()),
+              MaterialPageRoute(builder: (context) => ProfileDisplayPage()),
             );
           }
         },

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../Widget/bottom_navigation_bar.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
-import 'package:minglev2_1/Screen/profile_customization_page.dart';
+import 'package:minglev2_1/Screen/profile_display_page.dart';
 
 class FoundPage extends StatefulWidget {
   @override
@@ -81,7 +81,7 @@ class _FoundPageState extends State<FoundPage> {
             case 2:
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => ProfileEditPage()),
+                MaterialPageRoute(builder: (context) => ProfileDisplayPage()),
               );
               break;
           }

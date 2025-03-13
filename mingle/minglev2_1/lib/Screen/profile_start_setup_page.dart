@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:minglev2_1/Screen/profile_customization_page.dart';
+import 'package:minglev2_1/Screen/profile_edit_page.dart';
 
 final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>(
   (ref) => ProfileNotifier(),

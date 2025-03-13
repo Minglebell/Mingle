@@ -1,156 +1,13 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
+import 'package:minglev2_1/Services/profile_provider.dart';
+import 'profile_display_page.dart';
 
 import '../Widget/bottom_navigation_bar.dart';
-
-// Riverpod StateNotifier for managing profile state
-class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
-  ProfileNotifier()
-    : super({
-        'name': '',
-        'age': '',
-        'gender': <String>[],
-        'favourite food': <String>[],
-        'allergies': <String>[],
-      }) {
-    _fetchProfile(); // Fetch profile data when the notifier is created
-  }
-
-  Future<void> _fetchProfile() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final phoneNumber = prefs.getString('phoneNumber');
-
-      if (phoneNumber == null) {
-        debugPrint('Phone number not found in SharedPreferences');
-        return;
-      }
-
-      final profileRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(phoneNumber);
-
-      final profileDoc = await profileRef.get();
-
-      if (profileDoc.exists) {
-        final data = profileDoc.data()!;
-        final birthday =
-            data['birthday'] != null
-                ? DateFormat('M/d/yyyy').parse(data['birthday'])
-                : null;
-        final age = birthday != null ? DateTime.now().year - birthday.year : '';
-
-        state = {
-          'name': data['name'] ?? '',
-          'age': age,
-          'gender': List<String>.from(data['gender'] ?? <String>[]),
-          'favourite food': List<String>.from(
-            data['favourite food'] ?? <String>[],
-          ),
-          'allergies': List<String>.from(data['allergies'] ?? <String>[]),
-        };
-
-        debugPrint('Profile data fetched successfully: $state');
-      } else {
-        debugPrint(
-          'Firestore document does not exist for phoneNumber: $phoneNumber',
-        );
-      }
-    } catch (e) {
-      debugPrint('Error fetching profile: $e');
-    }
-  }
-
-  void updateName(String name) {
-    state = {...state, 'name': name};
-  }
-
-  void updateAge(int age) {
-    state = {...state, 'age': age};
-  }
-
-  void addPreference(String category, String preference) {
-    switch (category) {
-      case 'gender':
-        state = {
-          ...state,
-          category: [preference],
-        };
-        break;
-      case 'favourite food':
-        if ((state[category] as List<String>).length < 3) {
-          state = {
-            ...state,
-            category: [...state[category] as List<String>, preference],
-          };
-        }
-        break;
-      case 'allergies':
-        if (preference == 'None') {
-          state = {
-            ...state,
-            category: ['None'],
-          };
-        } else if (!(state[category] as List<String>).contains('None') &&
-            (state[category] as List<String>).length < 5) {
-          state = {
-            ...state,
-            category: [...state[category] as List<String>, preference],
-          };
-        }
-        break;
-    }
-  }
-
-  void removePreference(String category, String preference) {
-    if (state[category] is List<String>) {
-      state = {
-        ...state,
-        category:
-            (state[category] as List<String>)
-                .where((item) => item != preference)
-                .toList(),
-      };
-    }
-  }
-
-  Future<void> saveProfile() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      prefs.setString('name', state['name']);
-      prefs.setInt('age', state['age']);
-      prefs.setStringList(
-        'gender',
-        List<String>.from(state['gender'] ?? <String>[]),
-      );
-      prefs.setStringList(
-        'favourite food',
-        List<String>.from(state['favourite food'] ?? <String>[]),
-      );
-      prefs.setStringList(
-        'allergies',
-        List<String>.from(state['allergies'] ?? <String>[]),
-      );
-
-      debugPrint('Profile saved successfully: $state');
-    } catch (e) {
-      debugPrint('Error saving profile: $e');
-    }
-  }
-}
-
-// Riverpod Provider
-final profileProvider =
-    StateNotifierProvider<ProfileNotifier, Map<String, dynamic>>((ref) {
-      return ProfileNotifier();
-    });
 
 class ProfileEditPage extends ConsumerStatefulWidget {
   const ProfileEditPage({super.key});
@@ -161,7 +18,6 @@ class ProfileEditPage extends ConsumerStatefulWidget {
 
 class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   XFile? _image;
-  bool isEditMode = true;
   bool showBottomNavBar = true; // Controls visibility of the bottom nav bar
   int currentPageIndex = 2;
 
@@ -170,7 +26,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     super.initState();
     // Fetch profile data when the page is loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(profileProvider.notifier)._fetchProfile();
+      ref.read(profileProvider.notifier).fetchProfile();
     });
   }
 
@@ -216,7 +72,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ProfileEditPage(),
+                        builder: (context) => ProfileDisplayPage(),
                       ),
                     );
                   }
@@ -234,44 +90,40 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   children: [
                     _buildProfileHeader(profile),
                     const SizedBox(height: 20),
-                    if (isEditMode) ...[
-                      _buildPreferenceSection(
-                        "Gender",
-                        profile['gender'] as List<String>,
-                        profileNotifier,
-                      ),
-                      _buildPreferenceSection(
-                        "Favourite food",
-                        profile['favourite food'] as List<String>,
-                        profileNotifier,
-                      ),
-                      _buildPreferenceSection(
-                        "Allergies",
-                        profile['allergies'] as List<String>,
-                        profileNotifier,
-                      ),
-                    ] else ...[
-                      _buildProfileDisplay(profile),
-                    ],
+                    _buildPreferenceSection(
+                      "Gender",
+                      profile['gender'] as List<String>,
+                      profileNotifier,
+                    ),
+                    _buildPreferenceSection(
+                      "Favourite food",
+                      profile['favourite food'] as List<String>,
+                      profileNotifier,
+                    ),
+                    _buildPreferenceSection(
+                      "Allergies",
+                      profile['allergies'] as List<String>,
+                      profileNotifier,
+                    ),
                     const SizedBox(height: 20),
 
-                    // Save/Edit Button
+                    // Save Button
                     ElevatedButton(
                       onPressed: () {
-                        if (isEditMode) {
-                          profileNotifier.saveProfile();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Changes applied successfully!"),
-                              duration: Duration(seconds: 2),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        }
-                        setState(() {
-                          isEditMode = !isEditMode;
-                          showBottomNavBar = !isEditMode;
-                        });
+                        profileNotifier.saveProfile();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Changes applied successfully!"),
+                            duration: Duration(seconds: 2),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfileDisplayPage(),
+                          ),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6C9BCF),
@@ -280,9 +132,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                           vertical: 15,
                         ),
                       ),
-                      child: Text(
-                        isEditMode ? "Save" : "Edit",
-                        style: const TextStyle(
+                      child: const Text(
+                        "Save",
+                        style: TextStyle(
                           color: Color(0xFF333333),
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -299,7 +151,6 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     );
   }
 
-  // รูป + ชื่อ + อายุ
   Widget _buildProfileHeader(Map<String, dynamic> profile) {
     return Container(
       width: double.infinity,
@@ -315,19 +166,18 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 backgroundImage:
                     _image != null ? FileImage(File(_image!.path)) : null,
               ),
-              if (isEditMode)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.add_a_photo,
-                      color: Colors.black,
-                      size: 30,
-                    ),
-                    onPressed: _pickImage,
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.add_a_photo,
+                    color: Colors.black,
+                    size: 30,
                   ),
+                  onPressed: _pickImage,
                 ),
+              ),
             ],
           ),
           Expanded(
@@ -381,7 +231,6 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     );
   }
 
-  // อันนี้คือ กล่องใส่ Preferences หลายแหล่
   Widget _buildPreferenceSection(
     String label,
     List<String> preferences,
@@ -438,58 +287,6 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // กล่อง Display Preferences หน้า Profile
-  Widget _buildProfileDisplay(Map<String, dynamic> profile) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildPreferenceDisplay("Gender", profile['gender']),
-          _buildPreferenceDisplay("Favourite food", profile['favourite food']),
-          _buildPreferenceDisplay("Allergies", profile['allergies']),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPreferenceDisplay(String label, List<String> preferences) {
-    if (preferences.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 15.0,
-            runSpacing: 15.0,
-            crossAxisAlignment: WrapCrossAlignment.start,
-            children:
-                preferences.map((preference) {
-                  return Chip(
-                    label: Text(
-                      preference,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        color: Color(0xFF333333),
-                      ),
-                    ),
-                    backgroundColor: const Color(0xFF6C9BCF),
-                  );
-                }).toList(),
           ),
         ],
       ),

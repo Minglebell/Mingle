@@ -3,7 +3,7 @@ import '../Widget/bottom_navigation_bar.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
 import 'package:minglev2_1/Screen/searching_page.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
-import 'package:minglev2_1/Screen/profile_customization_page.dart';
+import 'package:minglev2_1/Screen/profile_display_page.dart';
 
 class NotFoundPage extends StatefulWidget {
   @override
@@ -102,7 +102,7 @@ class _NotFoundPageState extends State<NotFoundPage> {
             case 2:
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => ProfileEditPage()),
+                MaterialPageRoute(builder: (context) => ProfileDisplayPage()),
               );
               break;
           }

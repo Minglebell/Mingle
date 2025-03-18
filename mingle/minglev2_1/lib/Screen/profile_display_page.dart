@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
 import 'package:minglev2_1/Services/profile_provider.dart';
 import 'package:minglev2_1/Screen/profile_edit_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../Widget/bottom_navigation_bar.dart';
 
@@ -17,15 +20,24 @@ class ProfileDisplayPage extends ConsumerStatefulWidget {
 class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> {
   bool showBottomNavBar = true; // Controls visibility of the bottom nav bar
   int currentPageIndex = 2;
+  String? _imagePath;
 
   @override
   void initState() {
     super.initState();
+    _loadImagePath();
     // Fetch profile data when the page is loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(profileProvider.notifier).fetchProfile();
     });
   }
+
+  Future<void> _loadImagePath() async {
+  final prefs = await SharedPreferences.getInstance();
+  setState(() {
+    _imagePath = prefs.getString('profile_image_path');
+  });
+}
 
   @override
   Widget build(BuildContext context) {
@@ -114,67 +126,65 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> {
   }
 
   Widget _buildProfileHeader(Map<String, dynamic> profile) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 80,
-            backgroundColor: const Color(0xFF6C9BCF),
-            // You can add a background image here if needed
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 16.0),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(width: 1, color: Colors.grey),
-                  borderRadius: BorderRadius.circular(10),
-                  color: const Color(0xFFA8D1F0),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      "Name",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        CircleAvatar(
+          radius: 80,
+          backgroundColor: const Color(0xFF6C9BCF),
+          backgroundImage: _imagePath != null ? FileImage(File(_imagePath!)) : null,
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 16.0),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(width: 1, color: Colors.grey),
+                borderRadius: BorderRadius.circular(10),
+                color: const Color(0xFFA8D1F0),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Name",
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
                     ),
-                    Center(
-                      child: Text(
-                        profile['name'],
-                        style: const TextStyle(fontSize: 24),
-                      ),
+                  ),
+                  Text(
+                    profile['name'],
+                    style: const TextStyle(fontSize: 24),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "Age",
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      "Age",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        profile['age'].toString(),
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  Text(
+                    profile['age'].toString(),
+                    style: const TextStyle(fontSize: 24),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildProfileDisplay(Map<String, dynamic> profile) {
     return Align(

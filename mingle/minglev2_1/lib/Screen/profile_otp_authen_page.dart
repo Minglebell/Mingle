@@ -195,45 +195,140 @@ class ProfileOtp extends ConsumerWidget {
                               builder: (context) {
                                 final otpController = TextEditingController();
                                 return AlertDialog(
-                                  title: const Text('Enter OTP'),
-                                  content: TextFormField(
-                                    decoration: const InputDecoration(
-                                      labelText: 'Enter received OTP',
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16.0),
+                                  ),
+                                  title: const Text(
+                                    'Enter OTP',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontFamily: 'Itim',
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF333333),
                                     ),
-                                    controller: otpController,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        'Please enter the OTP sent to your phone number',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Color(0xCC333333),
+                                          fontFamily: 'Itim',
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      TextFormField(
+                                        controller: otpController,
+                                        keyboardType: TextInputType.number,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontFamily: 'Itim',
+                                          color: Color(0xFF333333),
+                                        ),
+                                        decoration: InputDecoration(
+                                          filled: true,
+                                          fillColor: const Color(0xFFF0F4F8),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12.0,
+                                            ),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                vertical: 16,
+                                                horizontal: 20,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        if (otpNotifier.verifyOtp(
-                                          otpController.text,
-                                        )) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'OTP verified successfully',
-                                              ),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(
+                                              context,
+                                            ); // Close the dialog
+                                          },
+                                          child: const Text(
+                                            'Cancel',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontFamily: 'Itim',
+                                              color: Color(0xFF6C9BCF),
                                             ),
-                                          );
-                                          _navigateToSetupProfile(
-                                            context,
-                                            phoneNumber,
-                                          );
-                                        } else {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Invalid OTP'),
+                                          ),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            if (otpNotifier.verifyOtp(
+                                              otpController.text,
+                                            )) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'OTP verified successfully',
+                                                    style: TextStyle(
+                                                      fontFamily: 'Itim',
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                              _navigateToSetupProfile(
+                                                context,
+                                                phoneNumber,
+                                              );
+                                            } else {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Invalid OTP',
+                                                    style: TextStyle(
+                                                      fontFamily: 'Itim',
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                              otpController
+                                                  .clear(); // Clear on invalid OTP
+                                            }
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF6C9BCF,
                                             ),
-                                          );
-                                          otpController
-                                              .clear(); // Clear on invalid OTP
-                                        }
-                                      },
-                                      child: const Text('Submit'),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 12,
+                                              horizontal: 24,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12.0),
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'Submit',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontFamily: 'Itim',
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 );
@@ -251,10 +346,9 @@ class ProfileOtp extends ConsumerWidget {
                         child: Text(
                           otpState.isOtpVerified ? 'Verified' : 'Send OTP',
                           style: const TextStyle(
-                            color: Color(0xFF333333),
+                            color: Colors.white,
                             fontSize: 24,
                             fontFamily: 'Itim',
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),

@@ -53,7 +53,7 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
   }
 
   void _navigateToProfileCustom(BuildContext context) async {
-    await _saveUserProfile(); 
+    await _saveUserProfile();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const ProfileEditPage()),
@@ -69,7 +69,7 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text(
-          'Setting up profile',
+          'Setup your profile',
           style: TextStyle(
             color: Color(0xFF333333),
             fontSize: 32,
@@ -85,28 +85,41 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 40),
-            const Text(
-              'Please enter your name and birthday to continue',
-              style: TextStyle(
-                color: Color(0xCC333333),
-                fontSize: 18,
-                fontFamily: 'Itim',
+            const SizedBox(height: 20),
+            Image.asset(
+              'assets/images/Activities.png',
+              width: 200,
+              height: 200,
+            ),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+              ), // Add horizontal padding
+              child: const Text(
+                'Let’s get to know you better! Please share your name and birthday.',
+                textAlign: TextAlign.center,
+                softWrap: true, 
+                style: TextStyle(
+                  color: Color(0xCC333333),
+                  fontSize: 18,
+                  fontFamily: 'Itim',
+                ),
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 20),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    // Name Field
+
                     TextFormField(
                       decoration: const InputDecoration(
                         labelText: 'Name',
                         labelStyle: TextStyle(
                           color: Color(0xFF333333),
-                          fontSize: 18,
+                          fontSize: 22,
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Color(0xFF6C9BCF)),
@@ -115,6 +128,7 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
                           borderSide: BorderSide(color: Color(0xFF6C9BCF)),
                         ),
                       ),
+                      style: const TextStyle(fontSize: 22),
                       controller: _nameController,
                       validator:
                           (value) =>
@@ -130,7 +144,7 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
                         labelText: 'Birthday',
                         labelStyle: TextStyle(
                           color: const Color(0xFF333333),
-                          fontSize: 18,
+                          fontSize: 22,
                         ),
                         enabledBorder: const OutlineInputBorder(
                           borderSide: BorderSide(color: Color(0xFF6C9BCF)),
@@ -160,6 +174,7 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
                           },
                         ),
                       ),
+                      style: const TextStyle(fontSize: 22),
                       controller: _birthdayController,
                       readOnly: true,
                       validator:
@@ -192,10 +207,9 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
                 child: const Text(
                   'Save',
                   style: TextStyle(
-                    color: Color(0xFF333333),
+                    color: Colors.white,
                     fontSize: 24,
                     fontFamily: 'Itim',
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),

@@ -6,6 +6,7 @@ import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
 import 'package:minglev2_1/Services/profile_provider.dart';
 import 'profile_display_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../Widget/bottom_navigation_bar.dart';
 
@@ -39,6 +40,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       setState(() {
         _image = pickedImage;
       });
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('profile_image_path', pickedImage.path);
     }
   }
 

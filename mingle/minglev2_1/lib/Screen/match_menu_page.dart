@@ -14,25 +14,39 @@ class FindMatchPage extends StatefulWidget {
 class _FindMatchPageState extends State<FindMatchPage> {
   int currentPageIndex = 0;
   String? selectedGender;
-  List<String> selectedFoods = [];
-  TimeOfDay? selectedTime;
-  double distance = 5.0;
+  List<String> selectedActivities = [];
+  DateTime? selectedDateTime;
+  double distance = 1.0;
 
-  final List<String> foodOptions = [
-    'Sushi', 'Pizza', 'Burger', 'Noodle',
-    'Curry', 'Taco', 'Sandwich', 'Salad',
-    'Soup', 'Steak', 'Fried Chicken', 'Ice Cream'
+  final List<String> activityOptions = [
+    'Hiking', 'Reading', 'Cooking', 'Traveling',
+    'Gaming', 'Yoga', 'Dancing', 'Swimming',
+    'Cycling', 'Running', 'Painting', 'Photography'
   ];
 
-  Future<void> _selectTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
+  Future<void> _selectDateTime(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
     );
-    if (picked != null && picked != selectedTime) {
-      setState(() {
-        selectedTime = picked;
-      });
+    if (picked != null) {
+      final TimeOfDay? time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+      if (time != null) {
+        setState(() {
+          selectedDateTime = DateTime(
+            picked.year,
+            picked.month,
+            picked.day,
+            time.hour,
+            time.minute,
+          );
+        });
+      }
     }
   }
 
@@ -43,13 +57,14 @@ class _FindMatchPageState extends State<FindMatchPage> {
         automaticallyImplyLeading: false,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Find Your Match',
+              'Find Your Activity Partner',
               style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
             ),
             Text(
-              'Customize your preferences to find the specific partner.',
+              'Customize your preferences to find the perfect activity buddy.',
               style: TextStyle(fontSize: 16, color: Colors.black),
             ),
           ],
@@ -77,7 +92,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, // Align headers to the start
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Gender Section
             Text(
@@ -85,7 +100,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
             ),
             SizedBox(height: 10),
-            Center( // Center the dropdown box
+            Center(
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
@@ -112,37 +127,37 @@ class _FindMatchPageState extends State<FindMatchPage> {
                       ),
                     );
                   }).toList(),
-                  underline: Container(), // Remove the default underline
+                  underline: Container(),
                 ),
               ),
             ),
             SizedBox(height: 20),
 
-            // Food Section
+            // Activity Section
             Text(
-              'Food',
+              'Activities',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
             ),
             SizedBox(height: 10),
-            Center( // Center the food chips
+            Center(
               child: Wrap(
                 spacing: 8.0,
                 runSpacing: 8.0,
                 alignment: WrapAlignment.center,
-                children: foodOptions.map((String food) {
+                children: activityOptions.map((String activity) {
                   return ChoiceChip(
                     label: Text(
-                      food,
+                      activity,
                       style: TextStyle(
-                        color: selectedFoods.contains(food) ? Colors.white : Colors.black),
+                        color: selectedActivities.contains(activity) ? Colors.white : Colors.black),
                       ),
-                    selected: selectedFoods.contains(food),
+                    selected: selectedActivities.contains(activity),
                     onSelected: (bool selected) {
                       setState(() {
-                        if (selected && selectedFoods.length < 3) {
-                          selectedFoods.add(food);
+                        if (selected && selectedActivities.length < 3) {
+                          selectedActivities.add(activity);
                         } else {
-                          selectedFoods.remove(food);
+                          selectedActivities.remove(activity);
                         }
                       });
                     },
@@ -153,15 +168,15 @@ class _FindMatchPageState extends State<FindMatchPage> {
             ),
             SizedBox(height: 20),
 
-            // Time Section
+            // DateTime Section
             Text(
-              'Time',
+              'Date and Time',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
             ),
             SizedBox(height: 10),
-            Center( // Center the time picker box
+            Center(
               child: InkWell(
-                onTap: () => _selectTime(context),
+                onTap: () => _selectDateTime(context),
                 child: Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -169,7 +184,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    selectedTime == null ? 'Click to select a time schedule' : 'Selected Time: ${selectedTime!.format(context)}',
+                    selectedDateTime == null ? 'Click to select a date and time' : 'Selected Date and Time: ${selectedDateTime!.day}/${selectedDateTime!.month}/${selectedDateTime!.year} at ${selectedDateTime!.hour}:${selectedDateTime!.minute}',
                     style: TextStyle(fontSize: 14, color: Colors.black),
                   ),
                 ),
@@ -183,7 +198,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
             ),
             SizedBox(height: 10),
-            Center( // Center the slider
+            Center(
               child: Column(
                 children: [
                   Text(
@@ -228,3 +243,4 @@ class _FindMatchPageState extends State<FindMatchPage> {
     );
   }
 }
+

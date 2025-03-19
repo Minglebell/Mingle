@@ -7,7 +7,6 @@ import 'package:minglev2_1/Screen/match_menu_page.dart';
 import 'package:minglev2_1/Services/profile_provider.dart';
 import 'profile_display_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../Widget/bottom_navigation_bar.dart';
 
 class ProfileEditPage extends ConsumerStatefulWidget {
@@ -53,104 +52,123 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
-      bottomNavigationBar:
-          showBottomNavBar
-              ? CustomBottomNavBar(
-                currentIndex: currentPageIndex,
-                onDestinationSelected: (int index) {
-                  setState(() {
-                    currentPageIndex = index;
-                  });
-                  // Navigate to other pages based on the index
-                  if (index == 0) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => FindMatchPage()),
-                    );
-                  } else if (index == 1) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => ChatListPage()),
-                    );
-                  } else if (index == 2) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProfileDisplayPage(),
-                      ),
-                    );
-                  }
-                },
-              )
-              : null, // Hide the bottom nav bar
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _buildProfileHeader(profile),
-                    const SizedBox(height: 20),
-                    _buildPreferenceSection(
-                      "Gender",
-                      profile['gender'] as List<String>,
-                      profileNotifier,
+      bottomNavigationBar: showBottomNavBar
+          ? CustomBottomNavBar(
+              currentIndex: currentPageIndex,
+              onDestinationSelected: (int index) {
+                setState(() {
+                  currentPageIndex = index;
+                });
+                // Navigate to other pages based on the index
+                if (index == 0) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => FindMatchPage()),
+                  );
+                } else if (index == 1) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => ChatListPage()),
+                  );
+                } else if (index == 2) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileDisplayPage(),
                     ),
-                    _buildPreferenceSection(
-                      "Favourite food",
-                      profile['favourite food'] as List<String>,
-                      profileNotifier,
-                    ),
-                    _buildPreferenceSection(
-                      "Allergies",
-                      profile['allergies'] as List<String>,
-                      profileNotifier,
-                    ),
-                    const SizedBox(height: 20),
+                  );
+                }
+              },
+            )
+          : null, // Hide the bottom nav bar
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Profile Header
+              _buildProfileHeader(profile),
+              const SizedBox(height: 20),
 
-                    // Save Button
-                    ElevatedButton(
-                      onPressed: () {
-                        profileNotifier.saveProfile();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Changes applied successfully!"),
-                            duration: Duration(seconds: 2),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProfileDisplayPage(),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C9BCF),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 50,
-                          vertical: 15,
-                        ),
-                      ),
-                      child: const Text(
-                        "Save",
-                        style: TextStyle(
-                          color: Color(0xFF333333),
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+              // Preference Sections
+              _buildPreferenceSection(
+                "Gender",
+                profile['gender'] as List<String>,
+                profileNotifier,
+              ),
+              const SizedBox(height: 16),
+              _buildPreferenceSection(
+                "Interests",
+                profile['interests'] as List<String>,
+                profileNotifier,
+              ),
+              const SizedBox(height: 16),
+              _buildPreferenceSection(
+                "Preferences",
+                profile['preferences'] as List<String>,
+                profileNotifier,
+              ),
+              const SizedBox(height: 16),
+              _buildPreferenceSection(
+                "Favourite Activities",
+                profile['favourite activities'] as List<String>,
+                profileNotifier,
+              ),
+              const SizedBox(height: 16),
+              _buildPreferenceSection(
+                "Alcoholic",
+                profile['alcoholic'] as List<String>,
+                profileNotifier,
+              ),
+              const SizedBox(height: 16),
+              _buildPreferenceSection(
+                "Smoking",
+                profile['smoking'] as List<String>,
+                profileNotifier,
+              ),
+              const SizedBox(height: 20),
+
+              // Save Button
+              ElevatedButton(
+                onPressed: () {
+                  profileNotifier.saveProfile();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Changes applied successfully!"),
+                      duration: Duration(seconds: 2),
+                      backgroundColor: Colors.green,
                     ),
-                  ],
+                  );
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileDisplayPage(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6C9BCF),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 50,
+                    vertical: 15,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  "Save",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -159,16 +177,26 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFF6C9BCF),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
         children: [
           Stack(
             children: [
               CircleAvatar(
-                radius: 80,
-                backgroundColor: const Color(0xFF6C9BCF),
+                radius: 60,
+                backgroundColor: Colors.white,
                 backgroundImage:
                     _image != null ? FileImage(File(_image!.path)) : null,
+                child: _image == null
+                    ? const Icon(
+                        Icons.person,
+                        size: 60,
+                        color: Colors.grey,
+                      )
+                    : null,
               ),
               Positioned(
                 bottom: 0,
@@ -184,50 +212,21 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               ),
             ],
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 16.0),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(width: 1, color: Colors.grey),
-                  borderRadius: BorderRadius.circular(10),
-                  color: const Color(0xFFA8D1F0),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      "Name",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        profile['name'],
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      "Age",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        profile['age'].toString(),
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          const SizedBox(height: 16),
+          Text(
+            profile['name'],
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Age: ${profile['age']}",
+            style: const TextStyle(
+              fontSize: 20,
+              color: Colors.white,
             ),
           ),
         ],
@@ -240,80 +239,83 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     List<String> preferences,
     ProfileNotifier notifier,
   ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF6C9BCF),
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(10),
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF333333),
+              ),
             ),
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Wrap(
-                    spacing: 8.0,
-                    runSpacing: 8.0,
-                    children:
-                        preferences.map((preference) {
-                          return Chip(
-                            label: Text(
-                              preference,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                color: Color(0xFF333333),
-                              ),
-                            ),
-                            backgroundColor: const Color(0xFFA8D1F0),
-                            deleteIconColor: const Color(0xFF333333),
-                            onDeleted:
-                                () => notifier.removePreference(
-                                  label.toLowerCase(),
-                                  preference,
-                                ),
-                          );
-                        }).toList(),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              alignment: WrapAlignment.center,
+              children: preferences.map((preference) {
+                return Chip(
+                  label: Text(
+                    preference,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFF333333),
+                    ),
                   ),
+                  backgroundColor: const Color(0xFFA8D1F0),
+                  deleteIconColor: const Color(0xFF333333),
+                  onDeleted: () => notifier.removePreference(
+                    label.toLowerCase(),
+                    preference,
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () => _showAddPreferenceDialog(label, notifier),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C9BCF),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
                 ),
-                if (preferences.length < 3)
-                  IconButton(
-                    icon: const Icon(Icons.add, color: Color(0xFF333333)),
-                    onPressed: () => _showAddPreferenceDialog(label, notifier),
-                  ),
-              ],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                "Add",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   void _showAddPreferenceDialog(String label, ProfileNotifier notifier) {
     final Map<String, List<String>> options = {
-      'Gender': ['Male', 'Female', 'Other'],
-      'Favourite food': [
-        'Thai food',
-        'Japanese Food',
-        'Korean food',
-        'Italian food',
-      ],
-      'Allergies': [
-        'Peanuts',
-        'Eggs',
-        'Fish',
-        'Shellfish',
-        'Tree nuts',
-        'None',
-      ],
+      'Gender': ['Male', 'Female', 'Non-Binary'],
+      'Interests': ['Hiking', 'Reading', 'Cooking', 'Traveling', 'Gaming'],
+      'Preferences': ['Outdoor', 'Indoor', 'Adventurous', 'Relaxing'],
+      'Favourite Activities': ['Swimming', 'Cycling', 'Yoga', 'Dancing'],
+      'Alcoholic': ['Yes', 'No', 'Occasionally'],
+      'Smoking': ['Yes', 'No', 'Occasionally'],
     };
 
     String? selectedValue;
@@ -322,63 +324,59 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Select $label"),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            "Select $label",
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: StatefulBuilder(
             builder: (context, setState) {
               return DropdownButtonFormField<String>(
                 value: selectedValue,
-                items:
-                    options[label]!.map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
+                items: options[label]!.map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(
+                      value,
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                  );
+                }).toList(),
                 onChanged: (value) {
                   setState(() {
                     selectedValue = value;
                   });
                 },
-                decoration: const InputDecoration(hintText: "Choose an option"),
+                decoration: InputDecoration(
+                  hintText: "Choose an option",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               );
             },
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel"),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.red,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
                 if (selectedValue != null) {
-                  final currentPreferences =
-                      ref.read(profileProvider)[label.toLowerCase()]
-                          as List<String>;
-                  if (label == 'Allergies' &&
-                      currentPreferences.contains('None')) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Cannot add more allergies when 'None' is selected.",
-                        ),
-                        duration: Duration(seconds: 2),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  } else if ((label == 'Favourite food' ||
-                          label == 'Allergies') &&
-                      currentPreferences.length >= 5) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Maximum number of selections reached."),
-                        duration: Duration(seconds: 2),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  } else {
-                    notifier.addPreference(label.toLowerCase(), selectedValue!);
-                    Navigator.of(context).pop();
-                  }
+                  notifier.addPreference(label.toLowerCase(), selectedValue!);
+                  Navigator.of(context).pop();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -389,7 +387,13 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   );
                 }
               },
-              child: const Text("Add"),
+              child: const Text(
+                "Add",
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Color(0xFF6C9BCF),
+                ),
+              ),
             ),
           ],
         );

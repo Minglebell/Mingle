@@ -10,8 +10,12 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
         'name': '',
         'age': '',
         'gender': <String>[],
-        'favourite food': <String>[],
         'allergies': <String>[],
+        'interests': <String>[],
+        'preferences': <String>[],
+        'favourite activities': <String>[],
+        'alcoholic': <String>[],
+        'smoking': <String>[],
       }) {
     fetchProfile(); // Fetch profile data when the notifier is created
   }
@@ -43,11 +47,17 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
         state = {
           'name': data['name'] ?? '',
           'age': age,
-          'gender': List<String>.from(data['gender'] ?? <String>[]),
-          'favourite food': List<String>.from(
-            data['favourite food'] ?? <String>[],
-          ),
+          'gender': List<String>.from(
+            data['gender'] ?? <String>[],
+          ), // Ensure 'gender' is fetched
           'allergies': List<String>.from(data['allergies'] ?? <String>[]),
+          'interests': List<String>.from(data['interests'] ?? <String>[]),
+          'preferences': List<String>.from(data['preferences'] ?? <String>[]),
+          'favourite activities': List<String>.from(
+            data['favourite activities'] ?? <String>[],
+          ),
+          'alcoholic': List<String>.from(data['alcoholic'] ?? <String>[]),
+          'smoking': List<String>.from(data['smoking'] ?? <String>[]),
         };
 
         debugPrint('Profile data fetched successfully: $state');
@@ -72,32 +82,29 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
   void addPreference(String category, String preference) {
     switch (category) {
       case 'gender':
+        if ((state[category] as List<String>).isEmpty) {
+          state = {
+            ...state,
+            category: [preference],
+          };
+        }
+        break;
+      case 'interests':
+      case 'preferences':
+      case 'favourite activities':
+        if ((state[category] as List<String>).length < 5) {
+          state = {
+            ...state,
+            category: [...state[category] as List<String>, preference],
+          };
+        }
+        break;
+      case 'alcoholic':
+      case 'smoking':
         state = {
           ...state,
           category: [preference],
         };
-        break;
-      case 'favourite food':
-        if ((state[category] as List<String>).length < 3) {
-          state = {
-            ...state,
-            category: [...state[category] as List<String>, preference],
-          };
-        }
-        break;
-      case 'allergies':
-        if (preference == 'None') {
-          state = {
-            ...state,
-            category: ['None'],
-          };
-        } else if (!(state[category] as List<String>).contains('None') &&
-            (state[category] as List<String>).length < 5) {
-          state = {
-            ...state,
-            category: [...state[category] as List<String>, preference],
-          };
-        }
         break;
     }
   }
@@ -133,8 +140,12 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
         'name': state['name'],
         'age': state['age'],
         'gender': state['gender'],
-        'favourite food': state['favourite food'],
         'allergies': state['allergies'],
+        'interests': state['interests'],
+        'preferences': state['preferences'],
+        'favourite activities': state['favourite activities'],
+        'alcoholic': state['alcoholic'],
+        'smoking': state['smoking'],
       }, SetOptions(merge: true)); // Merge to avoid overwriting other fields
 
       // Save to SharedPreferences
@@ -145,12 +156,28 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
         List<String>.from(state['gender'] ?? <String>[]),
       );
       prefs.setStringList(
-        'favourite food',
-        List<String>.from(state['favourite food'] ?? <String>[]),
-      );
-      prefs.setStringList(
         'allergies',
         List<String>.from(state['allergies'] ?? <String>[]),
+      );
+      prefs.setStringList(
+        'interests',
+        List<String>.from(state['interests'] ?? <String>[]),
+      );
+      prefs.setStringList(
+        'preferences',
+        List<String>.from(state['preferences'] ?? <String>[]),
+      );
+      prefs.setStringList(
+        'favourite activities',
+        List<String>.from(state['favourite activities'] ?? <String>[]),
+      );
+      prefs.setStringList(
+        'alcoholic',
+        List<String>.from(state['alcoholic'] ?? <String>[]),
+      );
+      prefs.setStringList(
+        'smoking',
+        List<String>.from(state['smoking'] ?? <String>[]),
       );
 
       debugPrint('Profile saved successfully: $state');

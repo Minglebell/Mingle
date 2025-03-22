@@ -1,9 +1,11 @@
+import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:minglev2_1/Screen/profile_start_setup_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:delightful_toast/delight_toast.dart';
 
 final otpProvider = StateNotifierProvider<OtpNotifier, OtpState>(
   (ref) => OtpNotifier(),
@@ -50,6 +52,22 @@ class ProfileOtp extends ConsumerWidget {
 
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
+
+  // Callback function to show toast
+  void _showToast(BuildContext context, String message) {
+    DelightToastBar(
+      autoDismiss: true,
+      snackbarDuration: const Duration(seconds: 3),
+      builder:
+          (context) => ToastCard(
+            leading: const Icon(Icons.error, size: 24, color: Colors.red),
+            title: Text(
+              message,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+          ),
+    ).show(context);
+  }
 
   Future<void> _saveUserToFirestore(String phoneNumber) async {
     FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -142,13 +160,25 @@ class ProfileOtp extends ConsumerWidget {
                       ],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please enter your phone number';
+                          _showToast(
+                            context,
+                            'Please enter your phone number',
+                          ); // Show toast
+                          return 'Please enter your phone number'; // Return error message
                         } else if (value.length != 10) {
-                          return 'Phone number must be 10 digits long';
+                          _showToast(
+                            context,
+                            'Phone number must be 10 digits',
+                          ); // Show toast
+                          return 'Phone number must be 10 digits'; // Return error message
                         } else if (!value.startsWith('0')) {
-                          return 'Phone number must start with 0';
+                          _showToast(
+                            context,
+                            'Phone number must start with 0',
+                          ); // Show toast
+                          return 'Phone number must start with 0'; // Return error message
                         }
-                        return null;
+                        return null; // Validation passed
                       },
                     ),
                     const SizedBox(height: 16),
@@ -158,15 +188,27 @@ class ProfileOtp extends ConsumerWidget {
                         onPressed: () async {
                           if (otpState.isOtpVerified)
                             return; // Prevent multiple taps if already verified
-
                           final phoneNumber = _phoneController.text;
                           if (phoneNumber.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter your phone number'),
-                              ),
-                            );
-                            return;
+                            DelightToastBar(
+                              autoDismiss: true,
+                              snackbarDuration: Duration(seconds: 3),
+                              builder:
+                                  (context) => const ToastCard(
+                                    leading: Icon(
+                                      Icons.error,
+                                      size: 24,
+                                      color: Colors.red,
+                                    ),
+                                    title: Text(
+                                      'Please enter your phone number',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                            ).show(context);
                           }
 
                           final firestore = FirebaseFirestore.instance;
@@ -176,14 +218,25 @@ class ProfileOtp extends ConsumerWidget {
                           final doc = await docRef.get();
 
                           if (doc.exists) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text(
-                                  'This phone number is already registered',
-                                ),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
+                            DelightToastBar(
+                              autoDismiss: true,
+                              snackbarDuration: Duration(seconds: 3),
+                              builder:
+                                  (context) => const ToastCard(
+                                    leading: Icon(
+                                      Icons.error,
+                                      size: 24,
+                                      color: Colors.red,
+                                    ),
+                                    title: Text(
+                                      'Phone number already exists',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                            ).show(context);
                             return;
                           }
 
@@ -273,35 +326,60 @@ class ProfileOtp extends ConsumerWidget {
                                             if (otpNotifier.verifyOtp(
                                               otpController.text,
                                             )) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'OTP verified successfully',
-                                                    style: TextStyle(
-                                                      fontFamily: 'Itim',
-                                                    ),
-                                                  ),
+                                              DelightToastBar(
+                                                autoDismiss: true,
+                                                snackbarDuration: Duration(
+                                                  seconds: 3,
                                                 ),
-                                              );
+                                                builder:
+                                                    (
+                                                      context,
+                                                    ) => const ToastCard(
+                                                      leading: Icon(
+                                                        Icons.check,
+                                                        size: 24,
+                                                        color:
+                                                            Colors.lightGreen,
+                                                      ),
+                                                      title: Text(
+                                                        'OTP Verified',
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
+                                                    ),
+                                              ).show(context);
                                               _navigateToSetupProfile(
                                                 context,
                                                 phoneNumber,
                                               );
                                             } else {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'Invalid OTP',
-                                                    style: TextStyle(
-                                                      fontFamily: 'Itim',
-                                                    ),
-                                                  ),
+                                              DelightToastBar(
+                                                autoDismiss: true,
+                                                snackbarDuration: Duration(
+                                                  seconds: 3,
                                                 ),
-                                              );
+                                                builder:
+                                                    (context) =>
+                                                        const ToastCard(
+                                                          leading: Icon(
+                                                            Icons.error,
+                                                            size: 24,
+                                                            color: Colors.red,
+                                                          ),
+                                                          title: Text(
+                                                            'Invalid OTP',
+                                                            style: TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w700,
+                                                              fontSize: 16,
+                                                            ),
+                                                          ),
+                                                        ),
+                                              ).show(context);
                                               otpController
                                                   .clear(); // Clear on invalid OTP
                                             }

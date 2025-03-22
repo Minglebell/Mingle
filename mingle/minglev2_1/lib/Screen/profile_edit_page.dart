@@ -8,6 +8,8 @@ import 'package:minglev2_1/Services/profile_provider.dart';
 import 'profile_display_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Widget/bottom_navigation_bar.dart';
+import 'package:delightful_toast/delight_toast.dart';
+import 'package:delightful_toast/toast/components/toast_card.dart';
 
 class ProfileEditPage extends ConsumerStatefulWidget {
   const ProfileEditPage({super.key});
@@ -52,35 +54,36 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
-      bottomNavigationBar: showBottomNavBar
-          ? CustomBottomNavBar(
-              currentIndex: currentPageIndex,
-              onDestinationSelected: (int index) {
-                setState(() {
-                  currentPageIndex = index;
-                });
-                // Navigate to other pages based on the index
-                if (index == 0) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => FindMatchPage()),
-                  );
-                } else if (index == 1) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => ChatListPage()),
-                  );
-                } else if (index == 2) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProfileDisplayPage(),
-                    ),
-                  );
-                }
-              },
-            )
-          : null, // Hide the bottom nav bar
+      bottomNavigationBar:
+          showBottomNavBar
+              ? CustomBottomNavBar(
+                currentIndex: currentPageIndex,
+                onDestinationSelected: (int index) {
+                  setState(() {
+                    currentPageIndex = index;
+                  });
+                  // Navigate to other pages based on the index
+                  if (index == 0) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => FindMatchPage()),
+                    );
+                  } else if (index == 1) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => ChatListPage()),
+                    );
+                  } else if (index == 2) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfileDisplayPage(),
+                      ),
+                    );
+                  }
+                },
+              )
+              : null, // Hide the bottom nav bar
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -133,13 +136,25 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               ElevatedButton(
                 onPressed: () {
                   profileNotifier.saveProfile();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Changes applied successfully!"),
-                      duration: Duration(seconds: 2),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                  DelightToastBar(
+                    autoDismiss: true,
+                    snackbarDuration: Duration(seconds: 3),
+                    builder:
+                        (context) => const ToastCard(
+                          leading: Icon(
+                            Icons.check_circle,
+                            size: 24,
+                            color: Colors.lightGreen,
+                          ),
+                          title: Text(
+                            'Profile saved successfully',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                  ).show(context);
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
@@ -190,13 +205,10 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 backgroundColor: Colors.white,
                 backgroundImage:
                     _image != null ? FileImage(File(_image!.path)) : null,
-                child: _image == null
-                    ? const Icon(
-                        Icons.person,
-                        size: 60,
-                        color: Colors.grey,
-                      )
-                    : null,
+                child:
+                    _image == null
+                        ? const Icon(Icons.person, size: 60, color: Colors.grey)
+                        : null,
               ),
               Positioned(
                 bottom: 0,
@@ -224,10 +236,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
           const SizedBox(height: 8),
           Text(
             "Age: ${profile['age']}",
-            style: const TextStyle(
-              fontSize: 20,
-              color: Colors.white,
-            ),
+            style: const TextStyle(fontSize: 20, color: Colors.white),
           ),
         ],
       ),
@@ -241,9 +250,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   ) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16.0),
@@ -263,23 +270,25 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               spacing: 8.0,
               runSpacing: 8.0,
               alignment: WrapAlignment.center,
-              children: preferences.map((preference) {
-                return Chip(
-                  label: Text(
-                    preference,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Color(0xFF333333),
-                    ),
-                  ),
-                  backgroundColor: const Color(0xFFA8D1F0),
-                  deleteIconColor: const Color(0xFF333333),
-                  onDeleted: () => notifier.removePreference(
-                    label.toLowerCase(),
-                    preference,
-                  ),
-                );
-              }).toList(),
+              children:
+                  preferences.map((preference) {
+                    return Chip(
+                      label: Text(
+                        preference,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFF333333),
+                        ),
+                      ),
+                      backgroundColor: const Color(0xFFA8D1F0),
+                      deleteIconColor: const Color(0xFF333333),
+                      onDeleted:
+                          () => notifier.removePreference(
+                            label.toLowerCase(),
+                            preference,
+                          ),
+                    );
+                  }).toList(),
             ),
             const SizedBox(height: 10),
             ElevatedButton(
@@ -296,10 +305,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               ),
               child: const Text(
                 "Add",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 18),
               ),
             ),
           ],
@@ -329,24 +335,22 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
           ),
           title: Text(
             "Select $label",
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           content: StatefulBuilder(
             builder: (context, setState) {
               return DropdownButtonFormField<String>(
                 value: selectedValue,
-                items: options[label]!.map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(
-                      value,
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                  );
-                }).toList(),
+                items:
+                    options[label]!.map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(
+                          value,
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                      );
+                    }).toList(),
                 onChanged: (value) {
                   setState(() {
                     selectedValue = value;
@@ -366,10 +370,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               onPressed: () => Navigator.of(context).pop(),
               child: const Text(
                 "Cancel",
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.red,
-                ),
+                style: TextStyle(fontSize: 18, color: Colors.red),
               ),
             ),
             TextButton(
@@ -389,10 +390,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               },
               child: const Text(
                 "Add",
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Color(0xFF6C9BCF),
-                ),
+                style: TextStyle(fontSize: 18, color: Color(0xFF6C9BCF)),
               ),
             ),
           ],

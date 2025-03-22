@@ -44,6 +44,8 @@ dependencies:
   firebase_core: ^3.11.0
   firebase_auth: ^5.4.2
   cloud_firestore: ^5.6.3
+  dash_chat_2: ^0.0.21
+  delightful_toast: ^1.1.0
 
 dev_dependencies:
   flutter_test:

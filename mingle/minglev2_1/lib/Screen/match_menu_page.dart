@@ -3,6 +3,8 @@ import '../Widget/bottom_navigation_bar.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/profile_display_page.dart';
 import 'package:minglev2_1/Screen/searching_page.dart';
+import 'package:delightful_toast/delight_toast.dart';
+import 'package:delightful_toast/toast/components/toast_card.dart';
 
 class FindMatchPage extends StatefulWidget {
   const FindMatchPage({Key? key}) : super(key: key);
@@ -41,11 +43,24 @@ class _FindMatchPageState extends State<FindMatchPage> {
   };
 
   final List<String> activityOptions = [
-    'Hiking', 'Reading', 'Cooking', 'Traveling',
-    'Gaming', 'Yoga', 'Dancing', 'Swimming',
-    'Cycling', 'Running', 'Painting', 'Photography',
-    'Eating', 'Karaoke', 'Shopping', 'Watching Movies',
-    'Gym', 'Coffee',
+    'Hiking',
+    'Reading',
+    'Cooking',
+    'Traveling',
+    'Gaming',
+    'Yoga',
+    'Dancing',
+    'Swimming',
+    'Cycling',
+    'Running',
+    'Painting',
+    'Photography',
+    'Eating',
+    'Karaoke',
+    'Shopping',
+    'Watching Movies',
+    'Gym',
+    'Coffee',
   ];
 
   Future<void> _selectDateTime(BuildContext context) async {
@@ -85,7 +100,11 @@ class _FindMatchPageState extends State<FindMatchPage> {
           children: [
             Text(
               'Find Your Activity Partner',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
             Text(
               'Customize your preferences to find the perfect activity buddy.',
@@ -130,7 +149,11 @@ class _FindMatchPageState extends State<FindMatchPage> {
               // Gender Section
               Text(
                 'Select Gender',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
               SizedBox(height: 10),
               Center(
@@ -152,15 +175,20 @@ class _FindMatchPageState extends State<FindMatchPage> {
                         selectedGender = newValue;
                       });
                     },
-                    items: <String>['Male', 'Female', 'Other'].map<DropdownMenuItem<String>>((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(
-                          value,
-                          style: TextStyle(color: Colors.black),
-                        ),
-                      );
-                    }).toList(),
+                    items:
+                        <String>[
+                          'Male',
+                          'Female',
+                          'Other',
+                        ].map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(
+                              value,
+                              style: TextStyle(color: Colors.black),
+                            ),
+                          );
+                        }).toList(),
                     underline: Container(),
                   ),
                 ),
@@ -170,7 +198,11 @@ class _FindMatchPageState extends State<FindMatchPage> {
               // Activity Section
               Text(
                 'Select Activities (up to 3)',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
               SizedBox(height: 10),
               Center(
@@ -178,39 +210,46 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   spacing: 8.0,
                   runSpacing: 8.0,
                   alignment: WrapAlignment.center,
-                  children: activityOptions.map((String activity) {
-                    return ChoiceChip(
-                      label: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            activityIcons[activity],
-                            size: 20,
-                            color: selectedActivities.contains(activity) ? Colors.white : Colors.black,
+                  children:
+                      activityOptions.map((String activity) {
+                        return ChoiceChip(
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                activityIcons[activity],
+                                size: 20,
+                                color:
+                                    selectedActivities.contains(activity)
+                                        ? Colors.white
+                                        : Colors.black,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                activity,
+                                style: TextStyle(
+                                  color:
+                                      selectedActivities.contains(activity)
+                                          ? Colors.white
+                                          : Colors.black,
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(width: 8),
-                          Text(
-                            activity,
-                            style: TextStyle(
-                              color: selectedActivities.contains(activity) ? Colors.white : Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                      selected: selectedActivities.contains(activity),
-                      onSelected: (bool selected) {
-                        setState(() {
-                          if (selected && selectedActivities.length < 3) {
-                            selectedActivities.add(activity);
-                          } else {
-                            selectedActivities.remove(activity);
-                          }
-                        });
-                      },
-                      selectedColor: Colors.blue,
-                      backgroundColor: Colors.grey[200],
-                    );
-                  }).toList(),
+                          selected: selectedActivities.contains(activity),
+                          onSelected: (bool selected) {
+                            setState(() {
+                              if (selected && selectedActivities.length < 3) {
+                                selectedActivities.add(activity);
+                              } else {
+                                selectedActivities.remove(activity);
+                              }
+                            });
+                          },
+                          selectedColor: Colors.blue,
+                          backgroundColor: Colors.grey[200],
+                        );
+                      }).toList(),
                 ),
               ),
               SizedBox(height: 20),
@@ -218,7 +257,11 @@ class _FindMatchPageState extends State<FindMatchPage> {
               // DateTime Section
               Text(
                 'Select Date and Time',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
               SizedBox(height: 10),
               Center(
@@ -232,7 +275,9 @@ class _FindMatchPageState extends State<FindMatchPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      selectedDateTime == null ? 'Click to select a date and time' : 'Selected Date and Time: ${selectedDateTime!.day}/${selectedDateTime!.month}/${selectedDateTime!.year} at ${selectedDateTime!.hour}:${selectedDateTime!.minute}',
+                      selectedDateTime == null
+                          ? 'Click to select a date and time'
+                          : 'Selected Date and Time: ${selectedDateTime!.day}/${selectedDateTime!.month}/${selectedDateTime!.year} at ${selectedDateTime!.hour}:${selectedDateTime!.minute}',
                       style: TextStyle(fontSize: 16, color: Colors.black),
                     ),
                   ),
@@ -243,7 +288,11 @@ class _FindMatchPageState extends State<FindMatchPage> {
               // Distance Section
               Text(
                 'Set Distance (in km)',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
               SizedBox(height: 10),
               Center(
@@ -268,19 +317,48 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   ],
                 ),
               ),
-              SizedBox(height: 80), // Add extra padding at the bottom to avoid overlapping
+              SizedBox(
+                height: 80,
+              ), 
             ],
           ),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Container(
-        margin: EdgeInsets.only(bottom: 20), // Add margin to avoid overlapping with the bottom navigation bar
+        margin: EdgeInsets.only(
+          bottom: 20,
+        ), 
         child: ElevatedButton(
           onPressed: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => SearchingPage()),
-            );
+            // add conditions if not all fields are selected
+            if (selectedGender == null ||
+                selectedActivities.isEmpty ||
+                selectedDateTime == null) {
+              DelightToastBar(
+                autoDismiss: true,
+                snackbarDuration: const Duration(seconds: 3),
+                builder:
+                    (context) => ToastCard(
+                      leading: const Icon(
+                        Icons.error,
+                        size: 24,
+                        color: Colors.red,
+                      ),
+                      title: Text(
+                        'Please select all fields',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+              ).show(context);
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => SearchingPage()),
+              );
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blue,
@@ -291,7 +369,11 @@ class _FindMatchPageState extends State<FindMatchPage> {
           ),
           child: Text(
             'Find Matches',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ),
       ),

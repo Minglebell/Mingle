@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:minglev2_1/Screen/profile_edit_page.dart';
+import 'package:delightful_toast/delight_toast.dart';
+import 'package:delightful_toast/toast/components/toast_card.dart';
 
 final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>(
   (ref) => ProfileNotifier(),
@@ -99,7 +101,7 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
               child: const Text(
                 'Let’s get to know you better! Please share your name and birthday.',
                 textAlign: TextAlign.center,
-                softWrap: true, 
+                softWrap: true,
                 style: TextStyle(
                   color: Color(0xCC333333),
                   fontSize: 18,
@@ -113,7 +115,6 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-
                     TextFormField(
                       decoration: const InputDecoration(
                         labelText: 'Name',
@@ -194,6 +195,25 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
               child: ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
+                    DelightToastBar(
+                      autoDismiss: true,
+                      snackbarDuration: Duration(seconds: 3),
+                      builder:
+                          (context) => const ToastCard(
+                            leading: Icon(
+                              Icons.check,
+                              size: 24,
+                              color: Colors.lightGreen,
+                            ),
+                            title: Text(
+                              'Successfully saved the data',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                    ).show(context);
                     _navigateToProfileCustom(context);
                   }
                 },

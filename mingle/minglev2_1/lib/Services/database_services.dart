@@ -50,6 +50,7 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
     }
   }
 
+
   Future<void> fetchProfile() async {
     try {
       final prefs = await SharedPreferences.getInstance();

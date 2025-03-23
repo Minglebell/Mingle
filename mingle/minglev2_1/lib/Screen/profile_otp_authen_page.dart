@@ -2,9 +2,9 @@ import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:minglev2_1/Screen/profile_start_setup_page.dart';
 import 'package:minglev2_1/Services/database_services.dart';
 import 'package:delightful_toast/delight_toast.dart';
+import 'package:minglev2_1/Services/navigation_services.dart';
 
 final otpProvider = StateNotifierProvider<OtpNotifier, OtpState>(
   (ref) => OtpNotifier(),
@@ -47,6 +47,7 @@ class OtpNotifier extends StateNotifier<OtpState> {
 }
 
 class ProfileOtp extends ConsumerWidget {
+
   ProfileOtp({Key? key}) : super(key: key);
 
   final _formKey = GlobalKey<FormState>();
@@ -71,11 +72,9 @@ class ProfileOtp extends ConsumerWidget {
   void _navigateToSetupProfile(BuildContext context, String phoneNumber) async {
     await DatabaseServices().saveUserToFirestore(phoneNumber);
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SetupProfile(phoneNumber: phoneNumber),
-      ),
+    NavigationService().navigateToReplacement(
+      '/setupProfile',
+      arguments: phoneNumber,
     );
   }
 

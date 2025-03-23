@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:minglev2_1/Screen/profile_otp_authen_page.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:minglev2_1/Services/navigation_services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,11 +24,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final navigationService = NavigationService(); // Create an instance of NavigationService
+
     return ProviderScope(
       child: MaterialApp(
         builder: DevicePreview.appBuilder,
         locale: DevicePreview.locale(context),
-        home: ProfileOtp(),
+        navigatorKey: navigationService.navigatorKey, // Set the navigatorKey
+        initialRoute: '/', // Set the initial route
+        routes: navigationService.routes, // Use the routes from NavigationService
         theme: ThemeData(primarySwatch: Colors.pink, fontFamily: 'Itim'),
       ),
     );

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:minglev2_1/Screen/profile_otp_authen_page.dart';
-import 'package:minglev2_1/Screen/profile_start_setup_page.dart';
+import 'package:minglev2_1/Screen/auth_page.dart';
 import 'package:minglev2_1/Screen/profile_edit_page.dart';
 import 'package:minglev2_1/Screen/profile_display_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
@@ -16,11 +15,7 @@ class NavigationService {
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   final Map<String, WidgetBuilder> routes = {
-    '/': (context) => ProfileOtp(),
-    '/setupProfile': (context) {
-      final phoneNumber = ModalRoute.of(context)!.settings.arguments as String;
-      return SetupProfile(phoneNumber: phoneNumber);
-    },
+    '/': (context) => AuthPage(),
     '/editProfile': (context) => ProfileEditPage(),
     '/profile': (context) => ProfileDisplayPage(),
     '/match': (context) => FindMatchPage(),

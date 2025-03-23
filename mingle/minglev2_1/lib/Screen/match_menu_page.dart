@@ -15,51 +15,58 @@ class FindMatchPage extends StatefulWidget {
 class _FindMatchPageState extends State<FindMatchPage> {
   int currentPageIndex = 0;
   String? selectedGender;
-  List<String> selectedActivities = [];
   DateTime? selectedDateTime;
+  String? selectedTimeRange;
+  String? selectedPlaceCategory;
+  String? selectedPlace;
   double distance = 1.0;
 
-  // Map activities to their respective icons
-  final Map<String, IconData> activityIcons = {
-    'Hiking': Icons.directions_walk,
-    'Reading': Icons.menu_book,
-    'Cooking': Icons.restaurant,
-    'Traveling': Icons.flight_takeoff,
-    'Gaming': Icons.videogame_asset,
-    'Yoga': Icons.self_improvement,
-    'Dancing': Icons.music_note,
-    'Swimming': Icons.pool,
-    'Cycling': Icons.directions_bike,
-    'Running': Icons.directions_run,
-    'Painting': Icons.palette,
-    'Photography': Icons.camera_alt,
-    'Eating': Icons.fastfood,
-    'Karaoke': Icons.mic,
-    'Shopping': Icons.shopping_cart,
-    'Watching Movies': Icons.movie,
-    'Gym': Icons.fitness_center,
-    'Coffee': Icons.coffee,
+  final Map<String, List<String>> placeCategories = {
+    "Outdoor_Nature": [
+      "Parks",
+      "Beaches",
+      "Lakes",
+      "Zoos",
+      "Safari parks",
+      "Amusement parks",
+      "Water parks"
+    ],
+    "Arts_Culture_Historical_Sites": [
+      "Museums",
+      "Art galleries",
+      "Historical landmarks",
+      "Temple"
+    ],
+    "Entertainment_Recreation": [
+      "Movie theaters",
+      "Bowling alleys",
+      "Escape rooms",
+      "Gaming centers",
+      "Live theaters",
+      "Concert venues",
+      "Karaoke bar",
+      "Aquariums"
+    ],
+    "Dining_Cafes": [
+      "Restaurants",
+      "Cafés",
+      "Coffee shops"
+    ],
+    "Nightlife_Bars": [
+      "Bars",
+      "Pubs"
+    ],
+    "Shopping": [
+      "Shopping malls",
+      "Markets"
+    ]
   };
 
-  final List<String> activityOptions = [
-    'Hiking',
-    'Reading',
-    'Cooking',
-    'Traveling',
-    'Gaming',
-    'Yoga',
-    'Dancing',
-    'Swimming',
-    'Cycling',
-    'Running',
-    'Painting',
-    'Photography',
-    'Eating',
-    'Karaoke',
-    'Shopping',
-    'Watching Movies',
-    'Gym',
-    'Coffee',
+  final List<String> timeRanges = [
+    "12am to 6am",
+    "6am to 12pm",
+    "12pm to 6pm", 
+    "6pm to 12am"
   ];
 
   Future<void> _selectDateTime(BuildContext context) async {
@@ -68,24 +75,52 @@ class _FindMatchPageState extends State<FindMatchPage> {
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.blue,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
-      final TimeOfDay? time = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
-      );
-      if (time != null) {
-        setState(() {
-          selectedDateTime = DateTime(
-            picked.year,
-            picked.month,
-            picked.day,
-            time.hour,
-            time.minute,
-          );
-        });
-      }
+      setState(() {
+        selectedDateTime = picked;
+      });
     }
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.blue.shade800,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCard(Widget child) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: child,
+      ),
+    );
   }
 
   @override
@@ -98,7 +133,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Find Your Activity Partner',
+              'Find Your Place Partner',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -106,12 +141,13 @@ class _FindMatchPageState extends State<FindMatchPage> {
               ),
             ),
             Text(
-              'Customize your preferences to find the perfect activity buddy.',
+              'Customize your preferences to find the perfect place buddy.',
               style: TextStyle(fontSize: 14, color: Colors.white70),
             ),
           ],
         ),
         backgroundColor: Colors.blue,
+        elevation: 0,
       ),
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: currentPageIndex,
@@ -141,173 +177,181 @@ class _FindMatchPageState extends State<FindMatchPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Gender Section
-              Text(
-                'Select Gender',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 10),
-              Center(
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButton<String>(
+              _buildSectionTitle('Select Gender'),
+              _buildCard(
+                Container(
+                  width: double.infinity,
+                  child: DropdownButtonFormField<String>(
                     value: selectedGender,
-                    hint: Text(
-                      'Choose gender',
-                      style: TextStyle(color: Colors.black54),
+                    decoration: InputDecoration(
+                      hintText: 'Choose gender',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                     onChanged: (String? newValue) {
                       setState(() {
                         selectedGender = newValue;
                       });
                     },
-                    items:
-                        <String>[
-                          'Male',
-                          'Female',
-                          'Other',
-                        ].map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(
-                              value,
-                              style: TextStyle(color: Colors.black),
-                            ),
-                          );
-                        }).toList(),
-                    underline: Container(),
+                    items: <String>['Male', 'Female', 'Other']
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
                   ),
                 ),
               ),
-              SizedBox(height: 20),
 
-              // Activity Section
-              Text(
-                'Select Activities (up to 3)',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 10),
-              Center(
-                child: Wrap(
-                  spacing: 8.0,
-                  runSpacing: 8.0,
-                  alignment: WrapAlignment.center,
-                  children:
-                      activityOptions.map((String activity) {
+              _buildSectionTitle('Select Date and Time Range'),
+              _buildCard(
+                Column(
+                  children: [
+                    InkWell(
+                      onTap: () => _selectDateTime(context),
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              selectedDateTime == null
+                                  ? 'Click to select a date'
+                                  : 'Date: ${selectedDateTime!.day}/${selectedDateTime!.month}/${selectedDateTime!.year}',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                            Icon(Icons.calendar_today, color: Colors.blue),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8.0,
+                      runSpacing: 8.0,
+                      children: timeRanges.map((String range) {
                         return ChoiceChip(
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                activityIcons[activity],
-                                size: 20,
-                                color:
-                                    selectedActivities.contains(activity)
-                                        ? Colors.white
-                                        : Colors.black,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                activity,
-                                style: TextStyle(
-                                  color:
-                                      selectedActivities.contains(activity)
-                                          ? Colors.white
-                                          : Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                          selected: selectedActivities.contains(activity),
+                          label: Text(range),
+                          selected: selectedTimeRange == range,
                           onSelected: (bool selected) {
                             setState(() {
-                              if (selected && selectedActivities.length < 3) {
-                                selectedActivities.add(activity);
-                              } else {
-                                selectedActivities.remove(activity);
-                              }
+                              selectedTimeRange = selected ? range : null;
                             });
                           },
                           selectedColor: Colors.blue,
-                          backgroundColor: Colors.grey[200],
+                          labelStyle: TextStyle(
+                            color: selectedTimeRange == range ? Colors.white : Colors.black,
+                          ),
                         );
                       }).toList(),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: 20),
 
-              // DateTime Section
-              Text(
-                'Select Date and Time',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 10),
-              Center(
-                child: InkWell(
-                  onTap: () => _selectDateTime(context),
-                  child: Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
+              _buildSectionTitle('Select Place Category'),
+              _buildCard(
+                Container(
+                  width: double.infinity,
+                  child: DropdownButtonFormField<String>(
+                    value: selectedPlaceCategory,
+                    decoration: InputDecoration(
+                      hintText: 'Choose place category',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
-                    child: Text(
-                      selectedDateTime == null
-                          ? 'Click to select a date and time'
-                          : 'Selected Date and Time: ${selectedDateTime!.day}/${selectedDateTime!.month}/${selectedDateTime!.year} at ${selectedDateTime!.hour}:${selectedDateTime!.minute}',
-                      style: TextStyle(fontSize: 16, color: Colors.black),
-                    ),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedPlaceCategory = newValue;
+                        selectedPlace = null;
+                      });
+                    },
+                    items: placeCategories.keys.map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value.replaceAll('_', ' ')),
+                      );
+                    }).toList(),
                   ),
                 ),
               ),
-              SizedBox(height: 20),
 
-              // Distance Section
-              Text(
-                'Set Distance (in km)',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+              if (selectedPlaceCategory != null) ...[
+                _buildSectionTitle('Select Place'),
+                _buildCard(
+                  Container(
+                    width: double.infinity,
+                    child: DropdownButtonFormField<String>(
+                      value: selectedPlace,
+                      decoration: InputDecoration(
+                        hintText: 'Choose place',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedPlace = newValue;
+                        });
+                      },
+                      items: placeCategories[selectedPlaceCategory!]!
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ),
-              ),
-              SizedBox(height: 10),
-              Center(
-                child: Column(
+              ],
+
+              _buildSectionTitle('Set Distance'),
+              _buildCard(
+                Column(
                   children: [
                     Text(
                       '${distance.round()} km',
-                      style: TextStyle(fontSize: 22, color: Colors.black),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade800,
+                      ),
                     ),
-                    Slider(
-                      value: distance,
-                      min: 1,
-                      max: 20,
-                      divisions: 19,
-                      onChanged: (double value) {
-                        setState(() {
-                          distance = value;
-                        });
-                      },
-                      activeColor: Colors.blue,
+                    SizedBox(height: 8),
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        activeTrackColor: Colors.blue,
+                        thumbColor: Colors.blue,
+                        overlayColor: Colors.blue.withAlpha(32),
+                        valueIndicatorColor: Colors.blue,
+                      ),
+                      child: Slider(
+                        value: distance,
+                        min: 1,
+                        max: 20,
+                        divisions: 19,
+                        label: '${distance.round()} km',
+                        onChanged: (double value) {
+                          setState(() {
+                            distance = value;
+                          });
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -319,31 +363,32 @@ class _FindMatchPageState extends State<FindMatchPage> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Container(
-        margin: EdgeInsets.only(bottom: 20),
+        padding: EdgeInsets.symmetric(horizontal: 24),
+        width: double.infinity,
         child: ElevatedButton(
           onPressed: () {
-            // add conditions if not all fields are selected
             if (selectedGender == null ||
-                selectedActivities.isEmpty ||
-                selectedDateTime == null) {
+                selectedDateTime == null ||
+                selectedTimeRange == null ||
+                selectedPlaceCategory == null ||
+                selectedPlace == null) {
               DelightToastBar(
                 autoDismiss: true,
                 snackbarDuration: const Duration(seconds: 3),
-                builder:
-                    (context) => ToastCard(
-                      leading: const Icon(
-                        Icons.error,
-                        size: 24,
-                        color: Colors.red,
-                      ),
-                      title: Text(
-                        'Please select all fields',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
+                builder: (context) => ToastCard(
+                  leading: const Icon(
+                    Icons.error,
+                    size: 24,
+                    color: Colors.red,
+                  ),
+                  title: Text(
+                    'Please select all fields',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
                     ),
+                  ),
+                ),
               ).show(context);
             } else {
               Navigator.of(context).pushReplacement(
@@ -353,10 +398,11 @@ class _FindMatchPageState extends State<FindMatchPage> {
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blue,
-            padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
             ),
+            elevation: 4,
           ),
           child: Text(
             'Find Matches',

@@ -24,13 +24,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final navigationService = NavigationService(); // Create an instance of NavigationService
+    final navigationService = NavigationService();
 
     return ProviderScope(
       child: MaterialApp(
         builder: DevicePreview.appBuilder,
         locale: DevicePreview.locale(context),
-        navigatorKey: navigationService.navigatorKey, // Set the navigatorKey
+        navigatorKey: navigationService.navigatorKey,
         initialRoute: '/', // Set the initial route
         routes: navigationService.routes, // Use the routes from NavigationService
         theme: ThemeData(primarySwatch: Colors.pink, fontFamily: 'Itim'),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../Widget/bottom_navigation_bar.dart';
-import 'package:minglev2_1/Screen/chat_list_page.dart';
-import 'package:minglev2_1/Screen/profile_display_page.dart';
+import 'package:minglev2_1/Services/navigation_services.dart';
 
 class FoundPage extends StatefulWidget {
   @override
@@ -9,7 +8,7 @@ class FoundPage extends StatefulWidget {
 }
 
 class _FoundPageState extends State<FoundPage> {
-  int currentPageIndex = 0; 
+  int currentPageIndex = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +37,7 @@ class _FoundPageState extends State<FoundPage> {
             ElevatedButton(
               onPressed: () {
                 // Start Chatting: Navigate to the chat page
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => ChatListPage()),
-                );
+                NavigationService().navigateToReplacement('/chatList');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
@@ -52,10 +48,7 @@ class _FoundPageState extends State<FoundPage> {
               ),
               child: Text(
                 'Start Chatting',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Colors.white,
-                ),
+                style: TextStyle(fontSize: 24, color: Colors.white),
               ),
             ),
           ],
@@ -67,23 +60,13 @@ class _FoundPageState extends State<FoundPage> {
           setState(() {
             currentPageIndex = index;
           });
-          // Handle navigation based on the selected index
-          switch (index) {
-            case 0:
-              // Navigate to Home (if needed)
-              break;
-            case 1:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => ChatListPage()),
-              );
-              break;
-            case 2:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => ProfileDisplayPage()),
-              );
-              break;
+          // Navigate to other pages based on the index
+          if (index == 0) {
+            NavigationService().navigateToReplacement('/match');
+          } else if (index == 1) {
+            NavigationService().navigateToReplacement('/chatList');
+          } else if (index == 2) {
+            NavigationService().navigateToReplacement('/profile');
           }
         },
       ),

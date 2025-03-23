@@ -15,7 +15,7 @@ class ProfileDisplayPage extends ConsumerStatefulWidget {
 }
 
 class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> {
-  bool showBottomNavBar = true; // Controls visibility of the bottom nav bar
+  bool showBottomNavBar = true;
   int currentPageIndex = 2;
   String? _imagePath;
 

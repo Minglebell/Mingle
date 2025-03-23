@@ -26,7 +26,7 @@ class NavigationService {
     '/search': (context) => SearchingPage(),
     '/found': (context) => FoundPage(),
     '/notFound': (context) => NotFoundPage(),
-    '/chat': (context) => ChatListPage(),
+    '/chatList': (context) => ChatListPage(),
   };
 
   factory NavigationService() {

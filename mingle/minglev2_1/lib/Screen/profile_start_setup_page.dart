@@ -81,7 +81,7 @@ class _SetupProfileState extends ConsumerState<SetupProfile> {
 
     // Use NavigationService to navigate
     NavigationService().navigateToReplacement(
-      '/editProfile', // Replace with your actual route name
+      '/editProfile',
     );
   }
 

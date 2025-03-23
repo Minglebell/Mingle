@@ -8,6 +8,7 @@ import 'package:minglev2_1/Screen/searching_page.dart';
 import 'package:minglev2_1/Screen/found_page.dart';
 import 'package:minglev2_1/Screen/not_found_page.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
+import 'package:minglev2_1/Model/chat_page.dart';
 
 
 class NavigationService {
@@ -27,6 +28,10 @@ class NavigationService {
     '/found': (context) => FoundPage(),
     '/notFound': (context) => NotFoundPage(),
     '/chatList': (context) => ChatListPage(),
+    '/chat': (context) {
+      final name = ModalRoute.of(context)!.settings.arguments as String;
+      return ChatPage(chatPersonName: name);
+    }
   };
 
   factory NavigationService() {

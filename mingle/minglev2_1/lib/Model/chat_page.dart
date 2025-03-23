@@ -49,7 +49,6 @@ class _ChatPageState extends State<ChatPage> {
         title: Text(widget.chatPersonName),
         automaticallyImplyLeading: true,
       ),
-      
       body: Column(
         children: [
           // Chat Messages

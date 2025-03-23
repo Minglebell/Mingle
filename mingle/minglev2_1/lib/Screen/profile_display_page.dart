@@ -46,7 +46,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> {
                 if (index == 0) {
                   NavigationService().navigateToReplacement('/match');
                 } else if (index == 1) {
-                  NavigationService().navigateToReplacement('/search');
+                  NavigationService().navigateToReplacement('/chatList');
                 } else if (index == 2) {
                   NavigationService().navigateToReplacement('/profile');
                 }

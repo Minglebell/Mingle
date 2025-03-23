@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:minglev2_1/Screen/chat_list_page.dart';
-import 'package:minglev2_1/Screen/match_menu_page.dart';
 import 'package:minglev2_1/Services/database_services.dart';
-import 'profile_display_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Widget/bottom_navigation_bar.dart';
 import 'package:delightful_toast/delight_toast.dart';
@@ -63,24 +60,12 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   setState(() {
                     currentPageIndex = index;
                   });
-                  // Navigate to other pages based on the index
                   if (index == 0) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => FindMatchPage()),
-                    );
+                    NavigationService().navigateToReplacement('/match');
                   } else if (index == 1) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => ChatListPage()),
-                    );
+                    NavigationService().navigateToReplacement('/chatList');
                   } else if (index == 2) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProfileDisplayPage(),
-                      ),
-                    );
+                    NavigationService().navigateToReplacement('/profile');
                   }
                 },
               )
@@ -156,9 +141,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                           ),
                         ),
                   ).show(context);
-                  NavigationService().navigateToReplacement(
-                    '/profile',
-                  );
+                  NavigationService().navigateToReplacement('/profile');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6C9BCF),

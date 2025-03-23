@@ -3,22 +3,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
   FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   DatabaseServices()
-    : super({
-        'name': '',
-        'age': '',
-        'gender': <String>[],
-        'allergies': <String>[],
-        'interests': <String>[],
-        'preferences': <String>[],
-        'favourite activities': <String>[],
-        'alcoholic': <String>[],
-        'smoking': <String>[],
-      }) {
+      : super({
+          'name': '',
+          'age': '',
+          'bio': '',
+          'gender': <String>[],
+          'religion': <String>[],
+          'budget level': <String>[],
+          'education level': <String>[],
+          'relationship status': <String>[],
+          'smoking': <String>[],
+          'alcoholic': <String>[],
+          'allergies': <String>[],
+          'physical activity level': <String>[],
+          'transportation': <String>[],
+          'pet': <String>[],
+          'personality': <String>[],
+        }) {
     fetchProfile(); // Fetch profile data when the notifier is created
   }
 
@@ -45,55 +52,54 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
       return doc.exists;
     } catch (e) {
       debugPrint('Error checking user existence: $e');
-      throw e;
+      rethrow;
     }
   }
 
   Future<void> fetchProfile() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final phoneNumber = prefs.getString('phoneNumber');
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        final DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.uid)
+            .get();
 
-      if (phoneNumber == null) {
-        debugPrint('Phone number not found in SharedPreferences');
-        return;
-      }
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          
+          // Calculate age from birthday
+          String birthday = userData['birthday'] ?? '';
+          String age = '';
+          if (birthday.isNotEmpty) {
+            final parts = birthday.split('/');
+            final birthDate = DateTime(
+              int.parse(parts[2]), // year
+              int.parse(parts[1]), // month
+              int.parse(parts[0]), // day
+            );
+            final today = DateTime.now();
+            age = (today.difference(birthDate).inDays / 365).floor().toString();
+          }
 
-      final profileRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(phoneNumber);
-
-      final profileDoc = await profileRef.get();
-
-      if (profileDoc.exists) {
-        final data = profileDoc.data()!;
-        final birthday =
-            data['birthday'] != null
-                ? DateFormat('M/d/yyyy').parse(data['birthday'])
-                : null;
-        final age = birthday != null ? DateTime.now().year - birthday.year : '';
-
-        state = {
-          'name': data['name'] ?? '',
-          'age': age,
-          'gender': List<String>.from(
-            data['gender'] ?? <String>[],
-          ), // Ensure 'gender' is fetched
-          'allergies': List<String>.from(data['allergies'] ?? <String>[]),
-          'interests': List<String>.from(data['interests'] ?? <String>[]),
-          'preferences': List<String>.from(data['preferences'] ?? <String>[]),
-          'favourite activities': List<String>.from(
-            data['favourite activities'] ?? <String>[],
-          ),
-          'alcoholic': List<String>.from(data['alcoholic'] ?? <String>[]),
-          'smoking': List<String>.from(data['smoking'] ?? <String>[]),
-        };
-
-        debugPrint('Profile data fetched successfully: $state');
-      } else {
-        debugPrint(
-          'Firestore document does not exist for phoneNumber: $phoneNumber',
-        );
+          state = {
+            'name': userData['name'] ?? '',
+            'age': age,
+            'bio': userData['bio'] ?? '',
+            'gender': List<String>.from(userData['gender'] ?? []),
+            'religion': List<String>.from(userData['religion'] ?? []),
+            'budget level': List<String>.from(userData['budget level'] ?? []),
+            'education level': List<String>.from(userData['education level'] ?? []),
+            'relationship status': List<String>.from(userData['relationship status'] ?? []),
+            'smoking': List<String>.from(userData['smoking'] ?? []),
+            'alcoholic': List<String>.from(userData['alcoholic'] ?? []),
+            'allergies': List<String>.from(userData['allergies'] ?? []),
+            'physical activity level': List<String>.from(userData['physical activity level'] ?? []),
+            'transportation': List<String>.from(userData['transportation'] ?? []),
+            'pet': List<String>.from(userData['pet'] ?? []),
+            'personality': List<String>.from(userData['personality'] ?? []),
+          };
+        }
       }
     } catch (e) {
       debugPrint('Error fetching profile: $e');
@@ -108,33 +114,33 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
     state = {...state, 'age': age};
   }
 
+  void updateBio(String bio) {
+    state = {...state, 'bio': bio};
+  }
+
   void addPreference(String category, String preference) {
-    switch (category) {
-      case 'gender':
-        if ((state[category] as List<String>).isEmpty) {
-          state = {
-            ...state,
-            category: [preference],
-          };
-        }
-        break;
-      case 'interests':
-      case 'preferences':
-      case 'favourite activities':
-        if ((state[category] as List<String>).length < 5) {
-          state = {
-            ...state,
-            category: [...state[category] as List<String>, preference],
-          };
-        }
-        break;
-      case 'alcoholic':
-      case 'smoking':
+    final List<String> currentPreferences = List<String>.from(state[category] ?? []);
+    
+    // Handle single-selection categories
+    if (['gender', 'religion', 'budget level', 'education level', 
+         'relationship status', 'smoking', 'alcoholic', 'physical activity level',
+         'personality'].contains(category)) {
+      state = {
+        ...state,
+        category: [preference],
+      };
+    }
+    // Handle multi-selection categories with limits
+    else if (['pet', 'allergies', 'transportation'].contains(category)) {
+      if (!currentPreferences.contains(preference) && currentPreferences.length < 4) {
         state = {
           ...state,
-          category: [preference],
+          category: [...currentPreferences, preference],
         };
-        break;
+      } else if (currentPreferences.length >= 4) {
+        // You can handle this case by showing a message to the user
+        debugPrint('Maximum 4 selections allowed for $category');
+      }
     }
   }
 
@@ -142,72 +148,26 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
     if (state[category] is List<String>) {
       state = {
         ...state,
-        category:
-            (state[category] as List<String>)
-                .where((item) => item != preference)
-                .toList(),
+        category: (state[category] as List<String>)
+            .where((item) => item != preference)
+            .toList(),
       };
     }
   }
 
   Future<void> saveProfile() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final phoneNumber = prefs.getString('phoneNumber');
-
-      if (phoneNumber == null) {
-        debugPrint('Phone number not found in SharedPreferences');
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        debugPrint('No authenticated user found');
         return;
       }
 
       // Save to Firestore
-      final profileRef = FirebaseFirestore.instance
+      await FirebaseFirestore.instance
           .collection('users')
-          .doc(phoneNumber);
-
-      await profileRef.set({
-        'name': state['name'],
-        'age': state['age'],
-        'gender': state['gender'],
-        'allergies': state['allergies'],
-        'interests': state['interests'],
-        'preferences': state['preferences'],
-        'favourite activities': state['favourite activities'],
-        'alcoholic': state['alcoholic'],
-        'smoking': state['smoking'],
-      }, SetOptions(merge: true)); // Merge to avoid overwriting other fields
-
-      // Save to SharedPreferences
-      prefs.setString('name', state['name']);
-      prefs.setInt('age', state['age']);
-      prefs.setStringList(
-        'gender',
-        List<String>.from(state['gender'] ?? <String>[]),
-      );
-      prefs.setStringList(
-        'allergies',
-        List<String>.from(state['allergies'] ?? <String>[]),
-      );
-      prefs.setStringList(
-        'interests',
-        List<String>.from(state['interests'] ?? <String>[]),
-      );
-      prefs.setStringList(
-        'preferences',
-        List<String>.from(state['preferences'] ?? <String>[]),
-      );
-      prefs.setStringList(
-        'favourite activities',
-        List<String>.from(state['favourite activities'] ?? <String>[]),
-      );
-      prefs.setStringList(
-        'alcoholic',
-        List<String>.from(state['alcoholic'] ?? <String>[]),
-      );
-      prefs.setStringList(
-        'smoking',
-        List<String>.from(state['smoking'] ?? <String>[]),
-      );
+          .doc(currentUser.uid)
+          .update(state);
 
       debugPrint('Profile saved successfully: $state');
     } catch (e) {
@@ -218,5 +178,5 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
 
 final profileProvider =
     StateNotifierProvider<DatabaseServices, Map<String, dynamic>>((ref) {
-      return DatabaseServices();
-    });
+  return DatabaseServices();
+});

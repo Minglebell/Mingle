@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:minglev2_1/Widget/custom_app_bar.dart';
 
 class ChatPage extends StatefulWidget {
   final String chatPersonName;
 
-  const ChatPage({Key? key, required this.chatPersonName}) : super(key: key);
+  const ChatPage({super.key, required this.chatPersonName});
 
   @override
   _ChatPageState createState() => _ChatPageState();
@@ -45,9 +46,9 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.chatPersonName),
-        automaticallyImplyLeading: true,
+      appBar: CustomAppBar(
+        title: widget.chatPersonName,
+        showBackButton: true,
       ),
       body: Column(
         children: [

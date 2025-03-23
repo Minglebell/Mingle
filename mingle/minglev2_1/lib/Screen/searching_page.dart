@@ -3,9 +3,13 @@ import '../Widget/bottom_navigation_bar.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/profile_display_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
-import 'package:minglev2_1/Screen/found_page.dart'; 
+import 'package:minglev2_1/Screen/found_page.dart';
+import 'package:minglev2_1/Services/navigation_services.dart';
+import 'package:minglev2_1/Widget/custom_app_bar.dart';
 
 class SearchingPage extends StatefulWidget {
+  const SearchingPage({super.key});
+
   @override
   _SearchingPageState createState() => _SearchingPageState();
 }
@@ -29,7 +33,7 @@ class _SearchingPageState extends State<SearchingPage>
     Future.delayed(Duration(minutes: 1), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => FoundPage()),
+        FadePageRoute(builder: (context) => FoundPage()),
       );
     });
   }
@@ -43,9 +47,8 @@ class _SearchingPageState extends State<SearchingPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Searching...'),
-        automaticallyImplyLeading: false,
+      appBar: CustomAppBar(
+        title: 'Searching...',
       ),
       body: Center(
         child: Column(
@@ -66,7 +69,7 @@ class _SearchingPageState extends State<SearchingPage>
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => FindMatchPage()),
+                  FadePageRoute(builder: (context) => FindMatchPage()),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -96,12 +99,12 @@ class _SearchingPageState extends State<SearchingPage>
           if (index == 1) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => ChatListPage()),
+              FadePageRoute(builder: (context) => ChatListPage()),
             );
           } else if (index == 2) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => ProfileDisplayPage()),
+              FadePageRoute(builder: (context) => ProfileDisplayPage()),
             );
           }
         },

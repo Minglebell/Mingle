@@ -9,6 +9,42 @@ import 'package:minglev2_1/Screen/not_found_page.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Model/chat_page.dart';
 
+// Custom FadePageRoute for smooth fade transitions
+class FadePageRoute<T> extends PageRoute<T> {
+  FadePageRoute({
+    required this.builder,
+    RouteSettings? settings,
+  }) : super(settings: settings);
+
+  final WidgetBuilder builder;
+
+  @override
+  Color? get barrierColor => null;
+
+  @override
+  String? get barrierLabel => null;
+
+  @override
+  bool get maintainState => true;
+
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 300);
+
+  @override
+  Widget buildPage(BuildContext context, Animation<double> animation,
+      Animation<double> secondaryAnimation) {
+    return builder(context);
+  }
+
+  @override
+  Widget buildTransitions(BuildContext context, Animation<double> animation,
+      Animation<double> secondaryAnimation, Widget child) {
+    return FadeTransition(
+      opacity: animation,
+      child: child,
+    );
+  }
+}
 
 class NavigationService {
   static final NavigationService _instance = NavigationService._internal();
@@ -36,24 +72,30 @@ class NavigationService {
   NavigationService._internal();
 
   Future<dynamic> navigateTo(String routeName, {dynamic arguments}) {
-    return navigatorKey.currentState!.pushNamed(
-      routeName,
-      arguments: arguments,
+    return navigatorKey.currentState!.push(
+      FadePageRoute(
+        builder: routes[routeName]!,
+        settings: RouteSettings(name: routeName, arguments: arguments),
+      ),
     );
   }
 
   Future<dynamic> navigateToReplacement(String routeName, {dynamic arguments}) {
-    return navigatorKey.currentState!.pushReplacementNamed(
-      routeName,
-      arguments: arguments,
+    return navigatorKey.currentState!.pushReplacement(
+      FadePageRoute(
+        builder: routes[routeName]!,
+        settings: RouteSettings(name: routeName, arguments: arguments),
+      ),
     );
   }
 
   Future<dynamic> navigateToAndRemoveUntil(String routeName, {dynamic arguments}) {
-    return navigatorKey.currentState!.pushNamedAndRemoveUntil(
-      routeName,
+    return navigatorKey.currentState!.pushAndRemoveUntil(
+      FadePageRoute(
+        builder: routes[routeName]!,
+        settings: RouteSettings(name: routeName, arguments: arguments),
+      ),
       (Route<dynamic> route) => false,
-      arguments: arguments,
     );
   }
 }

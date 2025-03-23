@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:delightful_toast/delight_toast.dart';
@@ -128,33 +129,82 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
 
   Future<void> _handleSubmit() async {
     if (_formKey.currentState!.validate()) {
-      // Here you would typically handle authentication with your backend
-      // For now, we'll just show a success message and navigate
-      
-      if (isLogin) {
-        // Handle login
-        _showToast('Login successful!', false);
-        NavigationService().navigateToReplacement('/editProfile');
-      } else {
-        // Handle registration
-        if (!_isOver20YearsOld(_birthdayController.text)) {
-          _showToast('You must be at least 20 years old to register', true);
-          return;
-        }
+      try {
+        if (isLogin) {
+          // Handle login with Firebase Auth
+          final UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
+          
+          if (userCredential.user != null) {
+            _showToast('Login successful!', false);
+            NavigationService().navigateToReplacement('/editProfile');
+          }
+        } else {
+          // Handle registration
+          if (!_isOver20YearsOld(_birthdayController.text)) {
+            _showToast('You must be at least 20 years old to register', true);
+            return;
+          }
 
-        // Show success message
-        _showToast('Registration successful! Please login with your credentials', false);
+          // Create user in Firebase Auth
+          final UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
+
+          // Store user data in Firestore using the auth UID as document ID
+          if (userCredential.user != null) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userCredential.user!.uid)
+                .set({
+              'email': _emailController.text,
+              'name': _nameController.text,
+              'birthday': _birthdayController.text,
+              'createdAt': FieldValue.serverTimestamp(),
+              'uid': userCredential.user!.uid,
+            });
+
+            // Show success message
+            _showToast('Registration successful! Please login with your credentials', false);
+            
+            // Clear the form
+            _emailController.clear();
+            _passwordController.clear();
+            _nameController.clear();
+            _birthdayController.clear();
+            
+            // Switch to login mode
+            setState(() {
+              isLogin = true;
+            });
+          }
+        }
+      } on FirebaseAuthException catch (e) {
+        String errorMessage = 'An error occurred';
         
-        // Clear the form
-        _emailController.clear();
-        _passwordController.clear();
-        _nameController.clear();
-        _birthdayController.clear();
+        switch (e.code) {
+          case 'weak-password':
+            errorMessage = 'The password provided is too weak';
+            break;
+          case 'email-already-in-use':
+            errorMessage = 'An account already exists for this email';
+            break;
+          case 'user-not-found':
+            errorMessage = 'No user found for that email';
+            break;
+          case 'wrong-password':
+            errorMessage = 'Wrong password provided';
+            break;
+          default:
+            errorMessage = e.message ?? 'An error occurred';
+        }
         
-        // Switch to login mode
-        setState(() {
-          isLogin = true;
-        });
+        _showToast('Error: $errorMessage', true);
+      } catch (e) {
+        _showToast('Error: ${e.toString()}', true);
       }
     }
   }

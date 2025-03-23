@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../Widget/bottom_navigation_bar.dart';
+import '../Widget/bottom_navigation_bar.dart';
+import '../Widget/chat_tile.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
-import 'package:minglev2_1/Widget/chat_tile.dart';
+import 'package:minglev2_1/Widget/custom_app_bar.dart';
 
 class ChatListPage extends StatefulWidget {
-  const ChatListPage({Key? key}) : super(key: key);
+  const ChatListPage({super.key});
 
   @override
   _ChatListPageState createState() => _ChatListPageState();
@@ -70,14 +71,8 @@ class _ChatListPageState extends State<ChatListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'Search...',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+      appBar: CustomAppBar(
+        title: 'Chat',
       ),
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _currentPageIndex,

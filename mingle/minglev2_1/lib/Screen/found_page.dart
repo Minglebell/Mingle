@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../Widget/bottom_navigation_bar.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
+import 'package:minglev2_1/Widget/custom_app_bar.dart';
 
 class FoundPage extends StatefulWidget {
+  const FoundPage({super.key});
+
   @override
   _FoundPageState createState() => _FoundPageState();
 }
@@ -13,9 +16,8 @@ class _FoundPageState extends State<FoundPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Partner Found!'),
-        automaticallyImplyLeading: false, // Remove back button
+      appBar: CustomAppBar(
+        title: 'Partner Found!',
       ),
       body: Center(
         child: Column(

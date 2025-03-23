@@ -20,6 +20,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
   String? _imagePath;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -33,8 +34,11 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
     );
     
     // Fetch profile data when the page is loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(profileProvider.notifier).fetchProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(profileProvider.notifier).fetchProfile();
+      setState(() {
+        _isLoading = false;
+      });
       _animationController.forward();
     });
   }
@@ -68,157 +72,252 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
               },
             )
           : null,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              expandedHeight: 300.0,
-              floating: false,
-              pinned: true,
-              backgroundColor: const Color(0xFF6C9BCF),
-              flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        const Color(0xFF6C9BCF),
-                        const Color(0xFF4A90E2),
-                      ],
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          radius: 75,
-                          backgroundColor: Colors.white,
-                          backgroundImage:
-                              _imagePath != null ? FileImage(File(_imagePath!)) : null,
-                          child: _imagePath == null
-                              ? const Icon(
-                                  Icons.person,
-                                  size: 75,
-                                  color: Colors.grey,
-                                )
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        profile['name'],
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          "Age: ${profile['age']}",
-                          style: const TextStyle(
-                            fontSize: 20,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6C9BCF)),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    _buildProfileDisplay(profile),
-                    const SizedBox(height: 24),
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF6C9BCF), Color(0xFF4A90E2)],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF6C9BCF).withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
+            )
+          : FadeTransition(
+              opacity: _fadeAnimation,
+              child: CustomScrollView(
+                slivers: [
+                  SliverAppBar(
+                    expandedHeight: 300.0,
+                    floating: false,
+                    pinned: true,
+                    backgroundColor: const Color(0xFF6C9BCF),
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ],
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          NavigationService().navigateToReplacement('/editProfile');
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          child: const Text(
+                            'Mingle',
+                            style: TextStyle(
+                              color: Color(0xFF6C9BCF),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
                           ),
                         ),
-                        child: const Text(
-                          "Edit Profile",
+                        const Text(
+                          'Profile',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
                           ),
+                        ),
+                      ],
+                    ),
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xFF6C9BCF),
+                              Color(0xFF4A90E2),
+                            ],
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(height: 60), // Add space for the app bar
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 75,
+                                backgroundColor: Colors.white,
+                                backgroundImage:
+                                    _imagePath != null ? FileImage(File(_imagePath!)) : null,
+                                child: _imagePath == null
+                                    ? const Icon(
+                                        Icons.person,
+                                        size: 75,
+                                        color: Colors.grey,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              profile['name'] ?? 'No Name',
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (profile['age']?.isNotEmpty ?? false)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  "Age: ${profile['age']}",
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
-                  ],
-                ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          if (profile['bio']?.isNotEmpty ?? false)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16.0),
+                              margin: const EdgeInsets.only(bottom: 16.0),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.edit_note,
+                                        color: Color(0xFF6C9BCF),
+                                        size: 24,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        "Bio",
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF333333),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    profile['bio'] as String,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF666666),
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          _buildProfileDisplay(profile),
+                          const SizedBox(height: 24),
+                          Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF6C9BCF), Color(0xFF4A90E2)],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF6C9BCF).withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                NavigationService().navigateToReplacement('/editProfile');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                "Edit Profile",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 
   Widget _buildProfileDisplay(Map<String, dynamic> profile) {
+    final List<String> preferenceSections = [
+      "Gender",
+      "Religion",
+      "Budget level",
+      "Education level",
+      "Relationship Status",
+      "Smoking",
+      "Alcoholic",
+      "Allergies",
+      "Physical Activity level",
+      "Transportation",
+      "Pet",
+      "Personality",
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildPreferenceDisplay("Gender", profile['gender']),
-        const SizedBox(height: 16),
-        _buildPreferenceDisplay("Interests", profile['interests']),
-        const SizedBox(height: 16),
-        _buildPreferenceDisplay("Preferences", profile['preferences']),
-        const SizedBox(height: 16),
-        _buildPreferenceDisplay("Favourite Activities", profile['favourite activities']),
-        const SizedBox(height: 16),
-        _buildPreferenceDisplay("Alcoholic", profile['alcoholic']),
-        const SizedBox(height: 16),
-        _buildPreferenceDisplay("Smoking", profile['smoking']),
-      ],
+      children: preferenceSections.map((section) {
+        final preferences = (profile[section.toLowerCase()] as List<dynamic>?) ?? [];
+        return Column(
+          children: [
+            _buildPreferenceDisplay(section, List<String>.from(preferences)),
+            const SizedBox(height: 16),
+          ],
+        );
+      }).toList(),
     );
   }
 
@@ -295,16 +394,28 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
     switch (label.toLowerCase()) {
       case 'gender':
         return Icons.person;
-      case 'interests':
+      case 'religion':
+        return Icons.church;
+      case 'budget level':
+        return Icons.attach_money;
+      case 'education level':
+        return Icons.school;
+      case 'relationship status':
         return Icons.favorite;
-      case 'preferences':
-        return Icons.star;
-      case 'favourite activities':
-        return Icons.sports;
-      case 'alcoholic':
-        return Icons.local_bar;
       case 'smoking':
         return Icons.smoking_rooms;
+      case 'alcoholic':
+        return Icons.local_bar;
+      case 'allergies':
+        return Icons.health_and_safety;
+      case 'physical activity level':
+        return Icons.fitness_center;
+      case 'transportation':
+        return Icons.directions_car;
+      case 'pet':
+        return Icons.pets;
+      case 'personality':
+        return Icons.psychology;
       default:
         return Icons.label;
     }

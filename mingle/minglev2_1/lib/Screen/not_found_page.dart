@@ -4,8 +4,12 @@ import 'package:minglev2_1/Screen/match_menu_page.dart';
 import 'package:minglev2_1/Screen/searching_page.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/profile_display_page.dart';
+import 'package:minglev2_1/Services/navigation_services.dart';
+import 'package:minglev2_1/Widget/custom_app_bar.dart';
 
 class NotFoundPage extends StatefulWidget {
+  const NotFoundPage({super.key});
+
   @override
   _NotFoundPageState createState() => _NotFoundPageState();
 }
@@ -16,9 +20,8 @@ class _NotFoundPageState extends State<NotFoundPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Not Found'),
-        automaticallyImplyLeading: false, // Remove back button
+      appBar: CustomAppBar(
+        title: 'Not Found',
       ),
       body: Center(
         child: Column(
@@ -61,7 +64,7 @@ class _NotFoundPageState extends State<NotFoundPage> {
                 // Go Back to Match Menu
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => FindMatchPage()),
+                  FadePageRoute(builder: (context) => FindMatchPage()),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -96,13 +99,13 @@ class _NotFoundPageState extends State<NotFoundPage> {
             case 1:
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => ChatListPage()),
+                FadePageRoute(builder: (context) => ChatListPage()),
               );
               break;
             case 2:
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => ProfileDisplayPage()),
+                FadePageRoute(builder: (context) => ProfileDisplayPage()),
               );
               break;
           }

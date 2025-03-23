@@ -4,8 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
-class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
-  ProfileNotifier()
+class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  DatabaseServices()
     : super({
         'name': '',
         'age': '',
@@ -18,6 +20,34 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
         'smoking': <String>[],
       }) {
     fetchProfile(); // Fetch profile data when the notifier is created
+  }
+
+  Future<void> saveUserToFirestore(String phoneNumber) async {
+
+    try {
+      await firestore.collection('users').doc(phoneNumber).set({
+        'phoneNumber': phoneNumber,
+        'createdAt': FieldValue.serverTimestamp(),
+        'isVerified': true,
+      });
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('phoneNumber', phoneNumber);
+
+      debugPrint('User data saved successfully');
+    } catch (e) {
+      debugPrint('Error saving user data: $e');
+    }
+  }
+
+   Future<bool> checkIfUserExists(String phoneNumber) async {
+    try {
+      final doc = await firestore.collection('users').doc(phoneNumber).get();
+      return doc.exists;
+    } catch (e) {
+      debugPrint('Error checking user existence: $e');
+      throw e; // Rethrow to handle in the UI
+    }
   }
 
   Future<void> fetchProfile() async {
@@ -189,6 +219,6 @@ class ProfileNotifier extends StateNotifier<Map<String, dynamic>> {
 
 // Riverpod Provider
 final profileProvider =
-    StateNotifierProvider<ProfileNotifier, Map<String, dynamic>>((ref) {
-      return ProfileNotifier();
+    StateNotifierProvider<DatabaseServices, Map<String, dynamic>>((ref) {
+      return DatabaseServices();
     });

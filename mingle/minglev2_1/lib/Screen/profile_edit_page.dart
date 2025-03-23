@@ -4,7 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
-import 'package:minglev2_1/Services/profile_provider.dart';
+import 'package:minglev2_1/Services/database_services.dart';
 import 'profile_display_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Widget/bottom_navigation_bar.dart';
@@ -246,7 +246,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   Widget _buildPreferenceSection(
     String label,
     List<String> preferences,
-    ProfileNotifier notifier,
+    DatabaseServices databaseServices,
   ) {
     return Card(
       elevation: 4,
@@ -283,7 +283,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                       backgroundColor: const Color(0xFFA8D1F0),
                       deleteIconColor: const Color(0xFF333333),
                       onDeleted:
-                          () => notifier.removePreference(
+                          () => databaseServices.removePreference(
                             label.toLowerCase(),
                             preference,
                           ),
@@ -292,7 +292,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             ),
             const SizedBox(height: 10),
             ElevatedButton(
-              onPressed: () => _showAddPreferenceDialog(label, notifier),
+              onPressed: () => _showAddPreferenceDialog(label, databaseServices),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6C9BCF),
                 padding: const EdgeInsets.symmetric(
@@ -314,7 +314,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     );
   }
 
-  void _showAddPreferenceDialog(String label, ProfileNotifier notifier) {
+  void _showAddPreferenceDialog(String label, DatabaseServices notifier) {
     final Map<String, List<String>> options = {
       'Gender': ['Male', 'Female', 'Non-Binary'],
       'Interests': ['Hiking', 'Reading', 'Cooking', 'Traveling', 'Gaming'],

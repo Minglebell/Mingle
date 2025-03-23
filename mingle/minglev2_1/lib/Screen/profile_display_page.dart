@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
-import 'package:minglev2_1/Services/profile_provider.dart';
+import 'package:minglev2_1/Services/database_services.dart';
 import 'package:minglev2_1/Screen/profile_edit_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

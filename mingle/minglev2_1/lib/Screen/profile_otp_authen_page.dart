@@ -2,9 +2,8 @@ import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:minglev2_1/Screen/profile_start_setup_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:minglev2_1/Services/database_services.dart';
 import 'package:delightful_toast/delight_toast.dart';
 
 final otpProvider = StateNotifierProvider<OtpNotifier, OtpState>(
@@ -69,29 +68,11 @@ class ProfileOtp extends ConsumerWidget {
     ).show(context);
   }
 
-  Future<void> _saveUserToFirestore(String phoneNumber) async {
-    FirebaseFirestore firestore = FirebaseFirestore.instance;
-
-    try {
-      await firestore.collection('users').doc(phoneNumber).set({
-        'phoneNumber': phoneNumber,
-        'createdAt': FieldValue.serverTimestamp(),
-        'isVerified': true,
-      });
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('phoneNumber', phoneNumber);
-
-      debugPrint('User data saved successfully');
-    } catch (e) {
-      debugPrint('Error saving user data: $e');
-    }
-  }
-
   void _navigateToSetupProfile(BuildContext context, String phoneNumber) async {
-    await _saveUserToFirestore(phoneNumber);
+    await DatabaseServices().saveUserToFirestore(phoneNumber);
 
-    Navigator.of(context).pushReplacement(
+    Navigator.pushReplacement(
+      context,
       MaterialPageRoute(
         builder: (context) => SetupProfile(phoneNumber: phoneNumber),
       ),
@@ -211,13 +192,9 @@ class ProfileOtp extends ConsumerWidget {
                             ).show(context);
                           }
 
-                          final firestore = FirebaseFirestore.instance;
-                          final docRef = firestore
-                              .collection('users')
-                              .doc(phoneNumber);
-                          final doc = await docRef.get();
-
-                          if (doc.exists) {
+                          if (await DatabaseServices().checkIfUserExists(
+                            phoneNumber,
+                          )) {
                             DelightToastBar(
                               autoDismiss: true,
                               snackbarDuration: Duration(seconds: 3),

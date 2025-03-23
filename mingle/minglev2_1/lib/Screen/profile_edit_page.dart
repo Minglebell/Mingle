@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../Widget/bottom_navigation_bar.dart';
 import 'package:delightful_toast/delight_toast.dart';
 import 'package:delightful_toast/toast/components/toast_card.dart';
+import 'package:minglev2_1/Services/navigation_services.dart';
 
 class ProfileEditPage extends ConsumerStatefulWidget {
   const ProfileEditPage({super.key});
@@ -155,11 +156,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                           ),
                         ),
                   ).show(context);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProfileDisplayPage(),
-                    ),
+                  NavigationService().navigateToReplacement(
+                    '/profile',
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -292,7 +290,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             ),
             const SizedBox(height: 10),
             ElevatedButton(
-              onPressed: () => _showAddPreferenceDialog(label, databaseServices),
+              onPressed:
+                  () => _showAddPreferenceDialog(label, databaseServices),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6C9BCF),
                 padding: const EdgeInsets.symmetric(

@@ -23,7 +23,6 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
   }
 
   Future<void> saveUserToFirestore(String phoneNumber) async {
-
     try {
       await firestore.collection('users').doc(phoneNumber).set({
         'phoneNumber': phoneNumber,
@@ -40,16 +39,15 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
     }
   }
 
-   Future<bool> checkIfUserExists(String phoneNumber) async {
+  Future<bool> checkIfUserExists(String phoneNumber) async {
     try {
       final doc = await firestore.collection('users').doc(phoneNumber).get();
       return doc.exists;
     } catch (e) {
       debugPrint('Error checking user existence: $e');
-      throw e; // Rethrow to handle in the UI
+      throw e;
     }
   }
-
 
   Future<void> fetchProfile() async {
     try {
@@ -218,7 +216,6 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
   }
 }
 
-// Riverpod Provider
 final profileProvider =
     StateNotifierProvider<DatabaseServices, Map<String, dynamic>>((ref) {
       return DatabaseServices();

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../Widget/bottom_navigation_bar.dart';
-import 'package:minglev2_1/Screen/chat_list_page.dart';
-import 'package:minglev2_1/Screen/profile_display_page.dart';
 import 'package:minglev2_1/Screen/searching_page.dart';
 import 'package:delightful_toast/delight_toast.dart';
 import 'package:delightful_toast/toast/components/toast_card.dart';
+import 'package:minglev2_1/Services/navigation_services.dart';
 
 class FindMatchPage extends StatefulWidget {
   const FindMatchPage({Key? key}) : super(key: key);
@@ -120,16 +119,12 @@ class _FindMatchPageState extends State<FindMatchPage> {
           setState(() {
             currentPageIndex = index;
           });
-          if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => ChatListPage()),
-            );
+          if (index == 0) {
+            NavigationService().navigateToReplacement('/match');
+          } else if (index == 1) {
+            NavigationService().navigateToReplacement('/search');
           } else if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => ProfileDisplayPage()),
-            );
+            NavigationService().navigateToReplacement('/profile');
           }
         },
       ),
@@ -317,18 +312,14 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   ],
                 ),
               ),
-              SizedBox(
-                height: 80,
-              ), 
+              SizedBox(height: 80),
             ],
           ),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Container(
-        margin: EdgeInsets.only(
-          bottom: 20,
-        ), 
+        margin: EdgeInsets.only(bottom: 20),
         child: ElevatedButton(
           onPressed: () {
             // add conditions if not all fields are selected

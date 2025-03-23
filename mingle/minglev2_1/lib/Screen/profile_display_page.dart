@@ -2,11 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:minglev2_1/Screen/chat_list_page.dart';
-import 'package:minglev2_1/Screen/match_menu_page.dart';
 import 'package:minglev2_1/Services/database_services.dart';
-import 'package:minglev2_1/Screen/profile_edit_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:minglev2_1/Services/navigation_services.dart';
 
 import '../Widget/bottom_navigation_bar.dart';
 
@@ -25,19 +22,12 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> {
   @override
   void initState() {
     super.initState();
-    _loadImagePath();
     // Fetch profile data when the page is loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(profileProvider.notifier).fetchProfile();
     });
   }
 
-  Future<void> _loadImagePath() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _imagePath = prefs.getString('profile_image_path');
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,22 +44,11 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> {
                 });
                 // Navigate to other pages based on the index
                 if (index == 0) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => FindMatchPage()),
-                  );
+                  NavigationService().navigateToReplacement('/match');
                 } else if (index == 1) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => ChatListPage()),
-                  );
+                  NavigationService().navigateToReplacement('/search');
                 } else if (index == 2) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProfileDisplayPage(),
-                    ),
-                  );
+                  NavigationService().navigateToReplacement('/profile');
                 }
               },
             )
@@ -91,12 +70,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> {
               // Edit Button
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProfileEditPage(),
-                    ),
-                  );
+                  NavigationService().navigateToReplacement('/editProfile');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6C9BCF),

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:minglev2_1/Screen/match_menu_page.dart';
-import 'package:minglev2_1/Screen/profile_display_page.dart';
 import 'package:minglev2_1/Model/chat_page.dart';
 import '../../Widget/bottom_navigation_bar.dart';
+import 'package:minglev2_1/Services/navigation_services.dart';
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({Key? key}) : super(key: key);
@@ -48,15 +47,11 @@ class _ChatListPageState extends State<ChatListPage> {
           });
           // Navigate to other pages based on the index
           if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => FindMatchPage()),
-            );
+            NavigationService().navigateToReplacement('/match');
+          } else if (index == 1) {
+            NavigationService().navigateToReplacement('/search');
           } else if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => ProfileDisplayPage()),
-            );
+            NavigationService().navigateToReplacement('/profile');
           }
         },
       ),

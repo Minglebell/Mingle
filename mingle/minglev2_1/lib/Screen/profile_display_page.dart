@@ -127,82 +127,85 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
                             ],
                           ),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(height: 60), // Add space for the app bar
-                            Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 5),
-                                  ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(height: 60), // Add space for the app bar
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 75,
+                                  backgroundColor: Colors.white,
+                                  backgroundImage:
+                                      _imagePath != null ? FileImage(File(_imagePath!)) : null,
+                                  child: _imagePath == null
+                                      ? const Icon(
+                                          Icons.person,
+                                          size: 75,
+                                          color: Colors.grey,
+                                        )
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                profile['name'] ?? 'No Name',
+                                style: const TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  if ((profile['gender'] as List<dynamic>?)?.isNotEmpty ?? false)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        "Gender: ${(profile['gender'] as List<dynamic>).first}",
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  if (profile['age']?.isNotEmpty ?? false)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        "Age: ${profile['age']}",
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
-                              child: CircleAvatar(
-                                radius: 75,
-                                backgroundColor: Colors.white,
-                                backgroundImage:
-                                    _imagePath != null ? FileImage(File(_imagePath!)) : null,
-                                child: _imagePath == null
-                                    ? const Icon(
-                                        Icons.person,
-                                        size: 75,
-                                        color: Colors.grey,
-                                      )
-                                    : null,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              profile['name'] ?? 'No Name',
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if ((profile['gender'] as List<dynamic>?)?.isNotEmpty ?? false)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      "Gender: ${(profile['gender'] as List<dynamic>).first}",
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                if ((profile['gender'] as List<dynamic>?)?.isNotEmpty ?? false) const SizedBox(width: 12),
-                                if (profile['age']?.isNotEmpty ?? false)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      "Age: ${profile['age']}",
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),

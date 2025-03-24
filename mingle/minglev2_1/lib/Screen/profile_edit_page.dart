@@ -220,7 +220,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   Row(
                     children: [
                       Text(
-                        "Gender: ${profile['gender']?.first ?? 'Not specified'}",
+                        "Gender: ${(profile['gender'] as List<dynamic>?)?.isNotEmpty ?? false ? (profile['gender'] as List<dynamic>).first : 'Not specified'}",
                         style: const TextStyle(fontSize: 20, color: Colors.white),
                       ),
                       IconButton(

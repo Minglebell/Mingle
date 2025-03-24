@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:minglev2_1/Services/database_services.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../Widget/bottom_navigation_bar.dart';
 
@@ -165,21 +166,42 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
                               ),
                             ),
                             const SizedBox(height: 8),
-                            if (profile['age']?.isNotEmpty ?? false)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  "Age: ${profile['age']}",
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    color: Colors.white,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if ((profile['gender'] as List<dynamic>?)?.isNotEmpty ?? false)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      "Gender: ${(profile['gender'] as List<dynamic>).first}",
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                if ((profile['gender'] as List<dynamic>?)?.isNotEmpty ?? false) const SizedBox(width: 12),
+                                if (profile['age']?.isNotEmpty ?? false)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      "Age: ${profile['age']}",
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -280,6 +302,74 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
                               ),
                             ),
                           ),
+                          const SizedBox(height: 16),
+                          Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFE74C3C), Color(0xFFC0392B)],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFE74C3C).withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                // Show confirmation dialog
+                                final bool? confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      title: const Text('Confirm Logout'),
+                                      content: const Text('Are you sure you want to logout?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(true),
+                                          child: const Text('Logout'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+
+                                if (confirm == true) {
+                                  // Clear shared preferences and navigate to login
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.clear();
+                                  if (context.mounted) {
+                                    NavigationService().navigateToReplacement('/');
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                "Logout",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
                           const SizedBox(height: 32),
                         ],
                       ),
@@ -293,7 +383,6 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
 
   Widget _buildProfileDisplay(Map<String, dynamic> profile) {
     final List<String> preferenceSections = [
-      "Gender",
       "Religion",
       "Budget level",
       "Education level",

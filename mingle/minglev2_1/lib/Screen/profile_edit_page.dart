@@ -51,7 +51,6 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     final profileNotifier = ref.read(profileProvider.notifier);
 
     final List<String> preferenceSections = [
-      "Gender",
       "Religion",
       "Budget level",
       "Education level",
@@ -215,18 +214,27 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              Text(
-                profile['name'],
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Age: ${profile['age']}",
-                style: const TextStyle(fontSize: 20, color: Colors.white),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        "Gender: ${profile['gender']?.first ?? 'Not specified'}",
+                        style: const TextStyle(fontSize: 20, color: Colors.white),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                        onPressed: () => _showAddPreferenceDialog('Gender', ref.read(profileProvider.notifier)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    "Age: ${profile['age']}",
+                    style: const TextStyle(fontSize: 20, color: Colors.white),
+                  ),
+                ],
               ),
             ],
           ),

@@ -139,7 +139,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
           
           if (userCredential.user != null) {
             _showToast('Login successful!', false);
-            NavigationService().navigateToReplacement('/editProfile');
+            NavigationService().navigateToReplacement('/profile');
           }
         } else {
           // Handle registration

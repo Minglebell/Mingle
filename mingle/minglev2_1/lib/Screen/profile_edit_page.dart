@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:minglev2_1/Services/database_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Widget/bottom_navigation_bar.dart';
 import 'package:delightful_toast/delight_toast.dart';
 import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
 
 class ProfileEditPage extends ConsumerStatefulWidget {
   const ProfileEditPage({super.key});
@@ -18,30 +20,161 @@ class ProfileEditPage extends ConsumerStatefulWidget {
 
 class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   XFile? _image;
+  String? _imageUrl;
   bool showBottomNavBar = true; // Controls visibility of the bottom nav bar
   int currentPageIndex = 2;
 
   @override
   void initState() {
     super.initState();
-    // Fetch profile data when the page is loaded
+    _loadSavedImage();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(profileProvider.notifier).fetchProfile();
     });
   }
 
   Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? pickedImage = await picker.pickImage(
-      source: ImageSource.gallery,
-    );
-    if (pickedImage != null) {
-      setState(() {
-        _image = pickedImage;
-      });
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? pickedImage = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
 
+      if (pickedImage != null) {
+        setState(() {
+          _image = pickedImage;
+        });
+
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          },
+        );
+
+        try {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            // Convert image to base64
+            final bytes = await pickedImage.readAsBytes();
+            final base64Image = base64Encode(bytes);
+
+            // Update Firestore with the base64 image
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .update({
+              'profileImage': base64Image,
+              'profileImageUpdatedAt': FieldValue.serverTimestamp(),
+            });
+
+            // Get the updated document
+            final doc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+
+            final data = doc.data();
+            if (data != null && data['profileImage'] != null) {
+              setState(() {
+                _imageUrl = data['profileImage'];
+              });
+
+              // Save to SharedPreferences
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('profile_image', data['profileImage']);
+
+              // Close loading indicator
+              Navigator.of(context).pop();
+
+              // Show success message
+              DelightToastBar(
+                autoDismiss: true,
+                snackbarDuration: const Duration(seconds: 3),
+                builder: (context) => const ToastCard(
+                  leading: Icon(
+                    Icons.check_circle,
+                    size: 24,
+                    color: Colors.green,
+                  ),
+                  title: Text(
+                    'Profile picture updated successfully',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ).show(context);
+            }
+          }
+        } catch (e) {
+          // Close loading indicator
+          Navigator.of(context).pop();
+          
+          // Show error message
+          DelightToastBar(
+            autoDismiss: true,
+            snackbarDuration: const Duration(seconds: 3),
+            builder: (context) => ToastCard(
+              leading: const Icon(
+                Icons.error,
+                size: 24,
+                color: Colors.red,
+              ),
+              title: Text(
+                'Error updating profile picture: ${e.toString()}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ).show(context);
+        }
+      }
+    } catch (e) {
+      print('Error picking/processing image: $e');
+      DelightToastBar(
+        autoDismiss: true,
+        snackbarDuration: const Duration(seconds: 3),
+        builder: (context) => ToastCard(
+          leading: const Icon(
+            Icons.error,
+            size: 24,
+            color: Colors.red,
+          ),
+          title: Text(
+            'Error processing image: ${e.toString()}',
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ).show(context);
+    }
+  }
+
+  Future<void> _loadSavedImage() async {
+    try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('profile_image_path', pickedImage.path);
+      final String? savedImage = prefs.getString('profile_image');
+      
+      if (savedImage != null) {
+        setState(() {
+          _imageUrl = savedImage;
+        });
+      }
+    } catch (e) {
+      print('Error loading saved image: $e');
     }
   }
 
@@ -192,12 +325,12 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   CircleAvatar(
                     radius: 60,
                     backgroundColor: Colors.white,
-                    backgroundImage:
-                        _image != null ? FileImage(File(_image!.path)) : null,
-                    child:
-                        _image == null
-                            ? const Icon(Icons.person, size: 60, color: Colors.grey)
-                            : null,
+                    backgroundImage: _imageUrl != null 
+                        ? MemoryImage(base64Decode(_imageUrl!))
+                        : null,
+                    child: _imageUrl == null
+                        ? const Icon(Icons.person, size: 60, color: Colors.grey)
+                        : null,
                   ),
                   Positioned(
                     bottom: 0,

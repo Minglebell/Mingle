@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:minglev2_1/services/location_service.dart';
@@ -258,6 +257,19 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
       debugPrint('Profile saved successfully: $state');
     } catch (e) {
       debugPrint('Error saving profile: $e');
+    }
+  }
+
+  Future<void> updateProfileImage(String imageUrl) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'profileImageUrl': imageUrl});
+      
+      // Update local state
+      state = {...state, 'profileImageUrl': imageUrl};
     }
   }
 }

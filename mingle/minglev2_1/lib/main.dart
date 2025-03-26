@@ -7,7 +7,7 @@ import 'package:minglev2_1/Services/navigation_services.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    // // Replace with actual values
+    // Replace with actual values
     // options: const FirebaseOptions(
     //   apiKey: 'AIzaSyCiZMeMdKrpFWB6hyIFfShfu_N3DJrgVr0',
     //   appId: '1:410780510942:web:538244212c2cb157e5b04f',

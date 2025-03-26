@@ -1,12 +1,13 @@
-import 'dart:io';
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:minglev2_1/Services/database_services.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../Widget/bottom_navigation_bar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfileDisplayPage extends ConsumerStatefulWidget {
   const ProfileDisplayPage({super.key});
@@ -18,7 +19,7 @@ class ProfileDisplayPage extends ConsumerStatefulWidget {
 class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with SingleTickerProviderStateMixin {
   bool showBottomNavBar = true;
   int currentPageIndex = 2;
-  String? _imagePath;
+  String? _imageUrl;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   bool _isLoading = true;
@@ -34,14 +35,51 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
     
-    // Fetch profile data when the page is loaded
+    // Fetch profile data and image when the page is loaded
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(profileProvider.notifier).fetchProfile();
+      await _loadProfileImage();
       setState(() {
         _isLoading = false;
       });
       _animationController.forward();
     });
+  }
+
+  Future<void> _loadProfileImage() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // First try to get from SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        final savedImage = prefs.getString('profile_image');
+        
+        if (savedImage != null) {
+          setState(() {
+            _imageUrl = savedImage;
+          });
+          return;
+        }
+
+        // If not in SharedPreferences, get from Firestore
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        final data = doc.data();
+        if (data != null && data['profileImage'] != null) {
+          setState(() {
+            _imageUrl = data['profileImage'];
+          });
+
+          // Save to SharedPreferences for future use
+          await prefs.setString('profile_image', data['profileImage']);
+        }
+      }
+    } catch (e) {
+      print('Error loading profile image: $e');
+    }
   }
 
   @override
@@ -146,9 +184,10 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
                                 child: CircleAvatar(
                                   radius: 75,
                                   backgroundColor: Colors.white,
-                                  backgroundImage:
-                                      _imagePath != null ? FileImage(File(_imagePath!)) : null,
-                                  child: _imagePath == null
+                                  backgroundImage: _imageUrl != null 
+                                      ? MemoryImage(base64Decode(_imageUrl!))
+                                      : null,
+                                  child: _imageUrl == null
                                       ? const Icon(
                                           Icons.person,
                                           size: 75,

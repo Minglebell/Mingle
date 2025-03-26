@@ -47,6 +47,7 @@ dependencies:
   dash_chat_2: ^0.0.21
   delightful_toast: ^1.1.0
   animations: ^2.0.8
+  geolocator: ^10.1.0
 
 dev_dependencies:
   flutter_test:

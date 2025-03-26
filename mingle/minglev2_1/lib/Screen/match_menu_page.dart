@@ -744,7 +744,17 @@ class _FindMatchPageState extends State<FindMatchPage> {
                 } else {
                   Navigator.pushReplacement(
                     context,
-                    FadePageRoute(builder: (context) => SearchingPage()),
+                    FadePageRoute(
+                      builder: (context) => SearchingPage(
+                        selectedGender: selectedGender!,
+                        ageRange: ageRange,
+                        maxDistance: distance,
+                        selectedPlace: selectedPlace ?? 'Any',
+                        selectedCategory: selectedCategory ?? 'Any',
+                        isScheduledMatch: isScheduledMatch,
+                        schedules: isScheduledMatch ? schedules : null,
+                      ),
+                    ),
                   );
                 }
               },

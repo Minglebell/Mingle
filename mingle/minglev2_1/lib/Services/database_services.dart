@@ -4,9 +4,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:minglev2_1/services/location_service.dart';
+import 'dart:async';
 
 class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
   FirebaseFirestore firestore = FirebaseFirestore.instance;
+  StreamSubscription<Position>? _locationSubscription;
 
   DatabaseServices()
       : super({
@@ -25,8 +29,86 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
           'transportation': <String>[],
           'pet': <String>[],
           'personality': <String>[],
+          'location': null,
+          'lastLocationUpdate': null,
         }) {
     fetchProfile(); // Fetch profile data when the notifier is created
+    startLocationTracking(); // Start tracking location
+  }
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> startLocationTracking() async {
+    debugPrint('Starting location tracking...');
+    final hasPermission = await LocationService.checkLocationPermission();
+    debugPrint('Location permission status: $hasPermission');
+    
+    if (hasPermission) {
+      debugPrint('Setting up location stream...');
+      _locationSubscription = LocationService.getLocationStream().listen(
+        (Position position) {
+          debugPrint('Received location update: ${position.latitude}, ${position.longitude}');
+          updateLocation(position);
+        },
+        onError: (error) {
+          debugPrint('Error in location stream: $error');
+        },
+      );
+    } else {
+      debugPrint('Location permission denied');
+    }
+  }
+
+  Future<void> updateLocation(Position position) async {
+    try {
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      debugPrint('Current user: ${currentUser?.uid}');
+      
+      if (currentUser != null) {
+        final locationData = {
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'accuracy': position.accuracy,
+          'timestamp': FieldValue.serverTimestamp(),
+        };
+
+        debugPrint('Updating location in Firestore: $locationData');
+        
+        // Update local state
+        state = {
+          ...state,
+          'location': locationData,
+          'lastLocationUpdate': DateTime.now().toIso8601String(),
+        };
+
+        // Update Firestore
+        await firestore.collection('users').doc(currentUser.uid).update({
+          'location': locationData,
+          'lastLocationUpdate': FieldValue.serverTimestamp(),
+        });
+        
+        debugPrint('Location updated successfully in Firestore');
+      } else {
+        debugPrint('No authenticated user found');
+      }
+    } catch (e) {
+      debugPrint('Error updating location: $e');
+    }
+  }
+
+  Future<void> getCurrentLocation() async {
+    try {
+      final position = await LocationService.getCurrentLocation();
+      if (position != null) {
+        await updateLocation(position);
+      }
+    } catch (e) {
+      debugPrint('Error getting current location: $e');
+    }
   }
 
   Future<void> saveUserToFirestore(String phoneNumber) async {
@@ -67,6 +149,7 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
 
         if (userDoc.exists) {
           final userData = userDoc.data() as Map<String, dynamic>;
+          debugPrint('Fetched user data: $userData');
           
           // Calculate age from birthday
           String birthday = userData['birthday'] ?? '';
@@ -98,7 +181,10 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
             'transportation': List<String>.from(userData['transportation'] ?? []),
             'pet': List<String>.from(userData['pet'] ?? []),
             'personality': List<String>.from(userData['personality'] ?? []),
+            'location': userData['location'],
+            'lastLocationUpdate': userData['lastLocationUpdate'],
           };
+          debugPrint('Updated state with location: ${state['location']}');
         }
       }
     } catch (e) {

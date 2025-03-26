@@ -28,6 +28,16 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
   late TextEditingController _passwordController;
   late TextEditingController _nameController;
   late TextEditingController _birthdayController;
+  String? _selectedGender;
+
+  final List<String> _genderOptions = [
+    'Male',
+    'Female',
+    'Non-binary',
+    'Transgender',
+    'LGBTQ+',
+    'Other'
+  ];
 
   @override
   void initState() {
@@ -148,6 +158,11 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
             return;
           }
 
+          if (_selectedGender == null) {
+            _showToast('Please select your gender', true);
+            return;
+          }
+
           // Create user in Firebase Auth
           final UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
             email: _emailController.text,
@@ -163,6 +178,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
               'email': _emailController.text,
               'name': _nameController.text,
               'birthday': _birthdayController.text,
+              'gender': [_selectedGender!],
               'createdAt': FieldValue.serverTimestamp(),
               'uid': userCredential.user!.uid,
             });
@@ -175,6 +191,9 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
             _passwordController.clear();
             _nameController.clear();
             _birthdayController.clear();
+            setState(() {
+              _selectedGender = null;
+            });
             
             // Switch to login mode
             setState(() {
@@ -372,6 +391,45 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                               decoration: _getInputDecoration('Full Name', Icons.person),
                               validator: (value) =>
                                   value == null || value.isEmpty ? 'Name is required' : null,
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Gender Selection
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[300]!),
+                              ),
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedGender,
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF6C9BCF)),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ),
+                                hint: const Text('Select Gender'),
+                                items: _genderOptions.map((String gender) {
+                                  return DropdownMenuItem<String>(
+                                    value: gender,
+                                    child: Text(gender),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    _selectedGender = newValue;
+                                  });
+                                },
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please select your gender';
+                                  }
+                                  return null;
+                                },
+                              ),
                             ),
                             const SizedBox(height: 16),
 

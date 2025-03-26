@@ -40,7 +40,15 @@ class _NotFoundPageState extends State<NotFoundPage> {
                 // Try Again: Navigate back to SearchingPage
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => SearchingPage()),
+                  MaterialPageRoute(
+                    builder: (context) => SearchingPage(
+                      selectedGender: 'Male', // Default value
+                      ageRange: const RangeValues(18, 100), // Default range
+                      maxDistance: 10.0, // Default distance
+                      selectedPlace: 'Any', // Default place
+                      selectedCategory: 'Any', // Default category
+                    ),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(

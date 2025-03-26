@@ -12,6 +12,15 @@ class FoundPage extends StatefulWidget {
 
 class _FoundPageState extends State<FoundPage> {
   int currentPageIndex = 1;
+  late Map<String, dynamic> matchedUserData;
+
+  @override
+  void initState() {
+    super.initState();
+    // Get the matched user data from navigation arguments
+    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    matchedUserData = args;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,8 +35,18 @@ class _FoundPageState extends State<FoundPage> {
             Icon(Icons.celebration, size: 50, color: Colors.green),
             SizedBox(height: 20),
             Text(
-              'Jennifer',
+              matchedUserData['matchedUserName'] ?? 'Unknown',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Text(
+              '${matchedUserData['matchedUserAge']} years old',
+              style: TextStyle(fontSize: 18),
+            ),
+            SizedBox(height: 10),
+            Text(
+              '${matchedUserData['matchedUserDistance']} km away',
+              style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 20),
             Text(

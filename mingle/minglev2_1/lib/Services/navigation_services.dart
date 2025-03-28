@@ -7,7 +7,7 @@ import 'package:minglev2_1/Screen/searching_page.dart';
 import 'package:minglev2_1/Screen/found_page.dart';
 import 'package:minglev2_1/Screen/not_found_page.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
-import 'package:minglev2_1/Model/chat_page.dart';
+import 'package:minglev2_1/Screen/chat_page.dart';
 
 // Custom FadePageRoute for smooth fade transitions
 class FadePageRoute<T> extends PageRoute<T> {
@@ -48,6 +48,9 @@ class FadePageRoute<T> extends PageRoute<T> {
 
 class NavigationService {
   static final NavigationService _instance = NavigationService._internal();
+  factory NavigationService() => _instance;
+  NavigationService._internal();
+
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   final Map<String, WidgetBuilder> routes = {
@@ -65,22 +68,12 @@ class NavigationService {
     '/found': (context) => FoundPage(),
     '/notFound': (context) => NotFoundPage(),
     '/chatList': (context) => ChatListPage(),
-    '/chat': (context) {
-      final name = ModalRoute.of(context)!.settings.arguments as String;
-      return ChatPage(chatPersonName: name);
-    }
   };
-
-  factory NavigationService() {
-    return _instance;
-  }
-
-  NavigationService._internal();
 
   Future<dynamic> navigateTo(String routeName, {dynamic arguments}) {
     return navigatorKey.currentState!.push(
       FadePageRoute(
-        builder: routes[routeName]!,
+        builder: (context) => routes[routeName]!(context),
         settings: RouteSettings(name: routeName, arguments: arguments),
       ),
     );
@@ -89,19 +82,36 @@ class NavigationService {
   Future<dynamic> navigateToReplacement(String routeName, {dynamic arguments}) {
     return navigatorKey.currentState!.pushReplacement(
       FadePageRoute(
-        builder: routes[routeName]!,
+        builder: (context) => routes[routeName]!(context),
         settings: RouteSettings(name: routeName, arguments: arguments),
       ),
     );
   }
 
-  Future<dynamic> navigateToAndRemoveUntil(String routeName, {dynamic arguments}) {
-    return navigatorKey.currentState!.pushAndRemoveUntil(
+  Future<dynamic> navigateToChat(String chatId, String name, String partnerId) {
+    return navigatorKey.currentState!.push(
       FadePageRoute(
-        builder: routes[routeName]!,
-        settings: RouteSettings(name: routeName, arguments: arguments),
+        builder: (context) => ChatPage(
+          chatPersonName: name,
+          chatId: chatId,
+          partnerId: partnerId,
+        ),
       ),
-      (Route<dynamic> route) => false,
     );
+  }
+
+  Future<dynamic> navigateToProfile(String userId) {
+    return navigatorKey.currentState!.push(
+      FadePageRoute(
+        builder: (context) => ProfileDisplayPage(
+          userId: userId,
+          showBottomNav: false,
+        ),
+      ),
+    );
+  }
+
+  void goBack() {
+    return navigatorKey.currentState!.pop();
   }
 }

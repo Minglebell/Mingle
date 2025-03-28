@@ -9,14 +9,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../Widget/bottom_navigation_bar.dart';
 
 class ProfileDisplayPage extends ConsumerStatefulWidget {
-  const ProfileDisplayPage({super.key});
+  final String? userId;  // Optional - if null, show current user's profile
+  final bool showBottomNav;  // Whether to show bottom navigation
+
+  const ProfileDisplayPage({
+    super.key,
+    this.userId,
+    this.showBottomNav = true,
+  });
 
   @override
   ConsumerState<ProfileDisplayPage> createState() => _ProfileDisplayPageState();
 }
 
 class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with SingleTickerProviderStateMixin {
-  bool showBottomNavBar = true;
+  bool get showBottomNavBar => widget.showBottomNav;
   int currentPageIndex = 2;
   String? _imagePath;
   late AnimationController _animationController;
@@ -36,7 +43,13 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
     
     // Fetch profile data when the page is loaded
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await ref.read(profileProvider.notifier).fetchProfile();
+      if (widget.userId != null) {
+        // Fetch other user's profile
+        await ref.read(profileProvider.notifier).fetchUserProfile(widget.userId!);
+      } else {
+        // Fetch current user's profile
+        await ref.read(profileProvider.notifier).fetchProfile();
+      }
       setState(() {
         _isLoading = false;
       });
@@ -56,6 +69,14 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
+      appBar: widget.userId != null ? AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ) : null,
       bottomNavigationBar: showBottomNavBar
           ? CustomBottomNavBar(
               currentIndex: currentPageIndex,
@@ -83,130 +104,98 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
               opacity: _fadeAnimation,
               child: CustomScrollView(
                 slivers: [
-                  SliverAppBar(
-                    expandedHeight: 300.0,
-                    floating: false,
-                    pinned: true,
-                    backgroundColor: const Color(0xFF6C9BCF),
-                    title: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Mingle',
-                            style: TextStyle(
-                              color: Color(0xFF6C9BCF),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
+                  SliverToBoxAdapter(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFF6C9BCF),
+                            Color(0xFF4A90E2),
+                          ],
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 60),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.easeOut,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: CircleAvatar(
+                              radius: 75,
+                              backgroundColor: Colors.white,
+                              backgroundImage:
+                                  _imagePath != null ? FileImage(File(_imagePath!)) : null,
+                              child: _imagePath == null
+                                  ? const Icon(
+                                      Icons.person,
+                                      size: 75,
+                                      color: Colors.grey,
+                                    )
+                                  : null,
                             ),
                           ),
-                        ),
-                        const Text(
-                          'Profile',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
+                          const SizedBox(height: 16),
+                          Text(
+                            profile['name'] ?? 'No Name',
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Color(0xFF6C9BCF),
-                              Color(0xFF4A90E2),
-                            ],
-                          ),
-                        ),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            alignment: WrapAlignment.center,
                             children: [
-                              const SizedBox(height: 60), // Add space for the app bar
-                              Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 15,
-                                      offset: const Offset(0, 5),
+                              if ((profile['gender'] as List<dynamic>?)?.isNotEmpty ?? false)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    "Gender: ${(profile['gender'] as List<dynamic>).first}",
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      color: Colors.white,
                                     ),
-                                  ],
+                                  ),
                                 ),
-                                child: CircleAvatar(
-                                  radius: 75,
-                                  backgroundColor: Colors.white,
-                                  backgroundImage:
-                                      _imagePath != null ? FileImage(File(_imagePath!)) : null,
-                                  child: _imagePath == null
-                                      ? const Icon(
-                                          Icons.person,
-                                          size: 75,
-                                          color: Colors.grey,
-                                        )
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                profile['name'] ?? 'No Name',
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 12,
-                                runSpacing: 8,
-                                alignment: WrapAlignment.center,
-                                children: [
-                                  if ((profile['gender'] as List<dynamic>?)?.isNotEmpty ?? false)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        "Gender: ${(profile['gender'] as List<dynamic>).first}",
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          color: Colors.white,
-                                        ),
-                                      ),
+                              if (profile['age']?.isNotEmpty ?? false)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    "Age: ${profile['age']}",
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      color: Colors.white,
                                     ),
-                                  if (profile['age']?.isNotEmpty ?? false)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        "Age: ${profile['age']}",
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
+                                  ),
+                                ),
                             ],
                           ),
-                        ),
+                          const SizedBox(height: 20),
+                        ],
                       ),
                     ),
                   ),
@@ -266,113 +255,116 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
                             ),
                           _buildProfileDisplay(profile),
                           const SizedBox(height: 24),
-                          Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF6C9BCF), Color(0xFF4A90E2)],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF6C9BCF).withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
+                          // Only show edit profile and logout buttons if viewing own profile
+                          if (widget.userId == null) ...[
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF6C9BCF), Color(0xFF4A90E2)],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
                                 ),
-                              ],
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF6C9BCF).withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  NavigationService().navigateToReplacement('/editProfile');
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Edit Profile",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                NavigationService().navigateToReplacement('/editProfile');
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                            const SizedBox(height: 16),
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFE74C3C), Color(0xFFC0392B)],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
                                 ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFE74C3C).withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                              child: const Text(
-                                "Edit Profile",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFE74C3C), Color(0xFFC0392B)],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFE74C3C).withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                // Show confirmation dialog
-                                final bool? confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: const Text('Confirm Logout'),
-                                      content: const Text('Are you sure you want to logout?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(false),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(true),
-                                          child: const Text('Logout'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  // Show confirmation dialog
+                                  final bool? confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: const Text('Confirm Logout'),
+                                        content: const Text('Are you sure you want to logout?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(true),
+                                            child: const Text('Logout'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
 
-                                if (confirm == true) {
-                                  // Clear shared preferences and navigate to login
-                                  final prefs = await SharedPreferences.getInstance();
-                                  await prefs.clear();
-                                  if (context.mounted) {
-                                    NavigationService().navigateToReplacement('/');
+                                  if (confirm == true) {
+                                    // Clear shared preferences and navigate to login
+                                    final prefs = await SharedPreferences.getInstance();
+                                    await prefs.clear();
+                                    if (context.mounted) {
+                                      NavigationService().navigateToReplacement('/');
+                                    }
                                   }
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
-                              ),
-                              child: const Text(
-                                "Logout",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                                child: const Text(
+                                  "Logout",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                           const SizedBox(height: 32),
                         ],
                       ),

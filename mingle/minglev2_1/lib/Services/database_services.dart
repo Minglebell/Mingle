@@ -260,6 +260,57 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
       debugPrint('Error saving profile: $e');
     }
   }
+
+  Future<void> fetchUserProfile(String userId) async {
+    try {
+      final DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>;
+        debugPrint('Fetched user data: $userData');
+        
+        // Calculate age from birthday
+        String birthday = userData['birthday'] ?? '';
+        String age = '';
+        if (birthday.isNotEmpty) {
+          final parts = birthday.split('/');
+          final birthDate = DateTime(
+            int.parse(parts[2]), // year
+            int.parse(parts[1]), // month
+            int.parse(parts[0]), // day
+          );
+          final today = DateTime.now();
+          age = (today.difference(birthDate).inDays / 365).floor().toString();
+        }
+
+        state = {
+          'name': userData['name'] ?? '',
+          'age': age,
+          'bio': userData['bio'] ?? '',
+          'gender': List<String>.from(userData['gender'] ?? []),
+          'religion': List<String>.from(userData['religion'] ?? []),
+          'budget level': List<String>.from(userData['budget level'] ?? []),
+          'education level': List<String>.from(userData['education level'] ?? []),
+          'relationship status': List<String>.from(userData['relationship status'] ?? []),
+          'smoking': List<String>.from(userData['smoking'] ?? []),
+          'alcoholic': List<String>.from(userData['alcoholic'] ?? []),
+          'allergies': List<String>.from(userData['allergies'] ?? []),
+          'physical activity level': List<String>.from(userData['physical activity level'] ?? []),
+          'transportation': List<String>.from(userData['transportation'] ?? []),
+          'pet': List<String>.from(userData['pet'] ?? []),
+          'personality': List<String>.from(userData['personality'] ?? []),
+          'location': userData['location'],
+          'lastLocationUpdate': userData['lastLocationUpdate'],
+        };
+        debugPrint('Updated state with location: ${state['location']}');
+      }
+    } catch (e) {
+      debugPrint('Error fetching user profile: $e');
+    }
+  }
 }
 
 final profileProvider =

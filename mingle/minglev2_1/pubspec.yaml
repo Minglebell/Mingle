@@ -16,10 +16,10 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 0.1.0
 
 environment:
-  sdk: ^3.7.0
+  sdk: '>=3.1.3 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -36,11 +36,18 @@ dependencies:
   cupertino_icons: ^1.0.8
   device_preview: ^1.2.0
   intl: ^0.19.0
-  image_picker: ^0.8.4+4
-  shared_preferences: ^2.5.2
-  http: ^0.13.3 
+  image_picker: ^1.0.5
+  shared_preferences: ^2.2.2
+  http: ^1.3.0 
   logging: ^1.1.0 
-  flutter_riverpod: ^2.6.1
+  flutter_riverpod: ^2.5.1
+  firebase_core: ^2.27.1
+  firebase_auth: ^4.17.9
+  cloud_firestore: ^4.15.9
+  dash_chat_2: ^0.0.21
+  delightful_toast: ^1.1.0
+  animations: ^2.0.8
+  geolocator: ^10.1.0
 
 dev_dependencies:
   flutter_test:
@@ -51,7 +58,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^2.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -100,3 +107,4 @@ flutter:
         - asset: fonts/Itim-Regular.ttf
   assets:
     - assets/images/OTP.png
+    - assets/images/Activities.png

@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "C:/Work/Project/MingleV2.1/minglev2_1/linux"
+    "cmake.sourceDirectory": "C:/Work/Project/Mingle/mingle/minglev2_1/linux",
+    "dart.flutterSdkPath": "C:\\flutter"
 }

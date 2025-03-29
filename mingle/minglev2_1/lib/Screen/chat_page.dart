@@ -5,6 +5,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
 import 'dart:convert';
+import 'package:logging/logging.dart';
+
+
+
+
 
 class ChatPage extends StatefulWidget {
   final String chatPersonName;
@@ -19,7 +24,7 @@ class ChatPage extends StatefulWidget {
   });
 
   @override
-  _ChatPageState createState() => _ChatPageState();
+  State<ChatPage> createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
@@ -27,6 +32,7 @@ class _ChatPageState extends State<ChatPage> {
   final ChatService _chatService = ChatService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final ScrollController _scrollController = ScrollController();
+  final _logger = Logger('ChatPage');
   Stream<QuerySnapshot>? _messagesStream;
   StreamSubscription? _messagesSubscription;
   bool _hasMarkedMessagesAsRead = false;
@@ -93,41 +99,44 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _markMessagesAsRead() async {
     if (_hasMarkedMessagesAsRead) {
-      print('Debug: Messages already marked as read');
+      _logger.fine('Messages already marked as read');
       return;
     }
 
     try {
       await _chatService.markMessagesAsRead(widget.chatId);
       _hasMarkedMessagesAsRead = true;
-      print('Debug: Successfully marked messages as read');
+      _logger.info('Successfully marked messages as read');
     } catch (e) {
-      print('Error marking messages as read: $e');
+      _logger.severe('Error marking messages as read: $e');
     }
   }
 
   Future<void> _fetchMatchDetails() async {
     try {
-      print('Debug: Starting to fetch match details for chat ${widget.chatId}');
+      _logger.fine('Starting to fetch match details for chat ${widget.chatId}');
       final details = await _chatService.getMatchDetails(widget.chatId);
-      print('Debug: Received match details: $details');
+      _logger.fine('Received match details: $details');
       if (mounted) {
         setState(() {
           _matchDetails = details;
         });
-        print('Debug: Updated match details in state: $_matchDetails');
+        _logger.fine('Updated match details in state: $_matchDetails');
       }
     } catch (e) {
-      print('Error fetching match details: $e');
+      _logger.severe('Error fetching match details: $e');
     }
   }
 
   void _sendMessage() async {
     if (_messageController.text.isNotEmpty) {
       try {
-        await _chatService.sendMessage(widget.chatId, _messageController.text);
+        final message = _messageController.text;
         _messageController.clear();
+        await _chatService.sendMessage(widget.chatId, message);
       } catch (e) {
+        if (!mounted) return;
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to send message: $e')),
         );
@@ -136,11 +145,11 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _showMatchDetails() {
-    print('Debug: Showing match details dialog with data: $_matchDetails');
+    _logger.fine('Showing match details dialog with data: $_matchDetails');
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Match Details'),
+        title: const Text('Match Details'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -149,23 +158,23 @@ class _ChatPageState extends State<ChatPage> {
               if (_matchDetails['category']?.isNotEmpty ?? false) ...[
                 Text(
                   'Category: ${_matchDetails['category']}',
-                  style: TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 16),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
               ],
               if (_matchDetails['place']?.isNotEmpty ?? false) ...[
                 Text(
                   'Place: ${_matchDetails['place']}',
-                  style: TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 16),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
               ],
               if (_matchDetails['schedule']?.isNotEmpty ?? false) ...[
                 Text(
                   'Schedule: ${_matchDetails['schedule']}',
-                  style: TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 16),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
               ],
               if (_matchDetails['matchDate']?.isNotEmpty ?? false)
                 Text(
@@ -231,7 +240,7 @@ class _ChatPageState extends State<ChatPage> {
                 }
               }
             },
-            child: Text(
+            child: const Text(
               'Unmatch',
               style: TextStyle(
                 color: Colors.red,
@@ -241,7 +250,7 @@ class _ChatPageState extends State<ChatPage> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -410,7 +419,7 @@ class _ChatPageState extends State<ChatPage> {
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: Colors.black.withAlpha(16),
                                       blurRadius: 4,
                                       offset: const Offset(0, 2),
                                     ),
@@ -445,7 +454,7 @@ class _ChatPageState extends State<ChatPage> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.done_all, size: 16, color: Colors.blue),
+                                      const Icon(Icons.done_all, size: 16, color: Colors.blue),
                                       const SizedBox(width: 4),
                                       Text(
                                         'Read',
@@ -471,7 +480,7 @@ class _ChatPageState extends State<ChatPage> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withAlpha(16),
                     blurRadius: 4,
                     offset: const Offset(0, -2),
                   ),
@@ -501,7 +510,7 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                   const SizedBox(width: 12),
                   Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.blue,
                       shape: BoxShape.circle,
                     ),

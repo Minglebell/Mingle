@@ -90,14 +90,14 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
   Future<void> _selectBirthday(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().subtract(Duration(days: 20 * 365)),
+      initialDate: DateTime.now().subtract(const Duration(days: 20 * 365)),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: const Color(0xFF6C9BCF),
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF6C9BCF),
               onPrimary: Colors.white,
               surface: Colors.white,
               onSurface: Colors.black,
@@ -231,18 +231,18 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
   InputDecoration _getInputDecoration(String label, IconData icon, {Widget? suffixIcon}) {
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: Colors.grey[600]),
+      labelStyle: const TextStyle(color: Colors.grey),
       prefixIcon: Icon(icon, color: const Color(0xFF6C9BCF)),
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: Colors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey[300]!),
+        borderSide: const BorderSide(color: Colors.grey),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey[300]!),
+        borderSide: const BorderSide(color: Colors.grey),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -285,7 +285,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF6C9BCF).withOpacity(0.3),
+                              color: const Color(0xFF6C9BCF).withAlpha(76), // replaced withOpacity(0.3)
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
@@ -301,27 +301,25 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                     const SizedBox(height: 40),
                     
                     // Title and Subtitle
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
+                    const AnimatedSwitcher(
+                      duration: Duration(milliseconds: 300),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isLogin ? 'Welcome Back!' : 'Create Account',
-                            style: const TextStyle(
+                            'Welcome Back!',
+                            style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF333333),
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Text(
-                            isLogin
-                                ? 'Sign in to continue your journey'
-                                : 'Begin your adventure with us',
+                            'Sign in to continue your journey',
                             style: TextStyle(
                               fontSize: 16,
-                              color: Colors.grey[600],
+                              color: Colors.grey,
                             ),
                           ),
                         ],
@@ -475,7 +473,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF6C9BCF).withOpacity(0.3),
+                            color: const Color(0xFF6C9BCF).withAlpha(76),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),

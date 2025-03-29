@@ -9,6 +9,9 @@ import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
+import 'package:logging/logging.dart';
+
+final _logger = Logger('ProfileEditPage');
 
 class ProfileEditPage extends ConsumerStatefulWidget {
   const ProfileEditPage({super.key});
@@ -18,7 +21,6 @@ class ProfileEditPage extends ConsumerStatefulWidget {
 }
 
 class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
-  XFile? _image;
   String? _imageUrl;
   bool showBottomNavBar = true; // Controls visibility of the bottom nav bar
   int currentPageIndex = 2;
@@ -33,6 +35,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   }
 
   Future<void> _pickImage() async {
+    if (!mounted) return;
+    
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? pickedImage = await picker.pickImage(
@@ -42,11 +46,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         imageQuality: 85,
       );
 
-      if (pickedImage != null) {
-        setState(() {
-          _image = pickedImage;
-        });
-
+      if (pickedImage != null && mounted) {
         // Show loading indicator
         showDialog(
           context: context,
@@ -60,7 +60,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
         try {
           final user = FirebaseAuth.instance.currentUser;
-          if (user != null) {
+          if (user != null && mounted) {
             // Convert image to base64
             final bytes = await pickedImage.readAsBytes();
             final base64Image = base64Encode(bytes);
@@ -81,7 +81,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 .get();
 
             final data = doc.data();
-            if (data != null && data['profileImage'] != null) {
+            if (data != null && data['profileImage'] != null && mounted) {
               setState(() {
                 _imageUrl = data['profileImage'];
               });
@@ -111,6 +111,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             }
           }
         } catch (e) {
+          if (!mounted) return;
+          
           // Close loading indicator
           Navigator.of(context).pop();
           
@@ -136,7 +138,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         }
       }
     } catch (e) {
-      print('Error picking/processing image: $e');
+      if (!mounted) return;
+      
+      _logger.warning('Error picking/processing image: $e');
       DelightToastBar(
         autoDismiss: true,
         snackbarDuration: const Duration(seconds: 3),
@@ -168,14 +172,14 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             .get();
 
         final data = doc.data();
-        if (data != null && data['profileImage'] != null) {
+        if (data != null && data['profileImage'] != null && mounted) {
           setState(() {
             _imageUrl = data['profileImage'];
           });
         }
       }
     } catch (e) {
-      print('Error loading profile image: $e');
+      _logger.warning('Error loading profile image: $e');
     }
   }
 
@@ -254,7 +258,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF6C9BCF).withOpacity(0.3),
+                      color: const Color(0xFF6C9BCF).withAlpha(76), // replaced withOpacity
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -382,7 +386,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withAlpha(46),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -638,7 +642,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 );
               }
               
-              return Container(
+              return SizedBox(
                 width: double.maxFinite,
                 height: 200, // Fixed height for scrollable content
                 child: SingleChildScrollView(

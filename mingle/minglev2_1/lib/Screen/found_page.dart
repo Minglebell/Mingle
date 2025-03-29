@@ -7,7 +7,7 @@ class FoundPage extends StatefulWidget {
   const FoundPage({super.key});
 
   @override
-  _FoundPageState createState() => _FoundPageState();
+  State<FoundPage> createState() => _FoundPageState();
 }
 
 class _FoundPageState extends State<FoundPage> {
@@ -25,36 +25,36 @@ class _FoundPageState extends State<FoundPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
+      appBar: const CustomAppBar(
         title: 'Partner Found!',
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Icon(Icons.celebration, size: 50, color: Colors.green),
-            SizedBox(height: 20),
+            const Icon(Icons.celebration, size: 50, color: Colors.green),
+            const SizedBox(height: 20),
             Text(
               matchedUserData['matchedUserName'] ?? 'Unknown',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               '${matchedUserData['matchedUserAge']} years old',
-              style: TextStyle(fontSize: 18),
+              style: const TextStyle(fontSize: 18),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               '${matchedUserData['matchedUserDistance']} km away',
-              style: TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
-            SizedBox(height: 20),
-            Text(
+            const SizedBox(height: 20),
+            const Text(
               'Partner Found!',
-              style: TextStyle(fontSize: 20),
+              style:  TextStyle(fontSize: 20),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
                 // Start Chatting: Navigate to the chat page
@@ -67,7 +67,7 @@ class _FoundPageState extends State<FoundPage> {
                   vertical: 15,
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'Start Chatting',
                 style: TextStyle(fontSize: 24, color: Colors.white),
               ),

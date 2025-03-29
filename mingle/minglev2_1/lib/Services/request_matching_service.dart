@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'navigation_services.dart';
@@ -8,6 +9,7 @@ import 'navigation_services.dart';
 class RequestMatchingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final Logger _logger = Logger('RequestMatchingService');
   StreamSubscription? _matchSubscription;
   String? _currentRequestId;
   final BuildContext context;
@@ -71,13 +73,13 @@ class RequestMatchingService {
     // Get the current user's request
     _firestore.collection('requests').doc(requestId).get().then((requestDoc) {
       if (!requestDoc.exists) {
-        print('Request document does not exist: $requestId');
+        _logger.warning('Request document does not exist: $requestId');
         return;
       }
 
       final requestData = requestDoc.data() as Map<String, dynamic>;
       final userId = requestData['userId'] as String;
-      print('Listening for matches for user: $userId');
+      _logger.fine('Listening for matches for user: $userId');
 
       // Query for potential matches
       _matchSubscription = _firestore
@@ -86,24 +88,21 @@ class RequestMatchingService {
           .where('userId', isNotEqualTo: userId)
           .snapshots()
           .listen((snapshot) async {
-        print('Found ${snapshot.docs.length} potential matches');
+        _logger.info('Found ${snapshot.docs.length} potential matches');
         for (var doc in snapshot.docs) {
           final matchData = doc.data();
-          print('Checking match with user: ${matchData['userId']}');
+          _logger.fine('Checking match with user: ${matchData['userId']}');
           if (_arePotentialMatches(requestData, matchData)) {
-            print('Match found! Creating chat...');
+            _logger.info('Match found! Creating chat...');
             await _handleMatch(requestId, doc.id);
             break;
           }
         }
       }, onError: (error) {
-        print('Error in match subscription: $error');
         if (error.toString().contains('requires an index')) {
-          // Show a user-friendly message about the missing index
-          print('Please wait while the matching system is being set up. This may take a few minutes.');
-          // You might want to show this message to the user in the UI
+          _logger.warning('Missing index: Please wait while the matching system is being set up');
         } else {
-          print('An error occurred while searching for matches: $error');
+          _logger.severe('Error in match subscription: $error');
         }
       });
     });
@@ -115,19 +114,19 @@ class RequestMatchingService {
     final gender1 = request1['gender'] as String;
     final gender2 = request2['gender'] as String;
     
-    print('Checking gender match: $gender1 with $gender2');
+    _logger.fine('Checking gender match: $gender1 with $gender2');
     // Allow matching if either user's gender matches the other's preference
     if (gender1 != gender2 && gender2 != gender1) {
-      print('Gender mismatch');
+      _logger.fine('Gender mismatch');
       return false;
     }
 
     // Check age range
     final ageRange1 = request1['ageRange'] as Map<String, dynamic>;
     final ageRange2 = request2['ageRange'] as Map<String, dynamic>;
-    print('Checking age ranges: ${ageRange1['start']}-${ageRange1['end']} with ${ageRange2['start']}-${ageRange2['end']}');
+    _logger.fine('Checking age ranges: ${ageRange1['start']}-${ageRange1['end']} with ${ageRange2['start']}-${ageRange2['end']}');
     if (ageRange1['start'] > ageRange2['end'] || ageRange1['end'] < ageRange2['start']) {
-      print('Age range mismatch');
+      _logger.fine('Age range mismatch');
       return false;
     }
 
@@ -147,9 +146,9 @@ class RequestMatchingService {
       location2['longitude'] as double,
     );
 
-    print('Distance between users: $distance km, Max allowed: $maxAllowedDistance km');
+    _logger.fine('Distance between users: $distance km, Max allowed: $maxAllowedDistance km');
     if (distance > maxAllowedDistance) {
-      print('Distance too far');
+      _logger.fine('Distance too far');
       return false;
     }
 
@@ -160,14 +159,14 @@ class RequestMatchingService {
       final time1 = scheduledTime1.toDate();
       final time2 = scheduledTime2.toDate();
       final timeDiff = time1.difference(time2).abs();
-      print('Time difference: ${timeDiff.inMinutes} minutes');
+      _logger.fine('Time difference: ${timeDiff.inMinutes} minutes');
       if (timeDiff.inMinutes > 30) {
-        print('Time difference too large');
+        _logger.fine('Time difference too large');
         return false;
       }
     }
 
-    print('All matching criteria passed!');
+    _logger.fine('All matching criteria passed!');
     return true;
   }
 
@@ -193,14 +192,14 @@ class RequestMatchingService {
   // Handle match between two users
   Future<void> _handleMatch(String requestId1, String requestId2) async {
     try {
-      print('Handling match between requests: $requestId1 and $requestId2');
+      _logger.info('Handling match between requests: $requestId1 and $requestId2');
       
       // Get both requests
       final request1Doc = await _firestore.collection('requests').doc(requestId1).get();
       final request2Doc = await _firestore.collection('requests').doc(requestId2).get();
 
       if (!request1Doc.exists || !request2Doc.exists) {
-        print('One or both requests no longer exist');
+        _logger.warning('One or both requests no longer exist');
         return;
       }
 
@@ -234,7 +233,7 @@ class RequestMatchingService {
 
       // Create a chat between the matched users
       final chatId = _createChatId(request1Data['userId'], request2Data['userId']);
-      print('Creating chat with ID: $chatId');
+      _logger.info('Creating chat with ID: $chatId');
       
       // Create the chat first
       await _firestore.collection('chats').doc(chatId).set({
@@ -267,16 +266,16 @@ class RequestMatchingService {
           _firestore.collection('requests').doc(requestId1).delete(),
           _firestore.collection('requests').doc(requestId2).delete()
         ]);
-        print('Successfully deleted matched requests');
+        _logger.info('Successfully deleted matched requests');
       } catch (e) {
-        print('Warning: Could not delete requests: $e');
+        _logger.warning('Warning: Could not delete requests: $e');
         // Continue even if deletion fails, as the requests are marked as matched
       }
 
       // Cancel the subscription
       _matchSubscription?.cancel();
       _currentRequestId = null;
-      print('Match handling completed successfully');
+      _logger.info('Match handling completed successfully');
 
       // Navigate to FoundPage with matched user's information
       if (context.mounted) {
@@ -289,7 +288,7 @@ class RequestMatchingService {
         });
       }
     } catch (e) {
-      print('Error handling match: $e');
+      _logger.severe('Error handling match: $e');
       rethrow;
     }
   }
@@ -313,7 +312,7 @@ class RequestMatchingService {
       // Clear the current request ID
       _currentRequestId = null;
     } catch (e) {
-      print('Error canceling request: $e');
+      _logger.severe('Error canceling request: $e');
       rethrow;
     }
   }

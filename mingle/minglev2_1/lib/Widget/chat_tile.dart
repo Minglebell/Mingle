@@ -37,7 +37,7 @@ class ChatTile extends StatelessWidget {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return CircleAvatar(
                   backgroundColor: Colors.blue,
-                  child: Text(name[0], style: TextStyle(color: Colors.white)),
+                  child: Text(name[0], style: const TextStyle(color: Colors.white)),
                 );
               }
 
@@ -50,7 +50,7 @@ class ChatTile extends StatelessWidget {
                     ? MemoryImage(base64Decode(profileImage))
                     : null,
                 child: profileImage == null
-                    ? Text(name[0], style: TextStyle(color: Colors.white))
+                    ? Text(name[0], style: const TextStyle(color: Colors.white))
                     : null,
               );
             },
@@ -76,24 +76,24 @@ class ChatTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(time, style: TextStyle(fontSize: 14, color: Colors.grey)),
+          Text(time, style: const TextStyle(fontSize: 14, color: Colors.grey)),
           if (hasUnreadMessages)
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: Colors.red,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.red.withOpacity(0.3),
+                    color: Colors.red.withAlpha(56),
                     blurRadius: 4,
-                    offset: Offset(0, 2),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: Text(
                 unreadCount.toString(),
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,

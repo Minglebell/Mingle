@@ -65,7 +65,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
         }
       }
     } catch (e) {
-      print('Error loading profile data: $e');
+      debugPrint('Error loading profile data: $e');
     }
   }
 
@@ -87,7 +87,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
         }
       }
     } catch (e) {
-      print('Error loading profile image: $e');
+      debugPrint('Error loading profile image: $e');
     }
   }
 
@@ -192,7 +192,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
+                                      color: Colors.black.withAlpha(76),
                                       blurRadius: 15,
                                       offset: const Offset(0, 5),
                                     ),
@@ -235,7 +235,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16, vertical: 8),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
+                                        color: Colors.white.withAlpha(56),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
@@ -251,7 +251,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16, vertical: 8),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
+                                        color: Colors.white.withAlpha(56),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
@@ -285,7 +285,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.grey.withOpacity(0.1),
+                                    color: Colors.grey.withAlpha(46),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -294,15 +294,15 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
+                                  const Row(
                                     children: [
-                                      const Icon(
+                                      Icon(
                                         Icons.edit_note,
                                         color: Color(0xFF6C9BCF),
                                         size: 24,
                                       ),
-                                      const SizedBox(width: 12),
-                                      const Text(
+                                      SizedBox(width: 12),
+                                      Text(
                                         "Bio",
                                         style: TextStyle(
                                           fontSize: 20,
@@ -338,7 +338,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                               boxShadow: [
                                 BoxShadow(
                                   color:
-                                      const Color(0xFF6C9BCF).withOpacity(0.3),
+                                      const Color(0xFF6C9BCF).withAlpha(76),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
@@ -382,7 +382,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                                 boxShadow: [
                                   BoxShadow(
                                     color:
-                                        const Color(0xFFE74C3C).withOpacity(0.3),
+                                        const Color(0xFFE74C3C).withAlpha(76),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
@@ -496,7 +496,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withAlpha(46),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

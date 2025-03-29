@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 
 class ChatTile extends StatelessWidget {
   final String name;
@@ -29,30 +31,30 @@ class ChatTile extends StatelessWidget {
       },
       leading: Stack(
         children: [
-          CircleAvatar(
-            backgroundColor: Colors.blue,
-            child: Text(name[0], style: TextStyle(color: Colors.white)),
+          FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance.collection('users').doc(partnerId).get(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircleAvatar(
+                  backgroundColor: Colors.blue,
+                  child: Text(name[0], style: TextStyle(color: Colors.white)),
+                );
+              }
+
+              final userData = snapshot.data?.data() as Map<String, dynamic>?;
+              final profileImage = userData?['profileImage'];
+
+              return CircleAvatar(
+                backgroundColor: Colors.blue,
+                backgroundImage: profileImage != null
+                    ? MemoryImage(base64Decode(profileImage))
+                    : null,
+                child: profileImage == null
+                    ? Text(name[0], style: TextStyle(color: Colors.white))
+                    : null,
+              );
+            },
           ),
-          if (hasUnreadMessages)
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                padding: EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  unreadCount > 1 ? unreadCount.toString() : '',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
       title: Text(
@@ -77,11 +79,25 @@ class ChatTile extends StatelessWidget {
           Text(time, style: TextStyle(fontSize: 14, color: Colors.grey)),
           if (hasUnreadMessages)
             Container(
-              width: 8,
-              height: 8,
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                unreadCount.toString(),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
         ],

@@ -518,35 +518,4 @@ class _ChatPageState extends State<ChatPage> {
       ),
     );
   }
-
-  Widget _buildRecommendationItem(String name, String distance) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(Icons.location_on, color: Colors.blue),
-          SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                distance,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }

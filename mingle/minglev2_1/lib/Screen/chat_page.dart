@@ -4,6 +4,8 @@ import 'package:minglev2_1/Services/chat_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
+import 'dart:convert';
+
 
 class ChatPage extends StatefulWidget {
   final String chatPersonName;
@@ -73,31 +75,57 @@ class _ChatPageState extends State<ChatPage> {
     _messagesSubscription = _messagesStream?.listen((snapshot) {
       if (!mounted) return;
       
-      // Only check for new unread messages if we haven't marked messages as read yet
-      if (!_hasMarkedMessagesAsRead) {
-        final hasUnreadMessages = snapshot.docs.any((doc) {
-          final message = doc.data() as Map<String, dynamic>;
-          return message['senderId'] != _auth.currentUser?.uid && 
-                 message['read'] == false;
-        });
+      // Check for new unread messages
+      final hasUnreadMessages = snapshot.docs.any((doc) {
+        final message = doc.data() as Map<String, dynamic>;
+        return message['senderId'] != _auth.currentUser?.uid && 
+               message['read'] == false;
+      });
 
-        if (hasUnreadMessages) {
-          _markMessagesAsRead();
-        }
+      if (hasUnreadMessages && !_hasMarkedMessagesAsRead) {
+        _markMessagesAsRead();
       }
     });
   }
 
   Future<void> _markMessagesAsRead() async {
-    if (_hasMarkedMessagesAsRead) {
-      print('Debug: Messages already marked as read');
-      return;
-    }
+    if (_hasMarkedMessagesAsRead) return;
 
     try {
-      await _chatService.markMessagesAsRead(widget.chatId);
+      final currentUserId = _auth.currentUser?.uid;
+      if (currentUserId == null) return;
+
+      // Get all unread messages
+      final messages = await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatId)
+          .collection('messages')
+          .where('senderId', isNotEqualTo: currentUserId)
+          .where('read', isEqualTo: false)
+          .get();
+
+      if (messages.docs.isEmpty) return;
+
+      final batch = FirebaseFirestore.instance.batch();
+      
+      // Update all unread messages to read
+      for (var doc in messages.docs) {
+        batch.update(doc.reference, {'read': true});
+      }
+
+      // Update chat document
+      batch.update(
+        FirebaseFirestore.instance.collection('chats').doc(widget.chatId),
+        {
+          'hasUnreadMessages': false,
+          'lastReadBy': {
+            currentUserId: FieldValue.serverTimestamp(),
+          },
+        },
+      );
+
+      await batch.commit();
       _hasMarkedMessagesAsRead = true;
-      print('Debug: Successfully marked messages as read');
     } catch (e) {
       print('Error marking messages as read: $e');
     }
@@ -122,6 +150,20 @@ class _ChatPageState extends State<ChatPage> {
   void _sendMessage() async {
     if (_messageController.text.isNotEmpty) {
       try {
+        final currentUserId = _auth.currentUser?.uid;
+        if (currentUserId == null) return;
+
+        // Update chat document to indicate unread messages
+        await FirebaseFirestore.instance
+            .collection('chats')
+            .doc(widget.chatId)
+            .update({
+          'hasUnreadMessages': true,
+          'lastMessage': _messageController.text,
+          'lastMessageTime': FieldValue.serverTimestamp(),
+        });
+
+        // Send the message
         await _chatService.sendMessage(widget.chatId, _messageController.text);
         _messageController.clear();
       } catch (e) {
@@ -252,6 +294,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -261,15 +304,41 @@ class _ChatPageState extends State<ChatPage> {
             children: [
               GestureDetector(
                 onTap: _navigateToProfile,
-                child: CircleAvatar(
-                  backgroundColor: Colors.blue.shade100,
-                  child: Text(
-                    widget.chatPersonName[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                child: FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance.collection('users').doc(widget.partnerId).get(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return CircleAvatar(
+                        backgroundColor: Colors.blue.shade100,
+                        child: Text(
+                          widget.chatPersonName[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    }
+
+                    final userData = snapshot.data?.data() as Map<String, dynamic>?;
+                    final profileImage = userData?['profileImage'];
+
+                    return CircleAvatar(
+                      backgroundColor: Colors.blue.shade100,
+                      backgroundImage: profileImage != null
+                          ? MemoryImage(base64Decode(profileImage))
+                          : null,
+                      child: profileImage == null
+                          ? Text(
+                              widget.chatPersonName[0].toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),
@@ -287,12 +356,25 @@ class _ChatPageState extends State<ChatPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const Text(
-                        'Online',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            'Online',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -309,17 +391,25 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: Column(
         children: [
-          // Chat Messages
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _messagesStream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Center(
+                    child: Text(
+                      'Something went wrong',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  );
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
+                  return Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                    ),
+                  );
                 }
 
                 final messages = snapshot.data?.docs ?? [];
@@ -328,7 +418,7 @@ class _ChatPageState extends State<ChatPage> {
                 return ListView.builder(
                   controller: _scrollController,
                   reverse: true,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[messages.length - 1 - index].data() as Map<String, dynamic>;
@@ -350,8 +440,20 @@ class _ChatPageState extends State<ChatPage> {
                               vertical: 10,
                             ),
                             decoration: BoxDecoration(
-                              color: isMe ? Colors.blue : Colors.grey[300],
-                              borderRadius: BorderRadius.circular(20),
+                              color: isMe ? Colors.blue : Colors.white,
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(20),
+                                topRight: Radius.circular(20),
+                                bottomLeft: Radius.circular(isMe ? 20 : 0),
+                                bottomRight: Radius.circular(isMe ? 0 : 20),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 5,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,7 +461,7 @@ class _ChatPageState extends State<ChatPage> {
                                 Text(
                                   message['text'] ?? '',
                                   style: TextStyle(
-                                    color: isMe ? Colors.white : Colors.black,
+                                    color: isMe ? Colors.white : Colors.black87,
                                     fontSize: 16,
                                   ),
                                 ),
@@ -368,7 +470,7 @@ class _ChatPageState extends State<ChatPage> {
                                   Text(
                                     timeString,
                                     style: TextStyle(
-                                      color: isMe ? Colors.white70 : Colors.grey[700],
+                                      color: isMe ? Colors.white70 : Colors.grey[600],
                                       fontSize: 12,
                                     ),
                                   ),
@@ -379,13 +481,24 @@ class _ChatPageState extends State<ChatPage> {
                           if (isMe && message['read'] == true && index == 0)
                             Padding(
                               padding: const EdgeInsets.only(right: 8),
-                              child: Text(
-                                'Read',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                  fontStyle: FontStyle.italic,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Read',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Icon(
+                                    Icons.done_all,
+                                    size: 16,
+                                    color: Colors.blue,
+                                  ),
+                                ],
                               ),
                             ),
                         ],
@@ -396,52 +509,52 @@ class _ChatPageState extends State<ChatPage> {
               },
             ),
           ),
-          // Recommendations Section
           Container(
             padding: const EdgeInsets.all(16),
-            color: Colors.grey[200],
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Recommendation',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: Offset(0, -2),
                 ),
-                SizedBox(height: 8),
-                _buildRecommendationItem('Food Court 1', '300 m'),
-                _buildRecommendationItem('Food shop 1', '1.0 km'),
-                _buildRecommendationItem('Market 1', '250 m'),
               ],
             ),
-          ),
-          // Message Input Field
-          Container(
-            padding: const EdgeInsets.all(8),
-            color: Colors.grey[200],
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Write your message...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: Colors.grey[300]!,
+                        width: 1,
                       ),
                     ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _messageController,
+                            decoration: InputDecoration(
+                              hintText: 'Write your message...',
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.send, color: Colors.blue),
+                          onPressed: _sendMessage,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(Icons.send, color: Colors.blue),
-                  onPressed: _sendMessage,
                 ),
               ],
             ),

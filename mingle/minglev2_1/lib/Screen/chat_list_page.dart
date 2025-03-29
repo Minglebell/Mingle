@@ -72,9 +72,23 @@ class _ChatListPageState extends State<ChatListPage> {
             .snapshots()
             .listen((messages) {
           if (!mounted) return;
+          
+          final count = messages.docs.length;
           setState(() {
-            _unreadCounts[chatId] = messages.docs.length;
+            _unreadCounts[chatId] = count;
           });
+
+          if (count == 0) {
+            FirebaseFirestore.instance
+                .collection('chats')
+                .doc(chatId)
+                .update({
+              'hasUnreadMessages': false,
+              'lastReadBy': {
+                currentUserId: FieldValue.serverTimestamp(),
+              },
+            });
+          }
         });
         
         _subscriptions.add(messagesSubscription);
@@ -116,6 +130,45 @@ class _ChatListPageState extends State<ChatListPage> {
         .get();
 
     return userDoc.data()?['name'] ?? 'Unknown';
+  }
+
+  Future<void> _markChatAsRead(String chatId) async {
+    final currentUserId = _auth.currentUser?.uid;
+    if (currentUserId == null) return;
+
+    try {
+      final messages = await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .where('senderId', isNotEqualTo: currentUserId)
+          .where('read', isEqualTo: false)
+          .get();
+
+      final batch = FirebaseFirestore.instance.batch();
+      
+      for (var doc in messages.docs) {
+        batch.update(doc.reference, {'read': true});
+      }
+
+      batch.update(
+        FirebaseFirestore.instance.collection('chats').doc(chatId),
+        {
+          'hasUnreadMessages': false,
+          'lastReadBy': {
+            currentUserId: FieldValue.serverTimestamp(),
+          },
+        },
+      );
+
+      await batch.commit();
+      
+      setState(() {
+        _unreadCounts[chatId] = 0;
+      });
+    } catch (e) {
+      print('Error marking chat as read: $e');
+    }
   }
 
   @override
@@ -236,7 +289,8 @@ class _ChatListPageState extends State<ChatListPage> {
                         );
                         
                         return GestureDetector(
-                          onTap: () {
+                          onTap: () async {
+                            await _markChatAsRead(chatId);
                             NavigationService().navigateToChat(chatId, participantName, otherParticipantId);
                           },
                           child: ChatTile(

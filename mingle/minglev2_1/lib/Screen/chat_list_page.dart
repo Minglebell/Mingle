@@ -46,42 +46,76 @@ class _ChatListPageState extends State<ChatListPage> {
     final currentUserId = _auth.currentUser?.uid;
     if (currentUserId == null) return;
 
+    // Single listener for all chats
     final chatsSubscription = FirebaseFirestore.instance
         .collection('chats')
         .where('participants', arrayContains: currentUserId)
         .snapshots()
         .listen((snapshot) {
+      if (!mounted) return;
+
       for (var doc in snapshot.docs) {
         final chatId = doc.id;
         final chatData = doc.data();
+        
+        // Get unread count and hasUnreadMessages flag
+        final unreadCount = (chatData['unreadCount'] ?? 0) as int;
         final hasUnreadMessages = chatData['hasUnreadMessages'] ?? false;
         
-        if (!hasUnreadMessages) {
-          setState(() {
-            _unreadCounts[chatId] = 0;
-          });
-          continue;
-        }
+        print('Debug: Chat $chatId - Unread count: $unreadCount, Has unread: $hasUnreadMessages');
         
-        final messagesSubscription = FirebaseFirestore.instance
-            .collection('chats')
-            .doc(chatId)
-            .collection('messages')
-            .where('senderId', isNotEqualTo: currentUserId)
-            .where('read', isEqualTo: false)
-            .snapshots()
-            .listen((messages) {
-          if (!mounted) return;
-          setState(() {
-            _unreadCounts[chatId] = messages.docs.length;
-          });
+        setState(() {
+          _unreadCounts[chatId] = unreadCount;
         });
-        
-        _subscriptions.add(messagesSubscription);
       }
     });
     
     _subscriptions.add(chatsSubscription);
+  }
+
+  Future<void> _markChatAsRead(String chatId) async {
+    final currentUserId = _auth.currentUser?.uid;
+    if (currentUserId == null) return;
+
+    try {
+      print('Debug: Marking chat $chatId as read');
+      
+      final messages = await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .where('senderId', isNotEqualTo: currentUserId)
+          .where('read', isEqualTo: false)
+          .get();
+
+      print('Debug: Found ${messages.docs.length} unread messages');
+
+      final batch = FirebaseFirestore.instance.batch();
+      
+      for (var doc in messages.docs) {
+        batch.update(doc.reference, {'read': true});
+      }
+
+      batch.update(
+        FirebaseFirestore.instance.collection('chats').doc(chatId),
+        {
+          'hasUnreadMessages': false,
+          'unreadCount': 0,
+          'lastReadBy': {
+            currentUserId: FieldValue.serverTimestamp(),
+          },
+        },
+      );
+
+      await batch.commit();
+      print('Debug: Successfully marked chat as read');
+      
+      setState(() {
+        _unreadCounts[chatId] = 0;
+      });
+    } catch (e) {
+      print('Error marking chat as read: $e');
+    }
   }
 
   void _filterChats() {
@@ -236,7 +270,8 @@ class _ChatListPageState extends State<ChatListPage> {
                         );
                         
                         return GestureDetector(
-                          onTap: () {
+                          onTap: () async {
+                            await _markChatAsRead(chatId);
                             NavigationService().navigateToChat(chatId, participantName, otherParticipantId);
                           },
                           child: ChatTile(

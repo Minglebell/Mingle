@@ -4,6 +4,8 @@ import 'package:minglev2_1/Services/chat_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
+import 'dart:convert';
+import 'dart:ui';
 
 class ChatPage extends StatefulWidget {
   final String chatPersonName;
@@ -40,6 +42,8 @@ class _ChatPageState extends State<ChatPage> {
     _setupChatListener();
     _markMessagesAsRead();
     _fetchMatchDetails();
+    // Mark user as active in this chat
+    _chatService.updateActiveUsers(widget.chatId, _auth.currentUser?.uid ?? '', true);
   }
 
   @override
@@ -48,6 +52,8 @@ class _ChatPageState extends State<ChatPage> {
     _messagesSubscription?.cancel();
     _chatSubscription?.cancel();
     _scrollController.dispose();
+    // Mark user as inactive in this chat
+    _chatService.updateActiveUsers(widget.chatId, _auth.currentUser?.uid ?? '', false);
     super.dispose();
   }
 
@@ -73,17 +79,15 @@ class _ChatPageState extends State<ChatPage> {
     _messagesSubscription = _messagesStream?.listen((snapshot) {
       if (!mounted) return;
       
-      // Only check for new unread messages if we haven't marked messages as read yet
-      if (!_hasMarkedMessagesAsRead) {
-        final hasUnreadMessages = snapshot.docs.any((doc) {
-          final message = doc.data() as Map<String, dynamic>;
-          return message['senderId'] != _auth.currentUser?.uid && 
-                 message['read'] == false;
-        });
+      // Check for new unread messages
+      final hasUnreadMessages = snapshot.docs.any((doc) {
+        final message = doc.data() as Map<String, dynamic>;
+        return message['senderId'] != _auth.currentUser?.uid && 
+               message['read'] == false;
+      });
 
-        if (hasUnreadMessages) {
-          _markMessagesAsRead();
-        }
+      if (hasUnreadMessages) {
+        _markMessagesAsRead();
       }
     });
   }
@@ -261,15 +265,41 @@ class _ChatPageState extends State<ChatPage> {
             children: [
               GestureDetector(
                 onTap: _navigateToProfile,
-                child: CircleAvatar(
-                  backgroundColor: Colors.blue.shade100,
-                  child: Text(
-                    widget.chatPersonName[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                child: FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance.collection('users').doc(widget.partnerId).get(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return CircleAvatar(
+                        backgroundColor: Colors.blue.shade100,
+                        child: Text(
+                          widget.chatPersonName[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    }
+
+                    final userData = snapshot.data?.data() as Map<String, dynamic>?;
+                    final profileImage = userData?['profileImage'];
+
+                    return CircleAvatar(
+                      backgroundColor: Colors.blue.shade100,
+                      backgroundImage: profileImage != null
+                          ? MemoryImage(base64Decode(profileImage))
+                          : null,
+                      child: profileImage == null
+                          ? Text(
+                              widget.chatPersonName[0].toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),

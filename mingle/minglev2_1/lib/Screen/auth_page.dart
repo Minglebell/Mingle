@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:delightful_toast/delight_toast.dart';
 import 'package:minglev2_1/Services/location_service.dart';
-import 'package:geolocator/geolocator.dart';
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>(
   (ref) => AuthNotifier(),
@@ -281,49 +281,90 @@ class _AuthPageState extends ConsumerState<AuthPage>
   }
 
   Future<void> _storeUserData(String uid) async {
-    // Calculate age from birthday
-    final parts = _birthdayController.text.split('/');
-    final birthDate = DateTime(
-      int.parse(parts[2]), // year
-      int.parse(parts[1]), // month
-      int.parse(parts[0]), // day
-    );
-    final today = DateTime.now();
-    int age = today.year - birthDate.year;
-    // Adjust age if birthday hasn't occurred this year
-    if (today.month < birthDate.month ||
-        (today.month == birthDate.month && today.day < birthDate.day)) {
-      age--;
-    }
-
-    // Request location permission
-    bool hasLocationPermission = await LocationService.checkLocationPermission();
-    Map<String, dynamic>? locationData;
-
-    if (hasLocationPermission) {
-      Position? position = await LocationService.getCurrentLocation();
-      if (position != null) {
-        locationData = {
-          'latitude': position.latitude,
-          'longitude': position.longitude,
-          'accuracy': position.accuracy,
-          'timestamp': FieldValue.serverTimestamp(),
-        };
+    try {
+      // Calculate age from birthday
+      final parts = _birthdayController.text.split('/');
+      final birthDate = DateTime(
+        int.parse(parts[2]), // year
+        int.parse(parts[1]), // month
+        int.parse(parts[0]), // day
+      );
+      final today = DateTime.now();
+      int age = today.year - birthDate.year;
+      if (today.month < birthDate.month ||
+          (today.month == birthDate.month && today.day < birthDate.day)) {
+        age--;
       }
-    }
 
-    await FirebaseFirestore.instance.collection('users').doc(uid).set({
-      'email': _emailController.text,
-      'name': _nameController.text,
-      'birthday': _birthdayController.text,
-      'age': age.toString(), // Add age field
-      'gender': [_selectedGender!],
-      'createdAt': FieldValue.serverTimestamp(),
-      'uid': uid,
-      'location': locationData,
-      'lastLocationUpdate':
-          locationData != null ? FieldValue.serverTimestamp() : null,
-    });
+      // Request location permission and get location
+      bool hasLocationPermission = await LocationService.checkLocationPermission();
+      Map<String, dynamic>? locationData;
+
+      if (hasLocationPermission) {
+        try {
+          Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+            timeLimit: const Duration(seconds: 5),
+          );
+
+          locationData = {
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+            'accuracy': position.accuracy,
+            'timestamp': FieldValue.serverTimestamp(),
+          };
+          debugPrint('Location obtained: $locationData');
+        } catch (e) {
+          debugPrint('Error getting location: $e');
+          // Fallback to last known position if getting current position fails
+          try {
+            Position? lastPosition = await Geolocator.getLastKnownPosition();
+            if (lastPosition != null) {
+              locationData = {
+                'latitude': lastPosition.latitude,
+                'longitude': lastPosition.longitude,
+                'accuracy': lastPosition.accuracy,
+                'timestamp': FieldValue.serverTimestamp(),
+              };
+              debugPrint('Last known location obtained: $locationData');
+            }
+          } catch (e) {
+            debugPrint('Error getting last known location: $e');
+          }
+        }
+      } else {
+        debugPrint('Location permission not granted');
+      }
+
+      // Prepare user data
+      final userData = {
+        'email': _emailController.text,
+        'name': _nameController.text,
+        'birthday': _birthdayController.text,
+        'age': age.toString(),
+        'gender': [_selectedGender!],
+        'createdAt': FieldValue.serverTimestamp(),
+        'uid': uid,
+        'lastActive': FieldValue.serverTimestamp(),
+      };
+
+      // Add location data if available
+      if (locationData != null) {
+        userData['location'] = locationData;
+        userData['lastLocationUpdate'] = FieldValue.serverTimestamp();
+      }
+
+      // Store user data in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .set(userData);
+
+      debugPrint('User data stored successfully');
+    } catch (e) {
+      debugPrint('Error storing user data: $e');
+      rethrow;
+    }
   }
 
   void _clearRegistrationForm() {

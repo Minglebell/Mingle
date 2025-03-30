@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:convert';
 import '../Widget/bottom_navigation_bar.dart';
 import '../Widget/chat_tile.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
@@ -117,6 +118,130 @@ class _ChatListPageState extends State<ChatListPage> {
         .get();
 
     return userDoc.data()?['name'] ?? 'Unknown';
+  }
+
+  Widget _buildNewMatchesList(List<QueryDocumentSnapshot> allChats) {
+    final newMatches = allChats.where((chat) {
+      final chatData = chat.data() as Map<String, dynamic>;
+      return chatData['lastMessage'] == null;
+    }).toList();
+
+    if (newMatches.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      height: 140, // Increased height to accommodate name
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Text(
+              'New Matches',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              itemCount: newMatches.length,
+              itemBuilder: (context, index) {
+                final chat = newMatches[index].data() as Map<String, dynamic>;
+                final chatId = newMatches[index].id;
+                final participants = List<String>.from(chat['participants'] ?? []);
+
+                return FutureBuilder<String>(
+                  future: _getParticipantName(chatId, participants),
+                  builder: (context, nameSnapshot) {
+                    final participantName = nameSnapshot.data ?? 'Loading...';
+                    final otherParticipantId = participants.firstWhere(
+                      (id) => id != _auth.currentUser?.uid,
+                      orElse: () => '',
+                    );
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/chat',
+                          arguments: {
+                            'chatId': chatId,
+                            'partnerId': otherParticipantId,
+                          },
+                        );
+                      },
+                      child: Container(
+                        width: 85, // Slightly increased width
+                        margin: const EdgeInsets.symmetric(horizontal: 6), // Increased spacing between items
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              height: 70, // Slightly larger avatar
+                              width: 70,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFF6C9BCF),
+                                  width: 2,
+                                ),
+                              ),
+                              child: FutureBuilder<String?>(
+                                future: _getParticipantProfileImage(otherParticipantId),
+                                builder: (context, imageSnapshot) {
+                                  return CircleAvatar(
+                                    backgroundColor: Colors.grey[200],
+                                    backgroundImage: imageSnapshot.data != null
+                                        ? MemoryImage(base64Decode(imageSnapshot.data!))
+                                        : null,
+                                    child: imageSnapshot.data == null
+                                        ? const Icon(Icons.person, color: Colors.grey)
+                                        : null,
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 8), // Increased spacing between image and text
+                            Container(
+                              width: 85, // Match parent width
+                              padding: const EdgeInsets.symmetric(horizontal: 2),
+                              child: Text(
+                                participantName,
+                                maxLines: 2, // Allow two lines for longer names
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<String?> _getParticipantProfileImage(String userId) async {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+    return userDoc.data()?['profileImage'] as String?;
   }
 
   @override
@@ -252,102 +377,109 @@ class _ChatListPageState extends State<ChatListPage> {
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.only(top: 8),
-                  physics: const BouncingScrollPhysics(),
-                  itemCount:
-                      chats.length + 1, // +1 for potential "no results" message
-                  itemBuilder: (context, index) {
-                    if (index == chats.length) {
-                      return FutureBuilder<int>(
-                        future: Future.wait(
-                          chats.map((chat) async {
-                            final chatData =
-                                chat.data() as Map<String, dynamic>;
-                            final participants = List<String>.from(
-                                chatData['participants'] ?? []);
-                            final name = await _getParticipantName(
-                                chat.id, participants);
-                            return _matchesSearch(name) ? 1 : 0;
-                          }),
-                        ).then((values) => values.reduce((a, b) => a + b)),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData) return const SizedBox.shrink();
+                return Column(
+                  children: [
+                    _buildNewMatchesList(chats),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(top: 8),
+                        physics: const BouncingScrollPhysics(),
+                        itemCount:
+                            chats.length + 1, // +1 for potential "no results" message
+                        itemBuilder: (context, index) {
+                          if (index == chats.length) {
+                            return FutureBuilder<int>(
+                              future: Future.wait(
+                                chats.map((chat) async {
+                                  final chatData =
+                                      chat.data() as Map<String, dynamic>;
+                                  final participants = List<String>.from(
+                                      chatData['participants'] ?? []);
+                                  final name = await _getParticipantName(
+                                      chat.id, participants);
+                                  return _matchesSearch(name) ? 1 : 0;
+                                }),
+                              ).then((values) => values.reduce((a, b) => a + b)),
+                              builder: (context, snapshot) {
+                                if (!snapshot.hasData) return const SizedBox.shrink();
 
-                          final visibleItems = snapshot.data ?? 0;
-                          if (visibleItems == 0 && _searchQuery.isNotEmpty) {
-                            return Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const SizedBox(height: 40),
-                                  Icon(
-                                    Icons.search_off,
-                                    size: 64,
-                                    color: Colors.grey[300],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'No results found for "$_searchQuery"',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[600],
+                                final visibleItems = snapshot.data ?? 0;
+                                if (visibleItems == 0 && _searchQuery.isNotEmpty) {
+                                  return Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const SizedBox(height: 40),
+                                        Icon(
+                                          Icons.search_off,
+                                          size: 64,
+                                          color: Colors.grey[300],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'No results found for "$_searchQuery"',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
                             );
                           }
-                          return const SizedBox.shrink();
+
+                          final chat = chats[index].data() as Map<String, dynamic>;
+                          final chatId = chats[index].id;
+
+                          final lastMessage = chat['lastMessage'] ?? '';
+                          final lastMessageTime =
+                              chat['lastMessageTime'] as Timestamp?;
+                          final timeString = lastMessageTime != null
+                              ? _formatTimestamp(lastMessageTime)
+                              : '';
+                          final participants =
+                              List<String>.from(chat['participants'] ?? []);
+
+                          final unreadCount = _unreadCounts[chatId] ?? 0;
+                          final hasUnreadMessages = unreadCount > 0;
+
+                          return FutureBuilder<String>(
+                            future: _getParticipantName(chatId, participants),
+                            builder: (context, nameSnapshot) {
+                              final participantName =
+                                  nameSnapshot.data ?? 'Loading...';
+
+                              if (!_matchesSearch(participantName)) {
+                                return const SizedBox.shrink();
+                              }
+
+                              final otherParticipantId = participants.firstWhere(
+                                (id) => id != _auth.currentUser?.uid,
+                                orElse: () => '',
+                              );
+
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 1),
+                                child: ChatTile(
+                                  name: participantName,
+                                  message: lastMessage,
+                                  time: timeString,
+                                  chatId: chatId,
+                                  partnerId: otherParticipantId,
+                                  hasUnreadMessages: hasUnreadMessages,
+                                  unreadCount: unreadCount,
+                                ),
+                              );
+                            },
+                          );
                         },
-                      );
-                    }
-
-                    final chat = chats[index].data() as Map<String, dynamic>;
-                    final chatId = chats[index].id;
-
-                    final lastMessage = chat['lastMessage'] ?? '';
-                    final lastMessageTime =
-                        chat['lastMessageTime'] as Timestamp?;
-                    final timeString = lastMessageTime != null
-                        ? _formatTimestamp(lastMessageTime)
-                        : '';
-                    final participants =
-                        List<String>.from(chat['participants'] ?? []);
-
-                    final unreadCount = _unreadCounts[chatId] ?? 0;
-                    final hasUnreadMessages = unreadCount > 0;
-
-                    return FutureBuilder<String>(
-                      future: _getParticipantName(chatId, participants),
-                      builder: (context, nameSnapshot) {
-                        final participantName =
-                            nameSnapshot.data ?? 'Loading...';
-
-                        if (!_matchesSearch(participantName)) {
-                          return const SizedBox.shrink();
-                        }
-
-                        final otherParticipantId = participants.firstWhere(
-                          (id) => id != _auth.currentUser?.uid,
-                          orElse: () => '',
-                        );
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 1),
-                          child: ChatTile(
-                            name: participantName,
-                            message: lastMessage,
-                            time: timeString,
-                            chatId: chatId,
-                            partnerId: otherParticipantId,
-                            hasUnreadMessages: hasUnreadMessages,
-                            unreadCount: unreadCount,
-                          ),
-                        );
-                      },
-                    );
-                  },
+                      ),
+                    ),
+                  ],
                 );
               },
             ),

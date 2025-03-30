@@ -296,8 +296,9 @@ class ChatService {
       if (category != null) updates['category'] = category;
       if (place != null) updates['place'] = place;
       if (schedule != null) updates['schedule'] = schedule;
-      if (matchDate != null)
+      if (matchDate != null) {
         updates['matchDate'] = Timestamp.fromDate(matchDate);
+      }
 
       _logger.info('Updates to apply: $updates');
 

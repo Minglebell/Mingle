@@ -5,7 +5,10 @@ import 'package:delightful_toast/delight_toast.dart';
 import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:minglev2_1/Widget/custom_app_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:minglev2_1/Services/request_matching_service.dart';
+import 'dart:async';
 
 class FindMatchPage extends StatefulWidget {
   const FindMatchPage({super.key});
@@ -23,6 +26,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
   List<Map<String, dynamic>> schedules = [];
   RangeValues ageRange = const RangeValues(20, 30);
   double distance = 10.0;
+  Timer? _scheduleCheckTimer;
 
   // Gender options from user_data
   final List<String> genderOptions = [
@@ -100,8 +104,181 @@ class _FindMatchPageState extends State<FindMatchPage> {
     'Shopping': Icons.shopping_bag,
   };
 
-  // Add new variables for schedule details dialog
-  bool _showScheduleDetails = false;
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedSettings();
+    // Start periodic check for expired schedules
+    _scheduleCheckTimer = Timer.periodic(Duration(minutes: 1), (timer) {
+      _checkAndCancelExpiredSchedules();
+    });
+  }
+
+  @override
+  void dispose() {
+    _scheduleCheckTimer?.cancel();
+    super.dispose();
+  }
+
+  // Load saved settings from SharedPreferences
+  Future<void> _loadSavedSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Load gender
+      setState(() {
+        selectedGender = prefs.getString('selectedGender');
+      });
+
+      // Load category
+      setState(() {
+        selectedCategory = prefs.getString('selectedCategory');
+      });
+
+      // Load place
+      setState(() {
+        selectedPlace = prefs.getString('selectedPlace');
+      });
+
+      // Load scheduled match setting
+      setState(() {
+        isScheduledMatch = prefs.getBool('isScheduledMatch') ?? false;
+      });
+
+      // Load age range
+      final savedAgeRangeStart = prefs.getDouble('ageRangeStart') ?? 20.0;
+      final savedAgeRangeEnd = prefs.getDouble('ageRangeEnd') ?? 30.0;
+      setState(() {
+        ageRange = RangeValues(savedAgeRangeStart, savedAgeRangeEnd);
+      });
+
+      // Load distance
+      setState(() {
+        distance = prefs.getDouble('distance') ?? 10.0;
+      });
+
+      // Load schedules
+      final savedSchedulesJson = prefs.getString('schedules');
+      if (savedSchedulesJson != null) {
+        final List<dynamic> savedSchedules = json.decode(savedSchedulesJson);
+        setState(() {
+          schedules = savedSchedules.map((schedule) {
+            final Map<String, dynamic> scheduleMap = Map<String, dynamic>.from(schedule);
+            scheduleMap['date'] = DateTime.parse(scheduleMap['date']);
+            return scheduleMap;
+          }).toList();
+        });
+      }
+    } catch (e) {
+      print('Error loading saved settings: $e');
+    }
+  }
+
+  // Save settings to SharedPreferences
+  Future<void> _saveSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Save gender
+      if (selectedGender != null) {
+        await prefs.setString('selectedGender', selectedGender!);
+      }
+
+      // Save category
+      if (selectedCategory != null) {
+        await prefs.setString('selectedCategory', selectedCategory!);
+      }
+
+      // Save place
+      if (selectedPlace != null) {
+        await prefs.setString('selectedPlace', selectedPlace!);
+      }
+
+      // Save scheduled match setting
+      await prefs.setBool('isScheduledMatch', isScheduledMatch);
+
+      // Save age range
+      await prefs.setDouble('ageRangeStart', ageRange.start);
+      await prefs.setDouble('ageRangeEnd', ageRange.end);
+
+      // Save distance
+      await prefs.setDouble('distance', distance);
+
+      // Save schedules
+      if (schedules.isNotEmpty) {
+        final schedulesJson = json.encode(schedules.map((schedule) {
+          final Map<String, dynamic> scheduleMap = Map<String, dynamic>.from(schedule);
+          scheduleMap['date'] = (schedule['date'] as DateTime).toIso8601String();
+          return scheduleMap;
+        }).toList());
+        await prefs.setString('schedules', schedulesJson);
+      }
+    } catch (e) {
+      print('Error saving settings: $e');
+    }
+  }
+
+  // Function to check if a schedule has passed its start time
+  bool _isScheduleExpired(Map<String, dynamic> schedule) {
+    if (schedule['date'] == null || schedule['timeRange'] == null) return false;
+    
+    final DateTime scheduleDate = schedule['date'] as DateTime;
+    final String timeRange = schedule['timeRange'] as String;
+    final int startHour = timeRanges[timeRange]!['start'] as int;
+    
+    // Create DateTime for schedule start time
+    final DateTime scheduleStartTime = DateTime(
+      scheduleDate.year,
+      scheduleDate.month,
+      scheduleDate.day,
+      startHour,
+    );
+    
+    return DateTime.now().isAfter(scheduleStartTime);
+  }
+
+  // Function to check and cancel expired schedules
+  Future<void> _checkAndCancelExpiredSchedules() async {
+    final List<Map<String, dynamic>> expiredSchedules = schedules.where(_isScheduleExpired).toList();
+    
+    for (var schedule in expiredSchedules) {
+      try {
+        // Cancel the request in Firestore
+        final matchingService = RequestMatchingService(context);
+        await matchingService.cancelRequest(schedule['requestId']);
+
+        setState(() {
+          schedules.remove(schedule);
+        });
+        
+        // Show notification that schedule was cancelled
+        DelightToastBar(
+          autoDismiss: true,
+          snackbarDuration: const Duration(seconds: 3),
+          builder: (context) => ToastCard(
+            leading: const Icon(
+              Icons.info,
+              size: 24,
+              color: Colors.orange,
+            ),
+            title: Text(
+              'Schedule for ${schedule['date'].day}/${schedule['date'].month}/${schedule['date'].year} ${schedule['timeRange']} has been cancelled as the time has passed',
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ).show(context);
+      } catch (e) {
+        print('Error cancelling expired schedule: $e');
+      }
+    }
+    
+    if (expiredSchedules.isNotEmpty) {
+      await _saveSettings();
+    }
+  }
 
   // Function to check if schedule already exists
   bool _isScheduleExists(DateTime date, String timeRange) {
@@ -221,22 +398,96 @@ class _FindMatchPageState extends State<FindMatchPage> {
       );
 
       if (selectedTime != null && selectedCategory != null && selectedPlace != null && selectedGender != null) {
+        // Create a new schedule
+        final newSchedule = {
+          'date': picked,
+          'timeRange': selectedTime,
+          'category': selectedCategory,
+          'place': selectedPlace,
+          'gender': selectedGender,
+          'ageRange': {
+            'start': ageRange.start,
+            'end': ageRange.end,
+          },
+          'distance': distance,
+        };
+
         setState(() {
-          schedules.add({
-            'date': picked,
-            'timeRange': selectedTime,
-            'category': selectedCategory,
-            'place': selectedPlace,
-            'gender': selectedGender,
-            'ageRange': {
-              'start': ageRange.start,
-              'end': ageRange.end,
-            },
-            'distance': distance,
-          });
+          schedules.add(newSchedule);
         });
+
+        // Show success message immediately
+        DelightToastBar(
+          autoDismiss: true,
+          snackbarDuration: const Duration(seconds: 3),
+          builder: (context) => ToastCard(
+            leading: const Icon(
+              Icons.check_circle,
+              size: 24,
+              color: Colors.green,
+            ),
+            title: Text(
+              'Schedule added successfully',
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ).show(context);
+
+        // Create a request for this schedule in the background
+        try {
+          final matchingService = RequestMatchingService(context);
+          await matchingService.createRequest(
+            place: selectedPlace!,
+            category: selectedCategory!,
+            gender: selectedGender!,
+            ageRange: ageRange,
+            maxDistance: distance,
+            scheduledTime: picked,
+            timeRange: selectedTime,
+          );
+
+          // Store the request ID in the schedule
+          newSchedule['requestId'] = matchingService.currentRequestId;
+        } catch (e) {
+          print('Error creating request for schedule: $e');
+          // Show error message
+          DelightToastBar(
+            autoDismiss: true,
+            snackbarDuration: const Duration(seconds: 3),
+            builder: (context) => ToastCard(
+              leading: const Icon(
+                Icons.error,
+                size: 24,
+                color: Colors.red,
+              ),
+              title: Text(
+                'Failed to create matching request. Please try again.',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ).show(context);
+        }
+
+        await _saveSettings(); // Save settings after adding schedule
       }
     }
+  }
+
+  void _removeSchedule(int index) {
+    setState(() {
+      schedules.removeAt(index);
+    });
+    _saveSettings(); // Save settings after removing schedule
+  }
+
+  String _formatCategory(String category) {
+    return category.replaceAll('_', ' ');
   }
 
   // Function to show schedule details
@@ -312,16 +563,6 @@ class _FindMatchPageState extends State<FindMatchPage> {
         );
       },
     );
-  }
-
-  void _removeSchedule(int index) {
-    setState(() {
-      schedules.removeAt(index);
-    });
-  }
-
-  String _formatCategory(String category) {
-    return category.replaceAll('_', ' ');
   }
 
   @override
@@ -402,6 +643,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                           selectedCategory = selected ? category : null;
                           selectedPlace = null; // Reset selected place when category changes
                         });
+                        _saveSettings(); // Save settings after category change
                       },
                       selectedColor: Colors.blue,
                       backgroundColor: Colors.grey[200],
@@ -440,104 +682,12 @@ class _FindMatchPageState extends State<FindMatchPage> {
                           setState(() {
                             selectedPlace = selected ? place : null;
                           });
+                          _saveSettings(); // Save settings after place change
                         },
                         selectedColor: Colors.blue,
                         backgroundColor: Colors.grey[200],
                       );
                     }).toList(),
-                  ),
-                ),
-              ],
-
-              // Schedule Section
-              SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Schedule',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  Switch(
-                    value: isScheduledMatch,
-                    onChanged: (bool value) {
-                      setState(() {
-                        isScheduledMatch = value;
-                        if (!value) {
-                          schedules.clear();
-                        }
-                      });
-                    },
-                    activeColor: Colors.blue,
-                  ),
-                ],
-              ),
-              SizedBox(height: 10),
-              if (isScheduledMatch) ...[
-                Center(
-                  child: Column(
-                    children: [
-                      // Schedule list
-                      ...schedules.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final schedule = entry.value;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.blue),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(timeRanges[schedule['timeRange']]!['icon'], 
-                                     color: Colors.blue),
-                                SizedBox(width: 8),
-                                Text(
-                                  '${schedule['date'].day}/${schedule['date'].month}/${schedule['date'].year} - ${schedule['timeRange']}',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                SizedBox(width: 8),
-                                IconButton(
-                                  icon: Icon(Icons.close, size: 18),
-                                  onPressed: () => _removeSchedule(index),
-                                  padding: EdgeInsets.zero,
-                                  constraints: BoxConstraints(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                      // Add schedule button
-                      if (schedules.length < 5)
-                        TextButton.icon(
-                          onPressed: () => _addSchedule(context),
-                          icon: Icon(Icons.add, color: Colors.blue),
-                          label: Text(
-                            'Add Schedule',
-                            style: TextStyle(color: Colors.blue),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ] else ...[
-                Center(
-                  child: Text(
-                    'Real-time matching enabled',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.blue,
-                      fontStyle: FontStyle.italic,
-                    ),
                   ),
                 ),
               ],
@@ -571,6 +721,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                       setState(() {
                         selectedGender = newValue;
                       });
+                      _saveSettings(); // Save settings after gender change
                     },
                     items: genderOptions
                         .map<DropdownMenuItem<String>>((String value) {
@@ -608,8 +759,8 @@ class _FindMatchPageState extends State<FindMatchPage> {
                     RangeSlider(
                       values: ageRange,
                       min: 20,
-                      max: 60,
-                      divisions: 40,
+                      max: 80,
+                      divisions: 60,
                       labels: RangeLabels(
                         ageRange.start.round().toString(),
                         ageRange.end.round().toString(),
@@ -618,6 +769,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                         setState(() {
                           ageRange = values;
                         });
+                        _saveSettings(); // Save settings after age range change
                       },
                       activeColor: Colors.blue,
                     ),
@@ -652,9 +804,38 @@ class _FindMatchPageState extends State<FindMatchPage> {
                         setState(() {
                           distance = value;
                         });
+                        _saveSettings(); // Save settings after distance change
                       },
                       activeColor: Colors.blue,
                     ),
+                  ],
+                ),
+              ),
+
+              // Schedule Section (moved to bottom)
+              SizedBox(height: 20),
+              Text(
+                'Schedule',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 10),
+              Center(
+                child: Column(
+                  children: [
+                    // Add schedule button
+                    if (schedules.length < 5)
+                      TextButton.icon(
+                        onPressed: () => _addSchedule(context),
+                        icon: Icon(Icons.add, color: Colors.blue),
+                        label: Text(
+                          'Add Schedule',
+                          style: TextStyle(color: Colors.blue),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -667,7 +848,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          if (isScheduledMatch && schedules.isNotEmpty)
+          if (schedules.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: FloatingActionButton(
@@ -691,6 +872,60 @@ class _FindMatchPageState extends State<FindMatchPage> {
                                   '${schedule['date'].day}/${schedule['date'].month}/${schedule['date'].year}',
                                 ),
                                 subtitle: Text(schedule['timeRange']),
+                                trailing: IconButton(
+                                  icon: Icon(Icons.close, color: Colors.red),
+                                  onPressed: () async {
+                                    try {
+                                      // Cancel the request in Firestore
+                                      final matchingService = RequestMatchingService(context);
+                                      await matchingService.cancelRequest(schedule['requestId']);
+
+                                      setState(() {
+                                        schedules.remove(schedule);
+                                      });
+                                      _saveSettings();
+                                      Navigator.of(context).pop();
+                                      DelightToastBar(
+                                        autoDismiss: true,
+                                        snackbarDuration: const Duration(seconds: 3),
+                                        builder: (context) => ToastCard(
+                                          leading: const Icon(
+                                            Icons.check_circle,
+                                            size: 24,
+                                            color: Colors.green,
+                                          ),
+                                          title: Text(
+                                            'Schedule removed successfully',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ).show(context);
+                                    } catch (e) {
+                                      print('Error canceling schedule: $e');
+                                      DelightToastBar(
+                                        autoDismiss: true,
+                                        snackbarDuration: const Duration(seconds: 3),
+                                        builder: (context) => ToastCard(
+                                          leading: const Icon(
+                                            Icons.error,
+                                            size: 24,
+                                            color: Colors.red,
+                                          ),
+                                          title: Text(
+                                            'Failed to remove schedule. Please try again.',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ).show(context);
+                                    }
+                                  },
+                                ),
                                 onTap: () => _showScheduleDetailsDialog(context, schedule),
                               );
                             }).toList(),
@@ -718,11 +953,22 @@ class _FindMatchPageState extends State<FindMatchPage> {
                     selectedPlace != null &&
                     selectedGender != null;
 
-                if (isScheduledMatch) {
-                  isValid = isValid && schedules.isNotEmpty;
-                }
-
-                if (!isValid) {
+                if (isValid) {
+                  Navigator.pushReplacement(
+                    context,
+                    FadePageRoute(
+                      builder: (context) => SearchingPage(
+                        selectedGender: selectedGender!,
+                        ageRange: ageRange,
+                        maxDistance: distance,
+                        selectedPlace: selectedPlace ?? 'Any',
+                        selectedCategory: selectedCategory ?? 'Any',
+                        isScheduledMatch: false,
+                        schedules: null,
+                      ),
+                    ),
+                  );
+                } else {
                   DelightToastBar(
                     autoDismiss: true,
                     snackbarDuration: const Duration(seconds: 3),
@@ -741,21 +987,6 @@ class _FindMatchPageState extends State<FindMatchPage> {
                       ),
                     ),
                   ).show(context);
-                } else {
-                  Navigator.pushReplacement(
-                    context,
-                    FadePageRoute(
-                      builder: (context) => SearchingPage(
-                        selectedGender: selectedGender!,
-                        ageRange: ageRange,
-                        maxDistance: distance,
-                        selectedPlace: selectedPlace ?? 'Any',
-                        selectedCategory: selectedCategory ?? 'Any',
-                        isScheduledMatch: isScheduledMatch,
-                        schedules: isScheduledMatch ? schedules : null,
-                      ),
-                    ),
-                  );
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -780,3 +1011,5 @@ class _FindMatchPageState extends State<FindMatchPage> {
     );
   }
 }
+
+

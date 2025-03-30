@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:delightful_toast/delight_toast.dart';
+import 'package:minglev2_1/Services/location_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>(
   (ref) => AuthNotifier(),
@@ -171,6 +173,22 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
 
           // Store user data in Firestore using the auth UID as document ID
           if (userCredential.user != null) {
+            // Request location permission
+            bool hasLocationPermission = await LocationService.checkLocationPermission();
+            Map<String, dynamic>? locationData;
+            
+            if (hasLocationPermission) {
+              Position? position = await LocationService.getCurrentLocation();
+              if (position != null) {
+                locationData = {
+                  'latitude': position.latitude,
+                  'longitude': position.longitude,
+                  'accuracy': position.accuracy,
+                  'timestamp': FieldValue.serverTimestamp(),
+                };
+              }
+            }
+
             await FirebaseFirestore.instance
                 .collection('users')
                 .doc(userCredential.user!.uid)
@@ -181,6 +199,8 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
               'gender': [_selectedGender!],
               'createdAt': FieldValue.serverTimestamp(),
               'uid': userCredential.user!.uid,
+              'location': locationData,
+              'lastLocationUpdate': locationData != null ? FieldValue.serverTimestamp() : null,
             });
 
             // Show success message

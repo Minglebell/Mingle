@@ -3,7 +3,6 @@ import '../Widget/bottom_navigation_bar.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/profile_display_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
-import 'package:minglev2_1/Screen/found_page.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:minglev2_1/Widget/custom_app_bar.dart';
 import 'package:minglev2_1/services/request_matching_service.dart';
@@ -43,6 +42,7 @@ class _SearchingPageState extends State<SearchingPage>
   bool _isSearching = true;
   String? _currentRequestId;
   Map<String, dynamic>? _matchedUser;
+  bool _matchFound = false;
 
   @override
   void initState() {
@@ -85,8 +85,43 @@ class _SearchingPageState extends State<SearchingPage>
   }
 
   void _listenForMatches() {
-    // The matching service will handle the match creation and navigation
-    // through the _handleMatch callback
+    // Set up a listener for match found events
+    _matchingService.onMatchFound = (matchedUser) {
+      if (mounted) {
+        _onMatchFound(matchedUser);
+      }
+    };
+  }
+
+  void _onMatchFound(Map<String, dynamic> matchedUser) {
+    if (!mounted) return;
+    
+    // Check if this match is for the current user
+    if (matchedUser['chatId'] != null) {
+      setState(() {
+        _isSearching = false;
+        _matchFound = true;
+        _matchedUser = {
+          'name': matchedUser['matchedUserName'] ?? 'Unknown',
+          'age': matchedUser['matchedUserAge'] ?? 'Unknown',
+          'distance': matchedUser['matchedUserDistance'] ?? '0',
+          'gender': matchedUser['matchedUserGender'] ?? 'Unknown',
+          'profileImage': matchedUser['matchedUserProfileImage'] ?? '',
+          'chatId': matchedUser['chatId'],
+        };
+        _controller.stop(); // Stop the searching animation
+      });
+    }
+  }
+
+  void _startChat() {
+    if (_matchedUser != null && _matchedUser!['chatId'] != null) {
+      // Navigate to chat list page with the chat ID
+      Navigator.pushReplacement(
+        context,
+        FadePageRoute(builder: (context) => ChatListPage()),
+      );
+    }
   }
 
   void _showNoMatchesFound() {
@@ -169,7 +204,7 @@ class _SearchingPageState extends State<SearchingPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: 'Searching...',
+        title: _matchFound ? 'Match Found!' : 'Searching...',
       ),
       body: Center(
         child: Column(
@@ -192,11 +227,11 @@ class _SearchingPageState extends State<SearchingPage>
                 style: TextStyle(fontSize: 16),
                 textAlign: TextAlign.center,
               ),
-            ] else if (_matchedUser != null) ...[
+            ] else if (_matchFound && _matchedUser != null) ...[
               Icon(Icons.celebration, size: 50, color: Colors.green),
               SizedBox(height: 20),
               Text(
-                _matchedUser!['name'],
+                _matchedUser!['name'] as String,
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 10),
@@ -206,50 +241,69 @@ class _SearchingPageState extends State<SearchingPage>
               ),
               SizedBox(height: 10),
               Text(
-                '${_matchedUser!['distance'].toStringAsFixed(1)} km away',
+                '${_matchedUser!['distance']} km away',
                 style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: _startChat,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 50,
+                    vertical: 15,
+                  ),
+                ),
+                child: Text(
+                  'Start Chat',
+                  style: TextStyle(
+                    fontSize: 24,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ],
             SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                if (_currentRequestId != null) {
-                  try {
-                    await _matchingService.cancelRequest(_currentRequestId!);
-                    if (mounted) {
-                      Navigator.pushReplacement(
-                        context,
-                        FadePageRoute(builder: (context) => FindMatchPage()),
-                      );
+            if (!_matchFound)
+              ElevatedButton(
+                onPressed: () async {
+                  if (_currentRequestId != null) {
+                    try {
+                      await _matchingService.cancelRequest(_currentRequestId!);
+                      if (mounted) {
+                        Navigator.pushReplacement(
+                          context,
+                          FadePageRoute(builder: (context) => FindMatchPage()),
+                        );
+                      }
+                    } catch (e) {
+                      print('Error canceling request: $e');
+                      if (mounted) {
+                        _showError();
+                      }
                     }
-                  } catch (e) {
-                    print('Error canceling request: $e');
-                    if (mounted) {
-                      _showError();
-                    }
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      FadePageRoute(builder: (context) => FindMatchPage()),
+                    );
                   }
-                } else {
-                  Navigator.pushReplacement(
-                    context,
-                    FadePageRoute(builder: (context) => FindMatchPage()),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 50,
-                  vertical: 15,
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 50,
+                    vertical: 15,
+                  ),
+                ),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontSize: 24,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Colors.white,
-                ),
-              ),
-            ),
           ],
         ),
       ),

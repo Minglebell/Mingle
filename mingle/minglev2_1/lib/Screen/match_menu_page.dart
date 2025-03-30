@@ -129,39 +129,24 @@ class _FindMatchPageState extends State<FindMatchPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // Load gender
+      // Load matching preferences (these will be null after a match)
       setState(() {
         selectedGender = prefs.getString('selectedGender');
-      });
-
-      // Load category
-      setState(() {
         selectedCategory = prefs.getString('selectedCategory');
-      });
-
-      // Load place
-      setState(() {
         selectedPlace = prefs.getString('selectedPlace');
+        ageRange = RangeValues(
+          prefs.getDouble('ageRangeStart') ?? 20.0,
+          prefs.getDouble('ageRangeEnd') ?? 30.0,
+        );
+        distance = prefs.getDouble('distance') ?? 10.0;
       });
 
-      // Load scheduled match setting
+      // Load schedule settings (these will persist after matches)
       setState(() {
         isScheduledMatch = prefs.getBool('isScheduledMatch') ?? false;
       });
 
-      // Load age range
-      final savedAgeRangeStart = prefs.getDouble('ageRangeStart') ?? 20.0;
-      final savedAgeRangeEnd = prefs.getDouble('ageRangeEnd') ?? 30.0;
-      setState(() {
-        ageRange = RangeValues(savedAgeRangeStart, savedAgeRangeEnd);
-      });
-
-      // Load distance
-      setState(() {
-        distance = prefs.getDouble('distance') ?? 10.0;
-      });
-
-      // Load schedules
+      // Load saved schedules
       final savedSchedulesJson = prefs.getString('schedules');
       if (savedSchedulesJson != null) {
         final List<dynamic> savedSchedules = json.decode(savedSchedulesJson);
@@ -171,6 +156,10 @@ class _FindMatchPageState extends State<FindMatchPage> {
             scheduleMap['date'] = DateTime.parse(scheduleMap['date']);
             return scheduleMap;
           }).toList();
+        });
+      } else {
+        setState(() {
+          schedules = [];
         });
       }
     } catch (e) {

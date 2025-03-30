@@ -9,6 +9,8 @@ import 'package:minglev2_1/services/request_matching_service.dart';
 import 'package:delightful_toast/delight_toast.dart';
 import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:logging/logging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class SearchingPage extends StatefulWidget {
   final String selectedGender;
@@ -100,6 +102,9 @@ class _SearchingPageState extends State<SearchingPage>
     
     // Check if this match is for the current user
     if (matchedUser['chatId'] != null) {
+      // Clear SharedPreferences only after a successful match
+      _clearPreferences();
+      
       setState(() {
         _isSearching = false;
         _matchFound = true;
@@ -116,13 +121,29 @@ class _SearchingPageState extends State<SearchingPage>
     }
   }
 
-  void _startChat() {
+  Future<void> _clearPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Only clear matching preferences, keep schedules
+    await prefs.remove('selectedGender');
+    await prefs.remove('selectedCategory');
+    await prefs.remove('selectedPlace');
+    await prefs.remove('ageRangeStart');
+    await prefs.remove('ageRangeEnd');
+    await prefs.remove('distance');
+    // Don't clear schedule-related preferences
+    // await prefs.remove('isScheduledMatch');
+    // await prefs.remove('schedules');
+  }
+
+  void _startChat() async {
     if (_matchedUser != null && _matchedUser!['chatId'] != null) {
-      // Navigate to chat list page with the chat ID
-      Navigator.pushReplacement(
-        context,
-        FadePageRoute(builder: (context) => const ChatListPage()),
-      );
+      // Navigate to chat list page
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          FadePageRoute(builder: (context) => const ChatListPage()),
+        );
+      }
     }
   }
 
@@ -175,112 +196,231 @@ class _SearchingPageState extends State<SearchingPage>
       appBar: CustomAppBar(
         title: _matchFound ? 'Match Found!' : 'Searching...',
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            if (_isSearching) ...[
-              RotationTransition(
-                turns: _animation,
-                child: const Icon(Icons.search, size: 50, color: Colors.blue),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Looking for matches at ${widget.selectedPlace}...',
-                style: const TextStyle(fontSize: 18),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Tips: The more distance you have, more likely you will found someone.',
-                style: TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-            ] else if (_matchFound && _matchedUser != null) ...[
-              const Icon(Icons.celebration, size: 50, color: Colors.green),
-              const SizedBox(height: 20),
-              Text(
-                _matchedUser!['name'] as String,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                '${_matchedUser!['age']} years old',
-                style: const TextStyle(fontSize: 18),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                '${_matchedUser!['distance']} km away',
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: _startChat,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 50,
-                    vertical: 15,
-                  ),
-                ),
-                child: const Text(
-                  'Start Chat',
-                  style: TextStyle(
-                    fontSize: 24,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              if (_isSearching) ...[
+                // Searching Animation and Info
+                Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
                     color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withAlpha(25),
+                        spreadRadius: 2,
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      RotationTransition(
+                        turns: _animation,
+                        child: const Icon(
+                          Icons.search,
+                          size: 64,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Looking for matches at ${widget.selectedPlace}...',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withAlpha(25),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.lightbulb_outline,
+                              color: Colors.blue,
+                              size: 24,
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Tip: Increasing your distance range improves your chances of finding a match!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.blue,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            if (!_matchFound)
-              ElevatedButton(
-                onPressed: () async {
-                  if (_currentRequestId != null) {
-                    try {
-                      // Store context before async gap
+              ] else if (_matchFound && _matchedUser != null) ...[
+                // Match Found UI
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withAlpha(25),
+                        spreadRadius: 2,
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.celebration,
+                        size: 64,
+                        color: Colors.green,
+                      ),
+                      const SizedBox(height: 24),
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.grey.shade200,
+                        backgroundImage: _matchedUser!['profileImage'].isNotEmpty
+                            ? MemoryImage(base64Decode(_matchedUser!['profileImage']))
+                            : null,
+                        child: _matchedUser!['profileImage'].isEmpty
+                            ? const Icon(
+                                Icons.person,
+                                size: 50,
+                                color: Colors.grey,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _matchedUser!['name'] as String,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildInfoChip(
+                            Icons.cake,
+                            '${_matchedUser!['age']} years',
+                          ),
+                          const SizedBox(width: 12),
+                          _buildInfoChip(
+                            Icons.location_on,
+                            '${_matchedUser!['distance']} km',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: _startChat,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.chat_bubble_outline, color: Colors.white),
+                            SizedBox(width: 8),
+                            Text(
+                              'Start Chat',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              if (!_matchFound)
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_currentRequestId != null) {
+                      try {
+                        final currentContext = context;
+                        await _matchingService.cancelRequest(_currentRequestId!);
+                        
+                        if (!mounted) return;
+                        if (!currentContext.mounted) return;
+                        
+                        Navigator.pushReplacement(
+                          currentContext,
+                          FadePageRoute(builder: (context) => const FindMatchPage()),
+                        );
+                      } catch (e) {
+                        _logger.warning('Error in canceling request', e);
+                        if (!mounted) return;
+                        _showError();
+                      }
+                    } else {
                       final currentContext = context;
-                      await _matchingService.cancelRequest(_currentRequestId!);
-                      
-                      if (!mounted) return;
                       if (!currentContext.mounted) return;
                       
                       Navigator.pushReplacement(
                         currentContext,
                         FadePageRoute(builder: (context) => const FindMatchPage()),
                       );
-                    } catch (e) {
-                      _logger.warning('Error in canceling request', e);
-                      if (!mounted) return;
-                      _showError();
                     }
-                  } else {
-                    // Store context for the non-async path too
-                    final currentContext = context;
-                    if (!currentContext.mounted) return;
-                    
-                    Navigator.pushReplacement(
-                      currentContext,
-                      FadePageRoute(builder: (context) => const FindMatchPage()),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 50,
-                    vertical: 15,
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade50,
+                    foregroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.close),
+                      SizedBox(width: 8),
+                      Text(
+                        'Cancel Search',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(
-                    fontSize: 24,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: CustomBottomNavBar(
@@ -301,6 +441,30 @@ class _SearchingPageState extends State<SearchingPage>
             );
           }
         },
+      ),
+    );
+  }
+
+  Widget _buildInfoChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.grey.shade700),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ],
       ),
     );
   }

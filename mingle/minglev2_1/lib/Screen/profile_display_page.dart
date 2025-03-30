@@ -1,34 +1,31 @@
-import 'dart:io';
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:minglev2_1/Services/database_services.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../Widget/bottom_navigation_bar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfileDisplayPage extends ConsumerStatefulWidget {
-  final String? userId;  // Optional - if null, show current user's profile
-  final bool showBottomNav;  // Whether to show bottom navigation
-
-  const ProfileDisplayPage({
-    super.key,
-    this.userId,
-    this.showBottomNav = true,
-  });
+  final String? userId; // Optional - if null, show current user's profile
+  final bool showBottomNav; // Whether to show bottom navigation
+  const ProfileDisplayPage({super.key, this.userId, this.showBottomNav = true});
 
   @override
   ConsumerState<ProfileDisplayPage> createState() => _ProfileDisplayPageState();
 }
 
-class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with SingleTickerProviderStateMixin {
-  bool get showBottomNavBar => widget.showBottomNav;
+class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
+    with SingleTickerProviderStateMixin {
+  bool showBottomNavBar = true;
   int currentPageIndex = 2;
-  String? _imagePath;
+  String? _imageUrl;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   bool _isLoading = true;
+  Map<String, dynamic>? _userProfile;
 
   @override
   void initState() {
@@ -40,21 +37,58 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
-    
-    // Fetch profile data when the page is loaded
+
+    // Fetch profile data and image when the page is loaded
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (widget.userId != null) {
-        // Fetch other user's profile
-        await ref.read(profileProvider.notifier).fetchUserProfile(widget.userId!);
-      } else {
-        // Fetch current user's profile
-        await ref.read(profileProvider.notifier).fetchProfile();
-      }
+      await _loadProfileData();
+      await _loadProfileImage();
       setState(() {
         _isLoading = false;
       });
       _animationController.forward();
     });
+  }
+
+  Future<void> _loadProfileData() async {
+    try {
+      final userId = widget.userId ?? FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+
+        if (doc.exists) {
+          setState(() {
+            _userProfile = doc.data();
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading profile data: $e');
+    }
+  }
+
+  Future<void> _loadProfileImage() async {
+    try {
+      final userId = widget.userId ?? FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        // Get from Firestore
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+
+        final data = doc.data();
+        if (data != null && data['profileImage'] != null) {
+          setState(() {
+            _imageUrl = data['profileImage'];
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading profile image: $e');
+    }
   }
 
   @override
@@ -65,19 +99,18 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(profileProvider);
+    final profile = _userProfile ?? ref.watch(profileProvider);
+    if (profile == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
-      appBar: widget.userId != null ? AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ) : null,
-      bottomNavigationBar: showBottomNavBar
+      bottomNavigationBar: widget.showBottomNav
           ? CustomBottomNavBar(
               currentIndex: currentPageIndex,
               onDestinationSelected: (int index) {
@@ -104,98 +137,136 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
               opacity: _fadeAnimation,
               child: CustomScrollView(
                 slivers: [
-                  SliverToBoxAdapter(
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Color(0xFF6C9BCF),
-                            Color(0xFF4A90E2),
-                          ],
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const SizedBox(height: 60),
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 500),
-                            curve: Curves.easeOut,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: CircleAvatar(
-                              radius: 75,
-                              backgroundColor: Colors.white,
-                              backgroundImage:
-                                  _imagePath != null ? FileImage(File(_imagePath!)) : null,
-                              child: _imagePath == null
-                                  ? const Icon(
-                                      Icons.person,
-                                      size: 75,
-                                      color: Colors.grey,
-                                    )
-                                  : null,
-                            ),
+                  SliverAppBar(
+                    expandedHeight: 300.0,
+                    floating: false,
+                    pinned: true,
+                    backgroundColor: const Color(0xFF6C9BCF),
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            profile['name'] ?? 'No Name',
-                            style: const TextStyle(
-                              fontSize: 32,
+                          child: const Text(
+                            'Mingle',
+                            style: TextStyle(
+                              color: Color(0xFF6C9BCF),
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              fontSize: 20,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 8,
-                            alignment: WrapAlignment.center,
-                            children: [
-                              if ((profile['gender'] as List<dynamic>?)?.isNotEmpty ?? false)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    "Gender: ${(profile['gender'] as List<dynamic>).first}",
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              if (profile['age']?.isNotEmpty ?? false)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    "Age: ${profile['age']}",
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
+                        ),
+                        const Text(
+                          'Profile',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xFF6C9BCF),
+                              Color(0xFF4A90E2),
                             ],
                           ),
-                          const SizedBox(height: 20),
-                        ],
+                        ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                  height: 60), // Add space for the app bar
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 75,
+                                  backgroundColor: Colors.white,
+                                  backgroundImage: _imageUrl != null
+                                      ? MemoryImage(base64Decode(_imageUrl!))
+                                      : null,
+                                  child: _imageUrl == null
+                                      ? const Icon(
+                                          Icons.person,
+                                          size: 75,
+                                          color: Colors.grey,
+                                        )
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                profile['name'] ?? 'No Name',
+                                style: const TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  if ((profile['gender'] as List<dynamic>?)
+                                          ?.isNotEmpty ??
+                                      false)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        "Gender: ${(profile['gender'] as List<dynamic>).first}",
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  if (profile['age']?.isNotEmpty ?? false)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        "Age: ${profile['age']}",
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -255,47 +326,49 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
                             ),
                           _buildProfileDisplay(profile),
                           const SizedBox(height: 24),
-                          // Only show edit profile and logout buttons if viewing own profile
-                          if (widget.userId == null) ...[
-                            Container(
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF6C9BCF), Color(0xFF4A90E2)],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF6C9BCF).withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
+                          Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF6C9BCF), Color(0xFF4A90E2)],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
                               ),
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  NavigationService().navigateToReplacement('/editProfile');
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  shadowColor: Colors.transparent,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      const Color(0xFF6C9BCF).withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
                                 ),
-                                child: const Text(
-                                  "Edit Profile",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: widget.userId == null ? () {
+                                NavigationService()
+                                    .navigateToReplacement('/editProfile');
+                              } : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Text(
+                                widget.userId == null ? "Edit Profile" : "View Profile",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
+                          ),
+                          if (widget.userId == null) ...[
                             const SizedBox(height: 16),
                             Container(
                               width: double.infinity,
@@ -308,7 +381,8 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFE74C3C).withOpacity(0.3),
+                                    color:
+                                        const Color(0xFFE74C3C).withOpacity(0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
@@ -322,14 +396,17 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
                                     builder: (BuildContext context) {
                                       return AlertDialog(
                                         title: const Text('Confirm Logout'),
-                                        content: const Text('Are you sure you want to logout?'),
+                                        content: const Text(
+                                            'Are you sure you want to logout?'),
                                         actions: [
                                           TextButton(
-                                            onPressed: () => Navigator.of(context).pop(false),
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(false),
                                             child: const Text('Cancel'),
                                           ),
                                           TextButton(
-                                            onPressed: () => Navigator.of(context).pop(true),
+                                            onPressed: () =>
+                                                Navigator.of(context).pop(true),
                                             child: const Text('Logout'),
                                           ),
                                         ],
@@ -339,17 +416,20 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
 
                                   if (confirm == true) {
                                     // Clear shared preferences and navigate to login
-                                    final prefs = await SharedPreferences.getInstance();
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
                                     await prefs.clear();
                                     if (context.mounted) {
-                                      NavigationService().navigateToReplacement('/');
+                                      NavigationService()
+                                          .navigateToReplacement('/');
                                     }
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.transparent,
                                   shadowColor: Colors.transparent,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -394,7 +474,8 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: preferenceSections.map((section) {
-        final preferences = (profile[section.toLowerCase()] as List<dynamic>?) ?? [];
+        final preferences =
+            (profile[section.toLowerCase()] as List<dynamic>?) ?? [];
         return Column(
           children: [
             _buildPreferenceDisplay(section, List<String>.from(preferences)),
@@ -457,7 +538,8 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage> with Si
                   ),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
                   preference,
                   style: const TextStyle(

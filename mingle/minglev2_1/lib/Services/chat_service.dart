@@ -20,32 +20,72 @@ class ChatService {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('No authenticated user');
 
-    final now = FieldValue.serverTimestamp();
-    final messageData = {
-      'text': message,
-      'senderId': currentUser.uid,
-      'timestamp': now,
-      'read': false,
-      'createdAt': now,
-    };
+    try {
+      final now = FieldValue.serverTimestamp();
+      final messageData = {
+        'text': message,
+        'senderId': currentUser.uid,
+        'timestamp': now,
+        'read': false,
+        'createdAt': now,
+      };
 
-    // Add message to chat
-    await _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .add(messageData);
+      // Start a batch write
+      final batch = _firestore.batch();
 
-    // Update last message in chat document
-    await _firestore.collection('chats').doc(chatId).update({
-      'lastMessage': message,
-      'lastMessageTime': now,
-      'lastMessageSenderId': currentUser.uid,
-      'hasUnreadMessages': true,
-      'lastReadBy': {
-        currentUser.uid: now,
-      },
-    });
+      // Add message to chat
+      final messageRef = _firestore
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .doc();
+      batch.set(messageRef, messageData);
+
+      // Get current chat document to check existing unread count and active users
+      final chatDoc = await _firestore.collection('chats').doc(chatId).get();
+      final currentData = chatDoc.data() ?? {};
+      final currentUnreadCount = currentData['unreadCount'] ?? 0;
+      final activeUsers = List<String>.from(currentData['activeUsers'] ?? []);
+      final recipientId = (currentData['participants'] as List).firstWhere(
+        (id) => id != currentUser.uid,
+        orElse: () => '',
+      );
+
+      // Check if recipient is currently in the chat page
+      final isRecipientInChat = activeUsers.contains(recipientId);
+      
+      print('Debug: Sending message to chat $chatId - Recipient in chat: $isRecipientInChat');
+
+      // Update chat document
+      final chatRef = _firestore.collection('chats').doc(chatId);
+      final updates = {
+        'lastMessage': message,
+        'lastMessageTime': now,
+        'lastMessageSenderId': currentUser.uid,
+        'lastReadBy': {
+          currentUser.uid: now,
+        },
+      };
+
+      if (isRecipientInChat) {
+        // If recipient is in chat, mark message as read immediately
+        updates['hasUnreadMessages'] = false;
+        updates['unreadCount'] = currentUnreadCount;
+        batch.update(messageRef, {'read': true});
+      } else {
+        // If recipient is not in chat, increment unread count
+        updates['hasUnreadMessages'] = true;
+        updates['unreadCount'] = currentUnreadCount + 1;
+      }
+
+      batch.update(chatRef, updates);
+      await batch.commit();
+      
+      print('Debug: Successfully sent message with unread count: ${updates['unreadCount']}');
+    } catch (e) {
+      print('Error sending message: $e');
+      rethrow;
+    }
   }
 
   // Get user's chats
@@ -86,54 +126,91 @@ class ChatService {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('No authenticated user');
 
-    // First check if there are any unread messages
-    final chatDoc = await _firestore.collection('chats').doc(chatId).get();
-    final chatData = chatDoc.data();
-    
-    // If chat doesn't have unread messages, return early
-    if (chatData?['hasUnreadMessages'] != true) {
-      print('Debug: No unread messages in chat $chatId');
-      return;
-    }
+    try {
+      print('Debug: Starting to mark messages as read in chat $chatId');
+      
+      // Get all unread messages from other users
+      final messages = await _firestore
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .where('senderId', isNotEqualTo: currentUser.uid)
+          .where('read', isEqualTo: false)
+          .get();
 
-    // Get all unread messages from other users
-    final messages = await _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .where('senderId', isNotEqualTo: currentUser.uid)
-        .where('read', isEqualTo: false)
-        .get();
+      if (messages.docs.isEmpty) {
+        print('Debug: No unread messages found in chat $chatId');
+        // Update chat document to reflect no unread messages
+        await _firestore.collection('chats').doc(chatId).update({
+          'hasUnreadMessages': false,
+          'unreadCount': 0,
+          'lastReadBy': {
+            currentUser.uid: FieldValue.serverTimestamp(),
+          },
+        });
+        return;
+      }
 
-    if (messages.docs.isEmpty) {
-      print('Debug: No unread messages found in chat $chatId');
-      // Update chat document to reflect no unread messages
-      await _firestore.collection('chats').doc(chatId).update({
+      print('Debug: Found ${messages.docs.length} unread messages in chat $chatId');
+
+      final batch = _firestore.batch();
+      
+      // Mark all unread messages as read
+      for (var doc in messages.docs) {
+        batch.update(doc.reference, {'read': true});
+      }
+      
+      // Update chat document to indicate no unread messages
+      batch.update(_firestore.collection('chats').doc(chatId), {
         'hasUnreadMessages': false,
+        'unreadCount': 0,
         'lastReadBy': {
           currentUser.uid: FieldValue.serverTimestamp(),
         },
       });
-      return;
+
+      await batch.commit();
+      print('Debug: Successfully marked messages as read in chat $chatId');
+    } catch (e) {
+      print('Error marking messages as read: $e');
+      rethrow;
     }
+  }
 
-    print('Debug: Found ${messages.docs.length} unread messages in chat $chatId');
+  // Sync unread status
+  Future<void> syncUnreadStatus(String chatId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) throw Exception('No authenticated user');
 
-    final batch = _firestore.batch();
-    for (var doc in messages.docs) {
-      batch.update(doc.reference, {'read': true});
+    try {
+      print('Debug: Syncing unread status for chat $chatId');
+      
+      // Get all unread messages
+      final messages = await _firestore
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .where('senderId', isNotEqualTo: currentUser.uid)
+          .where('read', isEqualTo: false)
+          .get();
+
+      final unreadCount = messages.docs.length;
+      print('Debug: Found $unreadCount unread messages');
+
+      // Update chat document with current unread status
+      await _firestore.collection('chats').doc(chatId).update({
+        'hasUnreadMessages': unreadCount > 0,
+        'unreadCount': unreadCount,
+        'lastReadBy': {
+          currentUser.uid: FieldValue.serverTimestamp(),
+        },
+      });
+
+      print('Debug: Successfully synced unread status');
+    } catch (e) {
+      print('Error syncing unread status: $e');
+      rethrow;
     }
-    
-    // Update chat document to indicate no unread messages
-    batch.update(_firestore.collection('chats').doc(chatId), {
-      'hasUnreadMessages': false,
-      'lastReadBy': {
-        currentUser.uid: FieldValue.serverTimestamp(),
-      },
-    });
-
-    await batch.commit();
-    print('Debug: Successfully marked messages as read in chat $chatId');
   }
 
   // Get unread message count
@@ -286,6 +363,24 @@ class ChatService {
     } catch (e) {
       print('Debug: Error during unmatch: $e');
       // Don't rethrow the error, just log it
+    }
+  }
+
+  // Update active users in chat
+  Future<void> updateActiveUsers(String chatId, String userId, bool isActive) async {
+    try {
+      final chatRef = _firestore.collection('chats').doc(chatId);
+      if (isActive) {
+        await chatRef.update({
+          'activeUsers': FieldValue.arrayUnion([userId])
+        });
+      } else {
+        await chatRef.update({
+          'activeUsers': FieldValue.arrayRemove([userId])
+        });
+      }
+    } catch (e) {
+      print('Error updating active users: $e');
     }
   }
 } 

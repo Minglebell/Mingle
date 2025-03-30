@@ -4,3 +4,4 @@ you can look for prerequisite below or follow the guidesline on how to install o
 - Android Studio with Android SDK Platform, API 35.0.2 or newer version installed
 - Any IDE Tools (Such as Visual Studio Code Etc.)
   
+

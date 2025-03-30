@@ -23,6 +23,7 @@ class _ChatListPageState extends State<ChatListPage> {
   Stream<QuerySnapshot>? _chatsStream;
   Map<String, int> _unreadCounts = {};
   List<StreamSubscription> _subscriptions = [];
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -43,28 +44,17 @@ class _ChatListPageState extends State<ChatListPage> {
 
   void _setupUnreadMessagesListener() {
     final currentUserId = _auth.currentUser?.uid;
-    if (currentUserId == null) {
-      print('Debug: No current user ID in unread listener');
-      return;
-    }
-
-    print('Debug: Setting up unread messages listener for user: $currentUserId');
+    if (currentUserId == null) return;
 
     final chatsSubscription = FirebaseFirestore.instance
         .collection('chats')
         .where('participants', arrayContains: currentUserId)
         .snapshots()
         .listen((snapshot) {
-      print('Debug: Found ${snapshot.docs.length} chats for user');
-      
       for (var doc in snapshot.docs) {
         final chatId = doc.id;
         final chatData = doc.data();
-        print('Debug: Chat $chatId data: $chatData');
-        
-        // Check if the chat document indicates unread messages
         final hasUnreadMessages = chatData['hasUnreadMessages'] ?? false;
-        print('Debug: Chat $chatId hasUnreadMessages: $hasUnreadMessages');
         
         if (!hasUnreadMessages) {
           setState(() {
@@ -73,9 +63,6 @@ class _ChatListPageState extends State<ChatListPage> {
           continue;
         }
         
-        print('Debug: Setting up listener for chat: $chatId');
-        
-        // Query for unread messages (read: false)
         final messagesSubscription = FirebaseFirestore.instance
             .collection('chats')
             .doc(chatId)
@@ -85,64 +72,49 @@ class _ChatListPageState extends State<ChatListPage> {
             .snapshots()
             .listen((messages) {
           if (!mounted) return;
-          
-          print('Debug: Chat $chatId has ${messages.docs.length} unread messages');
-          print('Debug: Unread messages data: ${messages.docs.map((doc) => doc.data()).toList()}');
-          
           setState(() {
             _unreadCounts[chatId] = messages.docs.length;
           });
-        }, onError: (error) {
-          print('Debug: Error listening to unread messages for chat $chatId: $error');
         });
         
         _subscriptions.add(messagesSubscription);
       }
-    }, onError: (error) {
-      print('Debug: Error listening to chats: $error');
     });
     
     _subscriptions.add(chatsSubscription);
   }
 
   void _filterChats() {
-    // Implement search functionality if needed
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+    });
   }
 
   void _clearSearch() {
     _searchController.clear();
   }
 
+  bool _matchesSearch(String name) {
+    if (_searchQuery.isEmpty) return true;
+    return name.toLowerCase().contains(_searchQuery);
+  }
+
   Future<String> _getParticipantName(String chatId, List<dynamic> participants) async {
     final currentUserId = _auth.currentUser?.uid;
-    if (currentUserId == null) {
-      print('Debug: No current user ID');
-      return 'Unknown';
-    }
+    if (currentUserId == null) return 'Unknown';
 
-    print('Debug: Current user ID: $currentUserId');
-    print('Debug: Participants: $participants');
-
-    // Find the other participant's ID
     final otherParticipantId = participants.firstWhere(
       (id) => id != currentUserId,
       orElse: () => '',
     );
 
-    print('Debug: Other participant ID: $otherParticipantId');
+    if (otherParticipantId.isEmpty) return 'Unknown';
 
-    if (otherParticipantId.isEmpty) {
-      print('Debug: No other participant found');
-      return 'Unknown';
-    }
-
-    // Fetch the other participant's data from users collection
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(otherParticipantId)
         .get();
 
-    print('Debug: User document data: ${userDoc.data()}');
     return userDoc.data()?['name'] ?? 'Unknown';
   }
 
@@ -169,13 +141,12 @@ class _ChatListPageState extends State<ChatListPage> {
       ),
       body: Column(
         children: [
-          // Search Bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search...',
+                hintText: 'Search by name...',
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -186,32 +157,50 @@ class _ChatListPageState extends State<ChatListPage> {
                         onPressed: _clearSearch,
                       )
                     : null,
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
             ),
           ),
-          // Chat List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _chatsStream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  print('Debug: Stream error: ${snapshot.error}');
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Center(
+                    child: Text(
+                      'Something went wrong',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  );
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
+                  return Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                    ),
+                  );
                 }
 
                 final chats = snapshot.data?.docs ?? [];
-                print('Debug: Number of chats: ${chats.length}');
-                print('Debug: Current unread counts: $_unreadCounts');
                 
                 if (chats.isEmpty) {
                   return Center(
-                    child: Text(
-                      'No chats yet',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'No chats yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }
@@ -221,7 +210,6 @@ class _ChatListPageState extends State<ChatListPage> {
                   itemBuilder: (context, index) {
                     final chat = chats[index].data() as Map<String, dynamic>;
                     final chatId = chats[index].id;
-                    print('Debug: Chat data: $chat');
                     
                     final lastMessage = chat['lastMessage'] ?? '';
                     final lastMessageTime = chat['lastMessageTime'] as Timestamp?;
@@ -229,19 +217,19 @@ class _ChatListPageState extends State<ChatListPage> {
                         ? _formatTimestamp(lastMessageTime)
                         : '';
                     final participants = List<String>.from(chat['participants'] ?? []);
-                    print('Debug: Chat participants: $participants');
 
                     final unreadCount = _unreadCounts[chatId] ?? 0;
                     final hasUnreadMessages = unreadCount > 0;
-                    print('Debug: Chat $chatId has $unreadCount unread messages');
 
                     return FutureBuilder<String>(
                       future: _getParticipantName(chatId, participants),
                       builder: (context, nameSnapshot) {
                         final participantName = nameSnapshot.data ?? 'Loading...';
-                        print('Debug: Participant name: $participantName');
                         
-                        // Get the other participant's ID
+                        if (!_matchesSearch(participantName)) {
+                          return SizedBox.shrink();
+                        }
+                        
                         final otherParticipantId = participants.firstWhere(
                           (id) => id != _auth.currentUser?.uid,
                           orElse: () => '',

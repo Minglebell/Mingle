@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:delightful_toast/delight_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:minglev2_1/Services/database_services.dart';
@@ -30,6 +31,8 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
   bool _isLoading = true;
   Map<String, dynamic>? _userProfile;
   double? _distance;
+  double? _userRating;
+  bool _isRatingSubmitting = false;
 
   @override
   void initState() {
@@ -52,6 +55,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
       });
       _animationController.forward();
       _calculateDistance();
+      _loadUserRating(); // Add this line
     });
   }
 
@@ -159,6 +163,136 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
 
   double _toRadians(double degree) {
     return degree * (math.pi / 180);
+  }
+
+  // Add this new method to load existing rating
+  Future<void> _loadUserRating() async {
+    if (widget.userId == null) return; 
+    
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId == null) return;
+
+      final ratingDoc = await FirebaseFirestore.instance
+          .collection('ratings')
+          .doc('${currentUserId}_${widget.userId}')
+          .get();
+
+      if (ratingDoc.exists) {
+        setState(() {
+          _userRating = ratingDoc.data()?['rating']?.toDouble();
+        });
+      }
+    } catch (e) {
+      _logger.warning('Error loading user rating: $e');
+    }
+  }
+
+  // Add this new method to save rating
+  Future<void> _saveRating(double rating) async {
+    if (widget.userId == null) return;
+    
+    setState(() {
+      _isRatingSubmitting = true;
+    });
+
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId == null) return;
+
+      // Save the rating
+      await FirebaseFirestore.instance
+          .collection('ratings')
+          .doc('${currentUserId}_${widget.userId}')
+          .set({
+        'fromUserId': currentUserId,
+        'toUserId': widget.userId,
+        'rating': rating,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // Update the average rating in the user's profile
+      final ratingsSnapshot = await FirebaseFirestore.instance
+          .collection('ratings')
+          .where('toUserId', isEqualTo: widget.userId)
+          .get();
+
+      double totalRating = 0;
+      int ratingCount = ratingsSnapshot.docs.length;
+
+      for (var doc in ratingsSnapshot.docs) {
+        totalRating += doc.data()['rating'];
+      }
+
+      double averageRating = ratingCount > 0 ? totalRating / ratingCount : 0;
+
+      // Use set with merge to handle both new and existing users
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.userId)
+          .set({
+        'averageRating': averageRating,
+        'ratingCount': ratingCount,
+      }, SetOptions(merge: true)); // This will merge with existing data
+
+      setState(() {
+        _userRating = rating;
+      });
+
+      if (mounted) {
+        DelightToastBar(
+          autoDismiss: true,
+          snackbarDuration: const Duration(seconds: 3),
+          builder: (context) => const Card(
+            child: ListTile(
+              leading: Icon(
+                Icons.check_circle,
+                size: 24,
+                color: Colors.green,
+              ),
+              title: Text(
+                'Rating saved successfully',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ).show(context);
+      }
+    } catch (e) {
+      _logger.severe('Error saving rating: $e');
+      if (mounted) {
+        DelightToastBar(
+          autoDismiss: true,
+          snackbarDuration: const Duration(seconds: 3),
+          builder: (context) => Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ListTile(
+              leading: const Icon(
+                Icons.error,
+                size: 24,
+                color: Colors.red,
+              ),
+              title: Text(
+                'Failed to save rating: $e',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ).show(context);
+      }
+    } finally {
+      setState(() {
+        _isRatingSubmitting = false;
+      });
+    }
   }
 
   @override
@@ -335,6 +469,77 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         children: [
+                          // Add Rating Widget if viewing another user's profile
+                          if (widget.userId != null) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16.0),
+                              margin: const EdgeInsets.only(bottom: 16.0),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withAlpha(25),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Row(
+                                    children: [
+                                      Icon(
+                                        Icons.star,
+                                        color: Color(0xFF6C9BCF),
+                                        size: 24,
+                                      ),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        "Rate this User",
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF333333),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: List.generate(5, (index) {
+                                      return GestureDetector(
+                                        onTap: _isRatingSubmitting
+                                            ? null
+                                            : () => _saveRating(index + 1),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 4),
+                                          child: Icon(
+                                            _userRating != null &&
+                                                    _userRating! > index
+                                                ? Icons.star
+                                                : Icons.star_border,
+                                            size: 40,
+                                            color: const Color(0xFF6C9BCF),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                  if (_isRatingSubmitting) ...[
+                                    const SizedBox(height: 16),
+                                    const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(16.0),

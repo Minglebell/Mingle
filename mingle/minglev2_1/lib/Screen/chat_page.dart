@@ -7,6 +7,7 @@ import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:logging/logging.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_place/google_place.dart';
 
 
 class ChatPage extends StatefulWidget {
@@ -38,10 +39,15 @@ class _ChatPageState extends State<ChatPage> {
   Map<String, dynamic> _matchDetails = {};
   final ImagePicker _imagePicker = ImagePicker();
   String? _chatPersonImage;
+  final googlePlace = GooglePlace('AIzaSyAlT7miIyYC-63raU7bT0lxoyUekhTI11o'); 
+  final Map<String, List<SearchResult>> _placesCache = {};
+  final Duration _cacheDuration = const Duration(hours: 1);
+  final Map<String, DateTime> _cacheTimestamps = {};
 
   @override
   void initState() {
     super.initState();
+    _loadChatPersonImage();
     _messagesStream = _chatService.getChatStream(widget.chatId);
     _setupMessagesListener();
     _setupChatListener();
@@ -49,6 +55,23 @@ class _ChatPageState extends State<ChatPage> {
     _fetchMatchDetails();
     _chatService.updateActiveUsers(
         widget.chatId, _auth.currentUser?.uid ?? '', true);
+  }
+
+  Future<void> _loadChatPersonImage() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.partnerId)
+          .get();
+      
+      if (doc.exists && mounted) {
+        setState(() {
+          _chatPersonImage = doc.data()?['profileImage'] as String?;
+        });
+      }
+    } catch (e) {
+      _logger.severe('Error loading chat person image: $e');
+    }
   }
 
   @override
@@ -404,274 +427,410 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  void _showPlaceRecommendations() {
+  void _showPlaceRecommendations() async {
     final category = _matchDetails['category'] ?? '';
     final place = _matchDetails['place'] ?? '';
-  
-    showModalBottomSheet(
+    
+    _logger.info('Category: $category, Place: $place'); // Debug log
+
+    if (category.isEmpty || place.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Category and place information not available'),
+        ),
+      );
+      return;
+    }
+
+    // Show loading indicator with debug info
+    showDialog(
       context: context,
-      backgroundColor: Colors.transparent,
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: Column(
+        return AlertDialog(
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Color(0xFFEEEEEE),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Recommended Places',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (category.isNotEmpty) ...[
-                          Text(
-                            'Based on your match category: $category',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF6C9BCF),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                        ..._getRecommendedPlaces(category).map((place) => 
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(13),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE8F1FF),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    _getCategoryIcon(place['type']),
-                                    color: const Color(0xFF6C9BCF),
-                                    size: 30,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        place['name'],
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        place['description'],
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.star,
-                                            size: 16,
-                                            color: Colors.amber[400],
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            place['rating'].toString(),
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Icon(
-                                            Icons.location_on,
-                                            size: 16,
-                                            color: Colors.grey[600],
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            place['distance'],
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.share),
-                                  color: const Color(0xFF6C9BCF),
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    _sharePlace(place);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ).toList(),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('Searching for $category in $place...'),
             ],
           ),
         );
       },
     );
+
+    try {
+      final places = await _getRecommendedPlacesWithCache(category, place);
+      if (!mounted) return;
+      Navigator.pop(context); // Dismiss loading dialog
+
+      if (places.isEmpty) {
+        _logger.warning('No places found for query: $category in $place');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No places found for $category in $place. Try adjusting your search terms.'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (BuildContext context) {
+          return DraggableScrollableSheet(
+            initialChildSize: 0.75, 
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (context, scrollController) {
+              return Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Color(0xFFEEEEEE),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Places near $place',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: FutureBuilder<List<SearchResult>>(
+                        future: _getRecommendedPlacesWithCache(category, place),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+
+                          if (snapshot.hasError) {
+                            _logger.severe('FutureBuilder error: ${snapshot.error}');
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.error_outline, 
+                                       size: 48, 
+                                       color: Colors.red[300]),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Error loading places\n${snapshot.error}',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.red[300],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          final places = snapshot.data ?? [];
+                          
+                          if (places.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.search_off, 
+                                       size: 48, 
+                                       color: Colors.grey[400]),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No places found for\n$category in $place',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            controller: scrollController,
+                            padding: const EdgeInsets.all(16),
+                            itemCount: places.length,
+                            itemBuilder: (context, index) {
+                              final place = places[index];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha(13),
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    if (place.photos?.isNotEmpty ?? false)
+                                      Container(
+                                        width: 60,
+                                        height: 60,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(8),
+                                          image: DecorationImage(
+                                            image: NetworkImage(
+                                              'https://maps.googleapis.com/maps/api/place/photo?maxwidth=100&photo_reference=${place.photos![0].photoReference}&key=AIzaSyAlT7miIyYC-63raU7bT0lxoyUekhTI11o',
+                                            ),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      Container(
+                                        width: 60,
+                                        height: 60,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE8F1FF),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.place,
+                                          color: Color(0xFF6C9BCF),
+                                          size: 30,
+                                        ),
+                                      ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            place.name ?? 'Unnamed Place',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          if (place.formattedAddress != null) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              place.formattedAddress!,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                          if (place.rating != null) ...[
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.star,
+                                                  size: 16,
+                                                  color: Colors.amber[400],
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  place.rating.toString(),
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.share),
+                                      color: const Color(0xFF6C9BCF),
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _sharePlace(place);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Dismiss loading dialog
+      _logger.severe('Error showing recommendations: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error finding places: ${e.toString()}'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
-  List<Map<String, dynamic>> _getRecommendedPlaces(String category) {
-    // This is a mock data function - in a real app, this would fetch from an API
+  Future<List<SearchResult>> _getRecommendedPlacesWithCache(String category, String place) async {
+    final cacheKey = '$category:$place';
+    final now = DateTime.now();
+
+    // Check if we have valid cached results
+    if (_placesCache.containsKey(cacheKey) &&
+        _cacheTimestamps[cacheKey] != null &&
+        now.difference(_cacheTimestamps[cacheKey]!) < _cacheDuration) {
+      return _placesCache[cacheKey]!;
+    }
+
+    // Fetch new results
+    final results = await _getRecommendedPlaces(category, place);
+    
+    // Cache the results
+    _placesCache[cacheKey] = results;
+    _cacheTimestamps[cacheKey] = now;
+
+    return results;
+  }
+
+  Future<List<SearchResult>> _getRecommendedPlaces(String category, String place) async {
+    try {
+      String googlePlaceType = _mapCategoryToGoogleType(category);
+      _logger.info('Searching for $googlePlaceType places in $place');
+
+      // First, get coordinates for the place
+      final locationResult = await googlePlace.search.getTextSearch(place);
+      if (locationResult?.results == null || locationResult!.results!.isEmpty) {
+        _logger.warning('Location not found: $place');
+        return [];
+      }
+
+      final location = locationResult.results![0].geometry?.location;
+      if (location == null) {
+        _logger.warning('No coordinates found for: $place');
+        return [];
+      }
+
+      _logger.info('Found coordinates: ${location.lat}, ${location.lng}');
+
+      // Search for places with simplified parameters first
+      final result = await googlePlace.search.getNearBySearch(
+        Location(lat: location.lat, lng: location.lng),
+        5000, // 5km radius
+        type: googlePlaceType,
+        // Removed other filters temporarily for testing
+      );
+
+      _logger.info('Search status: ${result?.status}');
+      _logger.info('Results found: ${result?.results?.length ?? 0}');
+
+      if (result?.status == 'OK' && result?.results != null) {
+        // Don't filter results yet, just return them all for testing
+        return result!.results!;
+      }
+
+      _logger.warning('No results found. Status: ${result?.status}');
+      return [];
+    } catch (e, stackTrace) {
+      _logger.severe('Error fetching places: $e');
+      _logger.severe('Stack trace: $stackTrace');
+      return [];
+    }
+  }
+
+  String _mapCategoryToGoogleType(String category) {
+    // Map your categories to Google Places API types
     switch (category.toLowerCase()) {
-      case 'coffee':
-        return [
-          {
-            'name': 'Starbucks Reserve',
-            'type': 'cafe',
-            'description': 'Premium coffee experience with unique blends',
-            'rating': 4.5,
-            'distance': '0.8 km',
-          },
-          {
-            'name': 'Local Coffee House',
-            'type': 'cafe',
-            'description': 'Cozy atmosphere with artisanal coffee',
-            'rating': 4.7,
-            'distance': '1.2 km',
-          },
-        ];
-      case 'dining':
-        return [
-          {
-            'name': 'The Garden Restaurant',
-            'type': 'restaurant',
-            'description': 'Fine dining with outdoor seating',
-            'rating': 4.8,
-            'distance': '1.5 km',
-          },
-          {
-            'name': 'Urban Kitchen',
-            'type': 'restaurant',
-            'description': 'Modern fusion cuisine in heart of city',
-            'rating': 4.6,
-            'distance': '2.0 km',
-          },
-        ];
-      case 'activity':
-        return [
-          {
-            'name': 'City Adventure Park',
-            'type': 'activity',
-            'description': 'Outdoor activities and adventure sports',
-            'rating': 4.4,
-            'distance': '3.2 km',
-          },
-          {
-            'name': 'Art Workshop Studio',
-            'type': 'activity',
-            'description': 'Creative workshops and classes',
-            'rating': 4.3,
-            'distance': '1.8 km',
-          },
-        ];
+      case 'bars':
+      case 'karaoke bars':
+        return 'bar';  // Make sure 'bar' is the exact type from Google Places API
+      case 'parks':
+        return 'park';
+      case 'beaches':
+        return 'natural_feature';
+      case 'lakes':
+        return 'natural_feature';
+      case 'zoos':
+        return 'zoo';
+      case 'safari parks':
+        return 'zoo';
+      case 'amusement parks':
+        return 'amusement_park';
+      case 'water parks':
+        return 'amusement_park';
+      case 'museums':
+        return 'museum';
+      case 'art galleries':
+        return 'art_gallery';
+      case 'historical landmarks':
+        return 'tourist_attraction';
+      case 'temples':
+        return 'place_of_worship';
+      case 'movie theaters':
+        return 'movie_theater';
+      case 'bowling alleys':
+        return 'bowling_alley';
+      case 'gaming centers':
+        return 'amusement_center';
+      case 'live theaters':
+        return 'theater';
+      case 'concert venues':
+        return 'stadium';
+      case 'aquariums':
+        return 'aquarium';
+      case 'ice-skating rinks':
+        return 'stadium';
       default:
-        return [
-          {
-            'name': 'Central Park',
-            'type': 'park',
-            'description': 'Beautiful park with walking trails',
-            'rating': 4.6,
-            'distance': '1.0 km',
-          },
-          {
-            'name': 'City Mall',
-            'type': 'shopping',
-            'description': 'Shopping and entertainment complex',
-            'rating': 4.4,
-            'distance': '2.5 km',
-          },
-        ];
+        return 'point_of_interest';
     }
   }
 
-  IconData _getCategoryIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'cafe':
-        return Icons.coffee;
-      case 'restaurant':
-        return Icons.restaurant;
-      case 'activity':
-        return Icons.sports_basketball;
-      case 'park':
-        return Icons.park;
-      case 'shopping':
-        return Icons.shopping_bag;
-      default:
-        return Icons.place;
-    }
-  }
 
-  void _sharePlace(Map<String, dynamic> place) {
-    final message = "How about we check out ${place['name']}? "
-        "It's ${place['description']} and it's only ${place['distance']} away. "
-        "Rating: ${place['rating']} ⭐";
+
+  void _sharePlace(SearchResult place) {
+    final message = "How about we check out ${place.name}? "
+        "It's located at ${place.formattedAddress}"
+        "${place.rating != null ? "\nRating: ${place.rating} ⭐" : ""}";
   
     _messageController.text = message;
   }

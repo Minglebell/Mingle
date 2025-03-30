@@ -336,7 +336,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
         debugPrint('Location permission not granted');
       }
 
-      // Prepare user data
+      // Prepare user data with rating fields
       final userData = {
         'email': _emailController.text,
         'name': _nameController.text,
@@ -346,6 +346,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
         'createdAt': FieldValue.serverTimestamp(),
         'uid': uid,
         'lastActive': FieldValue.serverTimestamp(),
+        // Add initial rating fields
+        'averageRating': 0.0,  // Initial average rating
+        'ratingCount': 0,      // Initial rating count
       };
 
       // Add location data if available

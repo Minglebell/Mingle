@@ -57,8 +57,9 @@ class ChatService {
 
       // Check if recipient is currently in the chat page
       final isRecipientInChat = activeUsers.contains(recipientId);
-      
-      _logger.info('Sending message to chat $chatId - Recipient in chat: $isRecipientInChat');
+
+      _logger.info(
+          'Sending message to chat $chatId - Recipient in chat: $isRecipientInChat');
 
       // Update chat document
       final chatRef = _firestore.collection('chats').doc(chatId);
@@ -84,8 +85,9 @@ class ChatService {
 
       batch.update(chatRef, updates);
       await batch.commit();
-      
-      _logger.info('Successfully sent message with unread count: ${updates['unreadCount']}');
+
+      _logger.info(
+          'Successfully sent message with unread count: ${updates['unreadCount']}');
     } catch (e) {
       _logger.severe('Error sending message: $e');
       rethrow;
@@ -108,11 +110,12 @@ class ChatService {
   Future<Map<String, dynamic>> getChatParticipants(String chatId) async {
     final chatDoc = await _firestore.collection('chats').doc(chatId).get();
     final participants = chatDoc.data()?['participants'] as List<dynamic>;
-    
+
     final participantsData = <String, dynamic>{};
-    
+
     for (var participantId in participants) {
-      final userDoc = await _firestore.collection('users').doc(participantId).get();
+      final userDoc =
+          await _firestore.collection('users').doc(participantId).get();
       final userData = userDoc.data();
       if (userData != null) {
         participantsData[participantId] = {
@@ -121,7 +124,7 @@ class ChatService {
         };
       }
     }
-    
+
     return participantsData;
   }
 
@@ -132,7 +135,7 @@ class ChatService {
 
     try {
       _logger.info('Starting to mark messages as read in chat $chatId');
-      
+
       // Get all unread messages from other users
       final messages = await _firestore
           .collection('chats')
@@ -155,15 +158,16 @@ class ChatService {
         return;
       }
 
-      _logger.info('Found ${messages.docs.length} unread messages in chat $chatId');
+      _logger.info(
+          'Found ${messages.docs.length} unread messages in chat $chatId');
 
       final batch = _firestore.batch();
-      
+
       // Mark all unread messages as read
       for (var doc in messages.docs) {
         batch.update(doc.reference, {'read': true});
       }
-      
+
       // Update chat document to indicate no unread messages
       batch.update(_firestore.collection('chats').doc(chatId), {
         'hasUnreadMessages': false,
@@ -188,7 +192,7 @@ class ChatService {
 
     try {
       _logger.info('Syncing unread status for chat $chatId');
-      
+
       // Get all unread messages
       final messages = await _firestore
           .collection('chats')
@@ -238,27 +242,31 @@ class ChatService {
       _logger.info('Fetching match details for chat $chatId');
       final chatDoc = await _firestore.collection('chats').doc(chatId).get();
       final chatData = chatDoc.data();
-      
+
       if (chatData == null) {
         _logger.warning('Chat data is null for chat $chatId');
         throw Exception('Chat not found');
       }
 
       _logger.info('Raw chat data: $chatData');
-      
+
       // Access the nested matchDetails object
-      final matchDetails = chatData['matchDetails'] as Map<String, dynamic>? ?? {};
-      
+      final matchDetails =
+          chatData['matchDetails'] as Map<String, dynamic>? ?? {};
+
       final details = {
         'category': matchDetails['category'] ?? '',
         'place': matchDetails['place'] ?? '',
         'schedule': matchDetails['scheduledTime'] ?? '',
         'timeRange': matchDetails['timeRange'] ?? '',
-        'matchDate': chatData['createdAt'] != null 
-            ? (chatData['createdAt'] as Timestamp).toDate().toString().split(' ')[0]
+        'matchDate': chatData['createdAt'] != null
+            ? (chatData['createdAt'] as Timestamp)
+                .toDate()
+                .toString()
+                .split(' ')[0]
             : '',
       };
-      
+
       _logger.info('Processed match details: $details');
       return details;
     } catch (e) {
@@ -274,7 +282,8 @@ class ChatService {
   }
 
   // Update match details
-  Future<void> updateMatchDetails(String chatId, {
+  Future<void> updateMatchDetails(
+    String chatId, {
     String? category,
     String? place,
     String? schedule,
@@ -283,14 +292,15 @@ class ChatService {
     try {
       _logger.info('Updating match details for chat $chatId');
       final updates = <String, dynamic>{};
-      
+
       if (category != null) updates['category'] = category;
       if (place != null) updates['place'] = place;
       if (schedule != null) updates['schedule'] = schedule;
-      if (matchDate != null) updates['matchDate'] = Timestamp.fromDate(matchDate);
-      
+      if (matchDate != null)
+        updates['matchDate'] = Timestamp.fromDate(matchDate);
+
       _logger.info('Updates to apply: $updates');
-      
+
       await _firestore.collection('chats').doc(chatId).update(updates);
       _logger.info('Successfully updated match details');
     } catch (e) {
@@ -315,13 +325,13 @@ class ChatService {
 
       final chatData = chatDoc.data() as Map<String, dynamic>;
       final participants = List<String>.from(chatData['participants'] ?? []);
-      
+
       // Check if current user is still a participant
       if (!participants.contains(currentUser.uid)) {
         _logger.info('User is no longer a participant in this chat');
         return; // User is no longer a participant, nothing to do
       }
-      
+
       // First delete all messages in the messages collection
       try {
         final messagesSnapshot = await _firestore
@@ -329,7 +339,7 @@ class ChatService {
             .doc(chatId)
             .collection('messages')
             .get();
-        
+
         final batch = _firestore.batch();
         for (var doc in messagesSnapshot.docs) {
           batch.delete(doc.reference);
@@ -356,9 +366,11 @@ class ChatService {
           await _firestore.collection('users').doc(participantId).update({
             'chats': FieldValue.arrayRemove([chatId])
           });
-          _logger.info('Successfully removed chat reference from user $participantId');
+          _logger.info(
+              'Successfully removed chat reference from user $participantId');
         } catch (e) {
-          _logger.warning('Could not remove chat reference from user $participantId: $e');
+          _logger.warning(
+              'Could not remove chat reference from user $participantId: $e');
           // Continue with other users even if one fails
         }
       }
@@ -371,7 +383,8 @@ class ChatService {
   }
 
   // Update active users in chat
-  Future<void> updateActiveUsers(String chatId, String userId, bool isActive) async {
+  Future<void> updateActiveUsers(
+      String chatId, String userId, bool isActive) async {
     try {
       final chatRef = _firestore.collection('chats').doc(chatId);
       if (isActive) {
@@ -395,7 +408,7 @@ class ChatService {
     try {
       final bytes = await imageFile.readAsBytes();
       final base64Image = base64Encode(bytes);
-      
+
       final now = FieldValue.serverTimestamp();
       final messageData = {
         'type': 'image',

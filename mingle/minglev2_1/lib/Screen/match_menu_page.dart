@@ -108,6 +108,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
     'Shopping': Icons.shopping_bag,
   };
 
+  // genders
   final Map<String, IconData> genderIcons = {
     'Male': Icons.male,
     'Female': Icons.female,
@@ -117,7 +118,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
     'Other': Icons.person_outline,
   };
 
-  // Add this map for place icons
+  // places
   final Map<String, IconData> placeIcons = {
     // Outdoor_Nature
     "Parks": Icons.park,
@@ -373,6 +374,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
     return true;
   }
 
+  // addSchedule function
   Future<void> _addSchedule(BuildContext context) async {
     
     if (schedules.length >= 5) {
@@ -719,7 +721,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
 
   Widget _buildCategorySelection() {
     return SizedBox(
-      width: double.infinity,  // Make container take full width
+      width: double.infinity,
       child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

@@ -14,7 +14,7 @@ class ChatPage extends StatefulWidget {
   final String partnerId;
 
   const ChatPage({
-    super.key, 
+    super.key,
     required this.chatPersonName,
     required this.chatId,
     required this.partnerId,
@@ -45,8 +45,8 @@ class _ChatPageState extends State<ChatPage> {
     _setupChatListener();
     _markMessagesAsRead();
     _fetchMatchDetails();
-    // Mark user as active in this chat
-    _chatService.updateActiveUsers(widget.chatId, _auth.currentUser?.uid ?? '', true);
+    _chatService.updateActiveUsers(
+        widget.chatId, _auth.currentUser?.uid ?? '', true);
   }
 
   @override
@@ -55,8 +55,8 @@ class _ChatPageState extends State<ChatPage> {
     _messagesSubscription?.cancel();
     _chatSubscription?.cancel();
     _scrollController.dispose();
-    // Mark user as inactive in this chat
-    _chatService.updateActiveUsers(widget.chatId, _auth.currentUser?.uid ?? '', false);
+    _chatService.updateActiveUsers(
+        widget.chatId, _auth.currentUser?.uid ?? '', false);
     super.dispose();
   }
 
@@ -67,7 +67,7 @@ class _ChatPageState extends State<ChatPage> {
         .snapshots()
         .listen((snapshot) {
       if (!mounted) return;
-      
+
       final chatData = snapshot.data();
       if (chatData != null) {
         final hasUnreadMessages = chatData['hasUnreadMessages'] ?? false;
@@ -81,12 +81,12 @@ class _ChatPageState extends State<ChatPage> {
   void _setupMessagesListener() {
     _messagesSubscription = _messagesStream?.listen((snapshot) {
       if (!mounted) return;
-      
+
       // Check for new unread messages
       final hasUnreadMessages = snapshot.docs.any((doc) {
         final message = doc.data() as Map<String, dynamic>;
-        return message['senderId'] != _auth.currentUser?.uid && 
-               message['read'] == false;
+        return message['senderId'] != _auth.currentUser?.uid &&
+            message['read'] == false;
       });
 
       if (hasUnreadMessages) {
@@ -116,7 +116,7 @@ class _ChatPageState extends State<ChatPage> {
       final details = await _chatService.getMatchDetails(widget.chatId);
       _logger.fine('Received match details: $details');
       if (!mounted) return;
-      
+
       setState(() {
         _matchDetails = details;
       });
@@ -128,7 +128,7 @@ class _ChatPageState extends State<ChatPage> {
 
   void _sendMessage() async {
     if (_messageController.text.isEmpty) return;
-    
+
     final messageText = _messageController.text;
     _messageController.clear();
 
@@ -136,7 +136,7 @@ class _ChatPageState extends State<ChatPage> {
       await _chatService.sendMessage(widget.chatId, messageText);
     } catch (e) {
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to send message: $e')),
       );
@@ -146,7 +146,7 @@ class _ChatPageState extends State<ChatPage> {
   void _showMatchDetails() {
     _logger.fine('Showing match details dialog with data: $_matchDetails');
     if (!mounted) return;
-    
+
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
@@ -156,22 +156,28 @@ class _ChatPageState extends State<ChatPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (_matchDetails['category'] != null && _matchDetails['category'].toString().isNotEmpty)
+              if (_matchDetails['category'] != null &&
+                  _matchDetails['category'].toString().isNotEmpty)
                 Text(
                   'Category: ${_matchDetails['category']}',
                   style: const TextStyle(fontSize: 16),
                 ),
-              if (_matchDetails['category'] != null && _matchDetails['category'].toString().isNotEmpty) const SizedBox(height: 8),
-              if (_matchDetails['place'] != null && _matchDetails['place'].toString().isNotEmpty)
+              if (_matchDetails['category'] != null &&
+                  _matchDetails['category'].toString().isNotEmpty)
+                const SizedBox(height: 8),
+              if (_matchDetails['place'] != null &&
+                  _matchDetails['place'].toString().isNotEmpty)
                 Text(
                   'Place: ${_matchDetails['place']}',
                   style: const TextStyle(fontSize: 16),
                 ),
-              if (_matchDetails['place'] != null && _matchDetails['place'].toString().isNotEmpty) const SizedBox(height: 8),
+              if (_matchDetails['place'] != null &&
+                  _matchDetails['place'].toString().isNotEmpty)
+                const SizedBox(height: 8),
               if (_matchDetails['schedule'] != null) ...[
                 const Text(
                   'Schedule:',
-                  style:  TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -182,19 +188,22 @@ class _ChatPageState extends State<ChatPage> {
                     'Date: ${(_matchDetails['schedule'] as Timestamp).toDate().day}/${(_matchDetails['schedule'] as Timestamp).toDate().month}/${(_matchDetails['schedule'] as Timestamp).toDate().year}',
                     style: const TextStyle(fontSize: 16),
                   )
-                else if (_matchDetails['schedule'] is String && (_matchDetails['schedule'] as String).isNotEmpty)
+                else if (_matchDetails['schedule'] is String &&
+                    (_matchDetails['schedule'] as String).isNotEmpty)
                   Text(
                     'Date: ${_matchDetails['schedule']}',
                     style: const TextStyle(fontSize: 16),
                   ),
-                if (_matchDetails['timeRange'] != null && (_matchDetails['timeRange'] as String).isNotEmpty)
+                if (_matchDetails['timeRange'] != null &&
+                    (_matchDetails['timeRange'] as String).isNotEmpty)
                   Text(
                     'Time: ${_matchDetails['timeRange']}',
                     style: const TextStyle(fontSize: 16),
                   ),
                 const SizedBox(height: 16),
               ],
-              if (_matchDetails['matchDate'] != null && (_matchDetails['matchDate'] as String).isNotEmpty)
+              if (_matchDetails['matchDate'] != null &&
+                  (_matchDetails['matchDate'] as String).isNotEmpty)
                 Text(
                   'Match Date: ${_matchDetails['matchDate']}',
                   style: TextStyle(
@@ -202,7 +211,11 @@ class _ChatPageState extends State<ChatPage> {
                     color: Colors.grey[600],
                   ),
                 ),
-              if (_matchDetails.isEmpty || (_matchDetails['category'] == null && _matchDetails['place'] == null && _matchDetails['schedule'] == null && _matchDetails['matchDate'] == null))
+              if (_matchDetails.isEmpty ||
+                  (_matchDetails['category'] == null &&
+                      _matchDetails['place'] == null &&
+                      _matchDetails['schedule'] == null &&
+                      _matchDetails['matchDate'] == null))
                 Text(
                   'No match details available',
                   style: TextStyle(
@@ -223,10 +236,12 @@ class _ChatPageState extends State<ChatPage> {
                 builder: (BuildContext confirmContext) {
                   return AlertDialog(
                     title: const Text('Confirm Unmatch'),
-                    content: Text('Are you sure you want to unmatch with ${widget.chatPersonName}? This action cannot be undone.'),
+                    content: Text(
+                        'Are you sure you want to unmatch with ${widget.chatPersonName}? This action cannot be undone.'),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.of(confirmContext).pop(false),
+                        onPressed: () =>
+                            Navigator.of(confirmContext).pop(false),
                         child: const Text('Cancel'),
                       ),
                       TextButton(
@@ -248,7 +263,7 @@ class _ChatPageState extends State<ChatPage> {
               // Store contexts before async gap
               final navigatorContext = Navigator.of(dialogContext);
               final scaffoldContext = ScaffoldMessenger.of(dialogContext);
-              
+
               // Show loading dialog
               showDialog(
                 context: dialogContext,
@@ -273,17 +288,18 @@ class _ChatPageState extends State<ChatPage> {
               try {
                 await _chatService.unmatch(widget.chatId);
                 if (!mounted) return;
-                
+
                 navigatorContext.pop(); // Close the loading dialog
                 navigatorContext.pop(); // Close the match details dialog
                 Navigator.of(context).pop(); // Go back to chat list
               } catch (e) {
                 if (!mounted) return;
-                
+
                 navigatorContext.pop(); // Close the loading dialog
                 scaffoldContext.showSnackBar(
                   const SnackBar(
-                    content: Text('Unable to unmatch at this time. Please try again later.'),
+                    content: Text(
+                        'Unable to unmatch at this time. Please try again later.'),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -373,17 +389,27 @@ class _ChatPageState extends State<ChatPage> {
           child: Row(
             children: [
               FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance.collection('users').doc(widget.partnerId).get(),
+                future: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(widget.partnerId)
+                    .get(),
                 builder: (context, snapshot) {
                   return Stack(
                     children: [
                       CircleAvatar(
                         radius: 20,
                         backgroundColor: Colors.grey[200],
-                        backgroundImage: snapshot.hasData && (snapshot.data?.data() as Map<String, dynamic>?)?['profileImage'] != null
-                            ? MemoryImage(base64Decode((snapshot.data?.data() as Map<String, dynamic>)['profileImage']))
+                        backgroundImage: snapshot.hasData &&
+                                (snapshot.data?.data() as Map<String,
+                                        dynamic>?)?['profileImage'] !=
+                                    null
+                            ? MemoryImage(base64Decode((snapshot.data?.data()
+                                as Map<String, dynamic>)['profileImage']))
                             : null,
-                        child: (!snapshot.hasData || (snapshot.data?.data() as Map<String, dynamic>?)?['profileImage'] == null)
+                        child: (!snapshot.hasData ||
+                                (snapshot.data?.data() as Map<String,
+                                        dynamic>?)?['profileImage'] ==
+                                    null)
                             ? Text(
                                 widget.chatPersonName[0].toUpperCase(),
                                 style: const TextStyle(
@@ -456,11 +482,13 @@ class _ChatPageState extends State<ChatPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+                          Icon(Icons.error_outline,
+                              size: 48, color: Colors.red[300]),
                           const SizedBox(height: 16),
                           Text(
                             'Something went wrong',
-                            style: TextStyle(color: Colors.red[300], fontSize: 16),
+                            style:
+                                TextStyle(color: Colors.red[300], fontSize: 16),
                           ),
                         ],
                       ),
@@ -470,7 +498,8 @@ class _ChatPageState extends State<ChatPage> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6C9BCF)),
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Color(0xFF6C9BCF)),
                       ),
                     );
                   }
@@ -484,8 +513,8 @@ class _ChatPageState extends State<ChatPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.chat_bubble_outline, 
-                            size: 48, 
+                            Icons.chat_bubble_outline,
+                            size: 48,
                             color: Colors.grey[400],
                           ),
                           const SizedBox(height: 16),
@@ -508,15 +537,17 @@ class _ChatPageState extends State<ChatPage> {
                     padding: const EdgeInsets.all(16),
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
-                      final message = messages[messages.length - 1 - index].data() as Map<String, dynamic>;
+                      final message = messages[messages.length - 1 - index]
+                          .data() as Map<String, dynamic>;
                       final isMe = message['senderId'] == currentUserId;
                       final timestamp = message['timestamp'] as Timestamp?;
-                      final timeString = timestamp != null 
+                      final timeString = timestamp != null
                           ? '${timestamp.toDate().hour.toString().padLeft(2, '0')}:${timestamp.toDate().minute.toString().padLeft(2, '0')}'
                           : '';
 
                       return Align(
-                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                        alignment:
+                            isMe ? Alignment.centerRight : Alignment.centerLeft,
                         child: Container(
                           constraints: BoxConstraints(
                             maxWidth: MediaQuery.of(context).size.width * 0.75,
@@ -527,11 +558,15 @@ class _ChatPageState extends State<ChatPage> {
                             right: isMe ? 0 : 50,
                           ),
                           child: Column(
-                            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                            crossAxisAlignment: isMe
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
                             children: [
                               Container(
                                 decoration: BoxDecoration(
-                                  color: isMe ? const Color(0xFF6C9BCF) : Colors.white,
+                                  color: isMe
+                                      ? const Color(0xFF6C9BCF)
+                                      : Colors.white,
                                   borderRadius: BorderRadius.only(
                                     topLeft: const Radius.circular(16),
                                     topRight: const Radius.circular(16),
@@ -554,14 +589,19 @@ class _ChatPageState extends State<ChatPage> {
                                     bottomRight: Radius.circular(isMe ? 4 : 16),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       if (message['type'] == 'image')
                                         GestureDetector(
-                                          onTap: () => _showFullScreenImage(message['image']),
+                                          onTap: () => _showFullScreenImage(
+                                              message['image']),
                                           child: Container(
                                             constraints: BoxConstraints(
-                                              maxHeight: MediaQuery.of(context).size.height * 0.3,
+                                              maxHeight: MediaQuery.of(context)
+                                                      .size
+                                                      .height *
+                                                  0.3,
                                             ),
                                             child: Image.memory(
                                               base64Decode(message['image']),
@@ -578,7 +618,9 @@ class _ChatPageState extends State<ChatPage> {
                                           child: Text(
                                             message['text'] ?? '',
                                             style: TextStyle(
-                                              color: isMe ? Colors.white : Colors.black87,
+                                              color: isMe
+                                                  ? Colors.white
+                                                  : Colors.black87,
                                               fontSize: 16,
                                             ),
                                           ),
@@ -588,7 +630,8 @@ class _ChatPageState extends State<ChatPage> {
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+                                padding: const EdgeInsets.only(
+                                    top: 4, left: 4, right: 4),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -602,9 +645,13 @@ class _ChatPageState extends State<ChatPage> {
                                     if (isMe) ...[
                                       const SizedBox(width: 4),
                                       Icon(
-                                        message['read'] == true ? Icons.done_all : Icons.done,
+                                        message['read'] == true
+                                            ? Icons.done_all
+                                            : Icons.done,
                                         size: 16,
-                                        color: message['read'] == true ? const Color(0xFF6C9BCF) : Colors.grey[600],
+                                        color: message['read'] == true
+                                            ? const Color(0xFF6C9BCF)
+                                            : Colors.grey[600],
                                       ),
                                     ],
                                   ],

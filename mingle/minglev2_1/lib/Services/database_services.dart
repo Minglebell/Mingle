@@ -45,12 +45,13 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
     debugPrint('Starting location tracking...');
     final hasPermission = await LocationService.checkLocationPermission();
     debugPrint('Location permission status: $hasPermission');
-    
+
     if (hasPermission) {
       debugPrint('Setting up location stream...');
       _locationSubscription = LocationService.getLocationStream().listen(
         (Position position) {
-          debugPrint('Received location update: ${position.latitude}, ${position.longitude}');
+          debugPrint(
+              'Received location update: ${position.latitude}, ${position.longitude}');
           updateLocation(position);
         },
         onError: (error) {
@@ -66,7 +67,7 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
     try {
       final User? currentUser = FirebaseAuth.instance.currentUser;
       debugPrint('Current user: ${currentUser?.uid}');
-      
+
       if (currentUser != null) {
         final locationData = {
           'latitude': position.latitude,
@@ -76,7 +77,7 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
         };
 
         debugPrint('Updating location in Firestore: $locationData');
-        
+
         // Update local state
         state = {
           ...state,
@@ -89,7 +90,7 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
           'location': locationData,
           'lastLocationUpdate': FieldValue.serverTimestamp(),
         });
-        
+
         debugPrint('Location updated successfully in Firestore');
       } else {
         debugPrint('No authenticated user found');
@@ -149,7 +150,7 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
         if (userDoc.exists) {
           final userData = userDoc.data() as Map<String, dynamic>;
           debugPrint('Fetched user data: $userData');
-          
+
           // Calculate age from birthday
           String birthday = userData['birthday'] ?? '';
           String age = '';
@@ -171,13 +172,17 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
             'gender': List<String>.from(userData['gender'] ?? []),
             'religion': List<String>.from(userData['religion'] ?? []),
             'budget level': List<String>.from(userData['budget level'] ?? []),
-            'education level': List<String>.from(userData['education level'] ?? []),
-            'relationship status': List<String>.from(userData['relationship status'] ?? []),
+            'education level':
+                List<String>.from(userData['education level'] ?? []),
+            'relationship status':
+                List<String>.from(userData['relationship status'] ?? []),
             'smoking': List<String>.from(userData['smoking'] ?? []),
             'alcoholic': List<String>.from(userData['alcoholic'] ?? []),
             'allergies': List<String>.from(userData['allergies'] ?? []),
-            'physical activity level': List<String>.from(userData['physical activity level'] ?? []),
-            'transportation': List<String>.from(userData['transportation'] ?? []),
+            'physical activity level':
+                List<String>.from(userData['physical activity level'] ?? []),
+            'transportation':
+                List<String>.from(userData['transportation'] ?? []),
             'pet': List<String>.from(userData['pet'] ?? []),
             'personality': List<String>.from(userData['personality'] ?? []),
             'location': userData['location'],
@@ -204,12 +209,21 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
   }
 
   void addPreference(String category, String preference) {
-    final List<String> currentPreferences = List<String>.from(state[category] ?? []);
-    
+    final List<String> currentPreferences =
+        List<String>.from(state[category] ?? []);
+
     // Handle single-selection categories
-    if (['gender', 'religion', 'budget level', 'education level', 
-         'relationship status', 'smoking', 'alcoholic', 'physical activity level',
-         'personality'].contains(category)) {
+    if ([
+      'gender',
+      'religion',
+      'budget level',
+      'education level',
+      'relationship status',
+      'smoking',
+      'alcoholic',
+      'physical activity level',
+      'personality'
+    ].contains(category)) {
       state = {
         ...state,
         category: [preference],
@@ -217,7 +231,8 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
     }
     // Handle multi-selection categories with limits
     else if (['pet', 'allergies', 'transportation'].contains(category)) {
-      if (!currentPreferences.contains(preference) && currentPreferences.length < 4) {
+      if (!currentPreferences.contains(preference) &&
+          currentPreferences.length < 4) {
         state = {
           ...state,
           category: [...currentPreferences, preference],
@@ -270,7 +285,7 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
       if (userDoc.exists) {
         final userData = userDoc.data() as Map<String, dynamic>;
         debugPrint('Fetched user data: $userData');
-        
+
         // Calculate age from birthday
         String birthday = userData['birthday'] ?? '';
         String age = '';
@@ -292,12 +307,15 @@ class DatabaseServices extends StateNotifier<Map<String, dynamic>> {
           'gender': List<String>.from(userData['gender'] ?? []),
           'religion': List<String>.from(userData['religion'] ?? []),
           'budget level': List<String>.from(userData['budget level'] ?? []),
-          'education level': List<String>.from(userData['education level'] ?? []),
-          'relationship status': List<String>.from(userData['relationship status'] ?? []),
+          'education level':
+              List<String>.from(userData['education level'] ?? []),
+          'relationship status':
+              List<String>.from(userData['relationship status'] ?? []),
           'smoking': List<String>.from(userData['smoking'] ?? []),
           'alcoholic': List<String>.from(userData['alcoholic'] ?? []),
           'allergies': List<String>.from(userData['allergies'] ?? []),
-          'physical activity level': List<String>.from(userData['physical activity level'] ?? []),
+          'physical activity level':
+              List<String>.from(userData['physical activity level'] ?? []),
           'transportation': List<String>.from(userData['transportation'] ?? []),
           'pet': List<String>.from(userData['pet'] ?? []),
           'personality': List<String>.from(userData['personality'] ?? []),

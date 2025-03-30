@@ -57,12 +57,12 @@ class NavigationService {
     '/profile': (context) => const ProfileDisplayPage(),
     '/match': (context) => const FindMatchPage(),
     '/search': (context) => const SearchingPage(
-      selectedGender: 'Male',
-      ageRange: RangeValues(18, 100),
-      maxDistance: 10.0,
-      selectedPlace: 'Any',
-      selectedCategory: 'Any',
-    ),
+          selectedGender: 'Male',
+          ageRange: RangeValues(18, 100),
+          maxDistance: 10.0,
+          selectedPlace: 'Any',
+          selectedCategory: 'Any',
+        ),
     '/chatList': (context) => const ChatListPage(),
   };
 

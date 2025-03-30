@@ -32,7 +32,8 @@ class MyApp extends StatelessWidget {
         locale: DevicePreview.locale(context),
         navigatorKey: navigationService.navigatorKey,
         initialRoute: '/', // Set the initial route
-        routes: navigationService.routes, // Use the routes from NavigationService
+        routes:
+            navigationService.routes, // Use the routes from NavigationService
         theme: ThemeData(primarySwatch: Colors.pink, fontFamily: 'Itim'),
       ),
     );

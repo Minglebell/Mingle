@@ -43,25 +43,33 @@ class ChatTile extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: hasUnreadMessages ? Colors.blue : Colors.transparent,
+                        color: hasUnreadMessages
+                            ? Colors.blue
+                            : Colors.transparent,
                         width: 2,
                       ),
                     ),
                     child: FutureBuilder<DocumentSnapshot>(
-                      future: FirebaseFirestore.instance.collection('users').doc(partnerId).get(),
+                      future: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(partnerId)
+                          .get(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return const CircleAvatar(
                             radius: 28,
                             backgroundColor: Colors.blue,
                             child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                               strokeWidth: 2,
                             ),
                           );
                         }
 
-                        final userData = snapshot.data?.data() as Map<String, dynamic>?;
+                        final userData =
+                            snapshot.data?.data() as Map<String, dynamic>?;
                         final profileImage = userData?['profileImage'];
 
                         return CircleAvatar(
@@ -113,7 +121,9 @@ class ChatTile extends StatelessWidget {
                           name,
                           style: TextStyle(
                             fontSize: 16,
-                            fontWeight: hasUnreadMessages ? FontWeight.bold : FontWeight.w600,
+                            fontWeight: hasUnreadMessages
+                                ? FontWeight.bold
+                                : FontWeight.w600,
                             color: Colors.black87,
                           ),
                         ),
@@ -121,8 +131,11 @@ class ChatTile extends StatelessWidget {
                           time,
                           style: TextStyle(
                             fontSize: 12,
-                            color: hasUnreadMessages ? Colors.blue : Colors.grey,
-                            fontWeight: hasUnreadMessages ? FontWeight.w600 : FontWeight.normal,
+                            color:
+                                hasUnreadMessages ? Colors.blue : Colors.grey,
+                            fontWeight: hasUnreadMessages
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
                       ],
@@ -137,15 +150,20 @@ class ChatTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 14,
-                              color: hasUnreadMessages ? Colors.black87 : Colors.grey.shade600,
-                              fontWeight: hasUnreadMessages ? FontWeight.w500 : FontWeight.normal,
+                              color: hasUnreadMessages
+                                  ? Colors.black87
+                                  : Colors.grey.shade600,
+                              fontWeight: hasUnreadMessages
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
                             ),
                           ),
                         ),
                         if (hasUnreadMessages) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.red,
                               borderRadius: BorderRadius.circular(12),

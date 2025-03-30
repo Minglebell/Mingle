@@ -339,18 +339,19 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color:
-                                      const Color(0xFF6C9BCF).withAlpha(76),
+                                  color: const Color(0xFF6C9BCF).withAlpha(76),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
                             child: ElevatedButton(
-                              onPressed: widget.userId == null ? () {
-                                NavigationService()
-                                    .navigateToReplacement('/editProfile');
-                              } : null,
+                              onPressed: widget.userId == null
+                                  ? () {
+                                      NavigationService().navigateToReplacement(
+                                          '/editProfile');
+                                    }
+                                  : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.transparent,
                                 shadowColor: Colors.transparent,
@@ -361,7 +362,9 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                                 ),
                               ),
                               child: Text(
-                                widget.userId == null ? "Edit Profile" : "View Profile",
+                                widget.userId == null
+                                    ? "Edit Profile"
+                                    : "View Profile",
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
@@ -377,7 +380,10 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFFE74C3C), Color(0xFFC0392B)],
+                                  colors: [
+                                    Color(0xFFE74C3C),
+                                    Color(0xFFC0392B)
+                                  ],
                                   begin: Alignment.centerLeft,
                                   end: Alignment.centerRight,
                                 ),
@@ -403,7 +409,8 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                                         actions: [
                                           TextButton(
                                             onPressed: () =>
-                                                Navigator.of(context).pop(false),
+                                                Navigator.of(context)
+                                                    .pop(false),
                                             child: const Text('Cancel'),
                                           ),
                                           TextButton(

@@ -55,14 +55,14 @@ class _ChatListPageState extends State<ChatListPage> {
         final chatId = doc.id;
         final chatData = doc.data();
         final hasUnreadMessages = chatData['hasUnreadMessages'] ?? false;
-        
+
         if (!hasUnreadMessages) {
           setState(() {
             _unreadCounts[chatId] = 0;
           });
           continue;
         }
-        
+
         final messagesSubscription = FirebaseFirestore.instance
             .collection('chats')
             .doc(chatId)
@@ -76,11 +76,11 @@ class _ChatListPageState extends State<ChatListPage> {
             _unreadCounts[chatId] = messages.docs.length;
           });
         });
-        
+
         _subscriptions.add(messagesSubscription);
       }
     });
-    
+
     _subscriptions.add(chatsSubscription);
   }
 
@@ -99,7 +99,8 @@ class _ChatListPageState extends State<ChatListPage> {
     return name.toLowerCase().contains(_searchQuery);
   }
 
-  Future<String> _getParticipantName(String chatId, List<dynamic> participants) async {
+  Future<String> _getParticipantName(
+      String chatId, List<dynamic> participants) async {
     final currentUserId = _auth.currentUser?.uid;
     if (currentUserId == null) return 'Unknown';
 
@@ -173,7 +174,8 @@ class _ChatListPageState extends State<ChatListPage> {
                     : null,
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(25),
                   borderSide: BorderSide(color: Colors.grey.shade200),
@@ -194,11 +196,13 @@ class _ChatListPageState extends State<ChatListPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+                        Icon(Icons.error_outline,
+                            size: 48, color: Colors.red[300]),
                         const SizedBox(height: 16),
                         Text(
                           'Something went wrong',
-                          style: TextStyle(color: Colors.red[300], fontSize: 16),
+                          style:
+                              TextStyle(color: Colors.red[300], fontSize: 16),
                         ),
                       ],
                     ),
@@ -215,7 +219,7 @@ class _ChatListPageState extends State<ChatListPage> {
                 }
 
                 final chats = snapshot.data?.docs ?? [];
-                
+
                 if (chats.isEmpty) {
                   return Center(
                     child: Column(
@@ -251,21 +255,25 @@ class _ChatListPageState extends State<ChatListPage> {
                 return ListView.builder(
                   padding: const EdgeInsets.only(top: 8),
                   physics: const BouncingScrollPhysics(),
-                  itemCount: chats.length + 1, // +1 for potential "no results" message
+                  itemCount:
+                      chats.length + 1, // +1 for potential "no results" message
                   itemBuilder: (context, index) {
                     if (index == chats.length) {
                       return FutureBuilder<int>(
                         future: Future.wait(
                           chats.map((chat) async {
-                            final chatData = chat.data() as Map<String, dynamic>;
-                            final participants = List<String>.from(chatData['participants'] ?? []);
-                            final name = await _getParticipantName(chat.id, participants);
+                            final chatData =
+                                chat.data() as Map<String, dynamic>;
+                            final participants = List<String>.from(
+                                chatData['participants'] ?? []);
+                            final name = await _getParticipantName(
+                                chat.id, participants);
                             return _matchesSearch(name) ? 1 : 0;
                           }),
                         ).then((values) => values.reduce((a, b) => a + b)),
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) return const SizedBox.shrink();
-                          
+
                           final visibleItems = snapshot.data ?? 0;
                           if (visibleItems == 0 && _searchQuery.isNotEmpty) {
                             return Center(
@@ -297,13 +305,15 @@ class _ChatListPageState extends State<ChatListPage> {
 
                     final chat = chats[index].data() as Map<String, dynamic>;
                     final chatId = chats[index].id;
-                    
+
                     final lastMessage = chat['lastMessage'] ?? '';
-                    final lastMessageTime = chat['lastMessageTime'] as Timestamp?;
+                    final lastMessageTime =
+                        chat['lastMessageTime'] as Timestamp?;
                     final timeString = lastMessageTime != null
                         ? _formatTimestamp(lastMessageTime)
                         : '';
-                    final participants = List<String>.from(chat['participants'] ?? []);
+                    final participants =
+                        List<String>.from(chat['participants'] ?? []);
 
                     final unreadCount = _unreadCounts[chatId] ?? 0;
                     final hasUnreadMessages = unreadCount > 0;
@@ -311,17 +321,18 @@ class _ChatListPageState extends State<ChatListPage> {
                     return FutureBuilder<String>(
                       future: _getParticipantName(chatId, participants),
                       builder: (context, nameSnapshot) {
-                        final participantName = nameSnapshot.data ?? 'Loading...';
-                        
+                        final participantName =
+                            nameSnapshot.data ?? 'Loading...';
+
                         if (!_matchesSearch(participantName)) {
                           return const SizedBox.shrink();
                         }
-                        
+
                         final otherParticipantId = participants.firstWhere(
                           (id) => id != _auth.currentUser?.uid,
                           orElse: () => '',
                         );
-                        
+
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 1),
                           child: ChatTile(

@@ -46,7 +46,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       if (pickedImage != null && context.mounted) {
         // Store context before async operation
         final currentContext = context;
-        
+
         // Show loading indicator
         if (!currentContext.mounted) return;
         showDialog(
@@ -112,11 +112,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
           }
         } catch (e) {
           _logger.warning('Error updating profile picture', e);
-          
+
           if (!currentContext.mounted) return;
           // Close loading indicator
           Navigator.of(currentContext).pop();
-          
+
           // Show error message
           DelightToastBar(
             autoDismiss: true,
@@ -141,11 +141,11 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     } catch (e) {
       _logger.warning('Error picking/processing image', e);
       if (!mounted) return;
-      
+
       // Store context before using it
       final currentContext = context;
       if (!currentContext.mounted) return;
-      
+
       DelightToastBar(
         autoDismiss: true,
         snackbarDuration: const Duration(seconds: 3),
@@ -210,24 +210,23 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
-      bottomNavigationBar:
-          showBottomNavBar
-              ? CustomBottomNavBar(
-                currentIndex: currentPageIndex,
-                onDestinationSelected: (int index) {
-                  setState(() {
-                    currentPageIndex = index;
-                  });
-                  if (index == 0) {
-                    NavigationService().navigateToReplacement('/match');
-                  } else if (index == 1) {
-                    NavigationService().navigateToReplacement('/chatList');
-                  } else if (index == 2) {
-                    NavigationService().navigateToReplacement('/profile');
-                  }
-                },
-              )
-              : null, // Hide the bottom nav bar
+      bottomNavigationBar: showBottomNavBar
+          ? CustomBottomNavBar(
+              currentIndex: currentPageIndex,
+              onDestinationSelected: (int index) {
+                setState(() {
+                  currentPageIndex = index;
+                });
+                if (index == 0) {
+                  NavigationService().navigateToReplacement('/match');
+                } else if (index == 1) {
+                  NavigationService().navigateToReplacement('/chatList');
+                } else if (index == 2) {
+                  NavigationService().navigateToReplacement('/profile');
+                }
+              },
+            )
+          : null, // Hide the bottom nav bar
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -264,7 +263,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF6C9BCF).withAlpha(76), // 0.3 * 255 ≈ 76
+                      color: const Color(0xFF6C9BCF)
+                          .withAlpha(76), // 0.3 * 255 ≈ 76
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -336,7 +336,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   CircleAvatar(
                     radius: 60,
                     backgroundColor: Colors.white,
-                    backgroundImage: _imageUrl != null 
+                    backgroundImage: _imageUrl != null
                         ? MemoryImage(base64Decode(_imageUrl!))
                         : null,
                     child: _imageUrl == null
@@ -365,11 +365,14 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                     children: [
                       Text(
                         "Gender: ${(profile['gender'] as List<dynamic>?)?.isNotEmpty ?? false ? (profile['gender'] as List<dynamic>).first : 'Not specified'}",
-                        style: const TextStyle(fontSize: 20, color: Colors.white),
+                        style:
+                            const TextStyle(fontSize: 20, color: Colors.white),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.white, size: 20),
-                        onPressed: () => _showAddPreferenceDialog('Gender', ref.read(profileProvider.notifier)),
+                        icon: const Icon(Icons.edit,
+                            color: Colors.white, size: 20),
+                        onPressed: () => _showAddPreferenceDialog(
+                            'Gender', ref.read(profileProvider.notifier)),
                       ),
                     ],
                   ),
@@ -422,7 +425,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF6C9BCF), width: 2),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF6C9BCF), width: 2),
                   ),
                 ),
                 onChanged: (value) {
@@ -463,30 +467,28 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               spacing: 8.0,
               runSpacing: 8.0,
               alignment: WrapAlignment.center,
-              children:
-                  preferences.map((preference) {
-                    return Chip(
-                      label: Text(
-                        preference,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Color(0xFF333333),
-                        ),
-                      ),
-                      backgroundColor: const Color(0xFFA8D1F0),
-                      deleteIconColor: const Color(0xFF333333),
-                      onDeleted:
-                          () => databaseServices.removePreference(
-                            label.toLowerCase(),
-                            preference,
-                          ),
-                    );
-                  }).toList(),
+              children: preferences.map((preference) {
+                return Chip(
+                  label: Text(
+                    preference,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+                  backgroundColor: const Color(0xFFA8D1F0),
+                  deleteIconColor: const Color(0xFF333333),
+                  onDeleted: () => databaseServices.removePreference(
+                    label.toLowerCase(),
+                    preference,
+                  ),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 10),
             ElevatedButton(
-              onPressed:
-                  () => _showAddPreferenceDialog(label, databaseServices),
+              onPressed: () =>
+                  _showAddPreferenceDialog(label, databaseServices),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6C9BCF),
                 padding: const EdgeInsets.symmetric(
@@ -572,11 +574,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         'Animal dander',
         'Other'
       ],
-      'Physical Activity level': [
-        'Low',
-        'Moderate',
-        'High'
-      ],
+      'Physical Activity level': ['Low', 'Moderate', 'High'],
       'Transportation': [
         'Own vehicle',
         'Public transport',
@@ -594,19 +592,16 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         'Turtle',
         'Other'
       ],
-      'Personality': [
-        'Introverted',
-        'Extroverted',
-        'Ambivert',
-        'Other'
-      ]
+      'Personality': ['Introverted', 'Extroverted', 'Ambivert', 'Other']
     };
 
     String? selectedValue;
-    final currentPreferences = ref.read(profileProvider)[label.toLowerCase()] as List<dynamic>? ?? [];
+    final currentPreferences =
+        ref.read(profileProvider)[label.toLowerCase()] as List<dynamic>? ?? [];
 
     // Check if already at max limit for Allergies and Pets
-    if (['Allergies', 'Pet', 'Transportation'].contains(label) && currentPreferences.length >= 4) {
+    if (['Allergies', 'Pet', 'Transportation'].contains(label) &&
+        currentPreferences.length >= 4) {
       DelightToastBar(
         autoDismiss: true,
         snackbarDuration: const Duration(seconds: 3),
@@ -648,7 +643,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   style: TextStyle(fontSize: 18),
                 );
               }
-              
+
               return SizedBox(
                 width: double.maxFinite,
                 height: 200, // Fixed height for scrollable content
@@ -678,7 +673,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                           side: BorderSide(
-                            color: isSelected ? const Color(0xFF6C9BCF) : Colors.transparent,
+                            color: isSelected
+                                ? const Color(0xFF6C9BCF)
+                                : Colors.transparent,
                           ),
                         ),
                       );

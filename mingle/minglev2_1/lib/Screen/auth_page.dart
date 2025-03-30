@@ -19,13 +19,14 @@ class AuthPage extends ConsumerStatefulWidget {
   ConsumerState<AuthPage> createState() => _AuthPageState();
 }
 
-class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderStateMixin {
+class _AuthPageState extends ConsumerState<AuthPage>
+    with SingleTickerProviderStateMixin {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool isLogin = true;
   bool isPasswordVisible = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  
+
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
   late TextEditingController _nameController;
@@ -97,7 +98,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
       now.month,
       now.day,
     );
-    
+
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: latestAllowedDate,
@@ -105,7 +106,8 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
       lastDate: latestAllowedDate,
       selectableDayPredicate: (DateTime date) {
         // Only allow dates that would make the user 20 or older
-        return date.isBefore(latestAllowedDate) || date.isAtSameMomentAs(latestAllowedDate);
+        return date.isBefore(latestAllowedDate) ||
+            date.isAtSameMomentAs(latestAllowedDate);
       },
       builder: (context, child) {
         return Theme(
@@ -126,7 +128,8 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
     );
 
     if (picked != null) {
-      final formattedDate = "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
+      final formattedDate =
+          "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
       setState(() {
         _birthdayController.text = formattedDate;
       });
@@ -172,11 +175,12 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
 
   Future<void> _handleLogin() async {
     try {
-      final UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      
+
       if (userCredential.user != null) {
         if (!mounted) return;
         _showToast('Login successful!', false);
@@ -184,7 +188,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage;
-      
+
       switch (e.code) {
         case 'user-not-found':
           errorMessage = 'No account found with this email';
@@ -207,7 +211,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
         default:
           errorMessage = 'Login failed. Please try again';
       }
-      
+
       if (!mounted) return;
       _showToast(errorMessage, true);
       _passwordController.clear();
@@ -228,7 +232,8 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
       }
 
       // Create user in Firebase Auth
-      final UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
@@ -236,9 +241,11 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
       // If registration successful, proceed with storing user data
       if (userCredential.user != null) {
         await _storeUserData(userCredential.user!.uid);
-        
+
         if (!mounted) return;
-        _showToast('Registration successful! Please login with your credentials', false);
+        _showToast(
+            'Registration successful! Please login with your credentials',
+            false);
         _clearRegistrationForm();
         setState(() {
           isLogin = true;
@@ -246,7 +253,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage;
-      
+
       switch (e.code) {
         case 'weak-password':
           errorMessage = 'Password should be at least 6 characters';
@@ -266,7 +273,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
         default:
           errorMessage = 'Registration failed. Please try again';
       }
-      
+
       if (!mounted) return;
       _showToast(errorMessage, true);
       _passwordController.clear();
@@ -275,9 +282,10 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
 
   Future<void> _storeUserData(String uid) async {
     // Request location permission
-    bool hasLocationPermission = await LocationService.checkLocationPermission();
+    bool hasLocationPermission =
+        await LocationService.checkLocationPermission();
     Map<String, dynamic>? locationData;
-    
+
     if (hasLocationPermission) {
       Position? position = await LocationService.getCurrentLocation();
       if (position != null) {
@@ -290,10 +298,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
       }
     }
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .set({
+    await FirebaseFirestore.instance.collection('users').doc(uid).set({
       'email': _emailController.text,
       'name': _nameController.text,
       'birthday': _birthdayController.text,
@@ -301,7 +306,8 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
       'createdAt': FieldValue.serverTimestamp(),
       'uid': uid,
       'location': locationData,
-      'lastLocationUpdate': locationData != null ? FieldValue.serverTimestamp() : null,
+      'lastLocationUpdate':
+          locationData != null ? FieldValue.serverTimestamp() : null,
     });
   }
 
@@ -315,7 +321,8 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
     });
   }
 
-  InputDecoration _getInputDecoration(String label, IconData icon, {Widget? suffixIcon}) {
+  InputDecoration _getInputDecoration(String label, IconData icon,
+      {Widget? suffixIcon}) {
     return InputDecoration(
       labelText: label,
       labelStyle: TextStyle(color: Colors.grey[600]),
@@ -386,7 +393,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                       ),
                     ),
                     const SizedBox(height: 40),
-                    
+
                     // Title and Subtitle
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
@@ -415,7 +422,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                       ),
                     ),
                     const SizedBox(height: 40),
-                    
+
                     // Form Fields
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
@@ -425,7 +432,8 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
-                            decoration: _getInputDecoration('Email', Icons.email),
+                            decoration:
+                                _getInputDecoration('Email', Icons.email),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Email is required';
@@ -475,9 +483,12 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                           if (!isLogin) ...[
                             TextFormField(
                               controller: _nameController,
-                              decoration: _getInputDecoration('Full Name', Icons.person),
+                              decoration: _getInputDecoration(
+                                  'Full Name', Icons.person),
                               validator: (value) =>
-                                  value == null || value.isEmpty ? 'Name is required' : null,
+                                  value == null || value.isEmpty
+                                      ? 'Name is required'
+                                      : null,
                             ),
                             const SizedBox(height: 16),
 
@@ -491,12 +502,14 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                               child: DropdownButtonFormField<String>(
                                 value: _selectedGender,
                                 decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF6C9BCF)),
+                                  prefixIcon: const Icon(Icons.person_outline,
+                                      color: Color(0xFF6C9BCF)),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide.none,
                                   ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
                                 ),
                                 hint: const Text('Select Gender'),
                                 items: _genderOptions.map((String gender) {
@@ -549,7 +562,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Submit Button with gradient
                     Container(
                       width: double.infinity,
@@ -590,7 +603,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                     ),
 
                     const SizedBox(height: 24),
-                    
+
                     // Toggle Button
                     Center(
                       child: TextButton(
@@ -602,14 +615,17 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                           });
                         },
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
                         ),
                         child: RichText(
                           text: TextSpan(
                             style: const TextStyle(fontSize: 16),
                             children: [
                               TextSpan(
-                                text: isLogin ? "Don't have an account? " : 'Already have an account? ',
+                                text: isLogin
+                                    ? "Don't have an account? "
+                                    : 'Already have an account? ',
                                 style: TextStyle(color: Colors.grey[600]),
                               ),
                               TextSpan(
@@ -682,4 +698,4 @@ class AuthState {
       birthday: birthday ?? this.birthday,
     );
   }
-} 
+}

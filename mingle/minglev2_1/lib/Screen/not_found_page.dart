@@ -8,89 +8,163 @@ import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:minglev2_1/Widget/custom_app_bar.dart';
 
 class NotFoundPage extends StatefulWidget {
-  const NotFoundPage({super.key});
+  final String selectedGender;
+  final RangeValues ageRange;
+  final double maxDistance;
+  final String selectedPlace;
+  final String selectedCategory;
+
+  const NotFoundPage({
+    super.key,
+    required this.selectedGender,
+    required this.ageRange,
+    required this.maxDistance,
+    required this.selectedPlace,
+    required this.selectedCategory,
+  });
 
   @override
   State<NotFoundPage> createState() => _NotFoundPageState();
 }
 
 class _NotFoundPageState extends State<NotFoundPage> {
-  int currentPageIndex = 0; // Track the current index for the bottom navigation bar
+  int currentPageIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const CustomAppBar(
-        title: 'Not Found',
+        title: 'No Matches Found',
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Icon(Icons.error_outline, size: 50, color: Colors.red),
-            const SizedBox(height: 20),
-            const Text(
-              'No matches found. Please try again or go back to the match menu.',
-              style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Try Again: Navigate back to SearchingPage
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SearchingPage(
-                      selectedGender: 'Male', // Default value
-                      ageRange: RangeValues(18, 100), // Default range
-                      maxDistance: 10.0, // Default distance
-                      selectedPlace: 'Any', // Default place
-                      selectedCategory: 'Any', // Default category
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withAlpha(25),
+                    spreadRadius: 2,
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.search_off_rounded,
+                      size: 64,
+                      color: Colors.red.shade400,
                     ),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 50,
-                  vertical: 15,
-                ),
-              ),
-              child: const Text(
-                'Try Again',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Colors.white,
-                ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'No Matches Found',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'We couldn\'t find any matches with your current preferences. Try adjusting your search criteria or try again later.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade600,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SearchingPage(
+                            selectedGender: 'Male',
+                            ageRange: RangeValues(18, 100),
+                            maxDistance: 10.0,
+                            selectedPlace: 'Any',
+                            selectedCategory: 'Any',
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.refresh, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Try Again',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        FadePageRoute(builder: (context) => const FindMatchPage()),
+                      );
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 16,
+                      ),
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.arrow_back, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Back to Match Menu',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () {
-                // Go Back to Match Menu
-                Navigator.pushReplacement(
-                  context,
-                  FadePageRoute(builder: (context) => const FindMatchPage()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 50,
-                  vertical: 15,
-                ),
-              ),
-              child: const Text(
-                'Go Back to Match Menu',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
       bottomNavigationBar: CustomBottomNavBar(
@@ -99,10 +173,8 @@ class _NotFoundPageState extends State<NotFoundPage> {
           setState(() {
             currentPageIndex = index;
           });
-          // Handle navigation based on the selected index
           switch (index) {
             case 0:
-              // Navigate to Home (if needed)
               break;
             case 1:
               Navigator.pushReplacement(

@@ -15,11 +15,13 @@ class MatchingService {
 
     double dLat = _toRadians(lat2 - lat1);
     double dLon = _toRadians(lon2 - lon1);
-    
+
     double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_toRadians(lat1)) * math.cos(_toRadians(lat2)) *
-        math.sin(dLon / 2) * math.sin(dLon / 2);
-    
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
     double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return earthRadius * c;
   }
@@ -50,9 +52,10 @@ class MatchingService {
       final currentUser = _auth.currentUser;
       if (currentUser == null) return [];
 
-      final currentUserDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+      final currentUserDoc =
+          await _firestore.collection('users').doc(currentUser.uid).get();
       final currentUserData = currentUserDoc.data();
-      
+
       if (currentUserData == null) return [];
 
       // Get current user's location
@@ -87,8 +90,9 @@ class MatchingService {
         // Check distance
         final userLat = userLocation['latitude'];
         final userLon = userLocation['longitude'];
-        final distance = calculateDistance(currentLat, currentLon, userLat, userLon);
-        
+        final distance =
+            calculateDistance(currentLat, currentLon, userLat, userLon);
+
         if (distance > maxDistance) continue;
 
         // Add to matches if all criteria are met
@@ -148,4 +152,4 @@ class MatchingService {
       rethrow;
     }
   }
-} 
+}

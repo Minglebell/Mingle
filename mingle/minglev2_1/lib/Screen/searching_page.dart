@@ -3,6 +3,7 @@ import '../Widget/bottom_navigation_bar.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/profile_display_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
+import 'not_found_page.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:minglev2_1/Widget/custom_app_bar.dart';
 import 'package:minglev2_1/services/request_matching_service.dart';
@@ -11,6 +12,7 @@ import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:async';
 
 class SearchingPage extends StatefulWidget {
   final String selectedGender;
@@ -47,6 +49,8 @@ class _SearchingPageState extends State<SearchingPage>
   Map<String, dynamic>? _matchedUser;
   bool _matchFound = false;
   final _logger = Logger('SearchingPage');
+  Timer? _searchTimer;
+  final int _searchTimeoutMinutes = 1; // Adjust timeout duration as needed
 
   @override
   void initState() {
@@ -59,6 +63,32 @@ class _SearchingPageState extends State<SearchingPage>
     _matchingService = RequestMatchingService(context);
 
     _startMatching();
+    _startSearchTimer();
+  }
+
+  void _startSearchTimer() {
+    _searchTimer = Timer(Duration(minutes: _searchTimeoutMinutes), () {
+      if (mounted && !_matchFound) {
+        // Cancel the current request
+        if (_currentRequestId != null) {
+          _matchingService.cancelRequest(_currentRequestId!);
+        }
+
+        // Navigate to not found page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const NotFoundPage(
+              selectedGender: 'Male', // Default value
+              ageRange: RangeValues(18, 100), // Default range
+              maxDistance: 10.0, // Default distance
+              selectedPlace: 'Any', // Default place
+              selectedCategory: 'Any', // Default category
+            ),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _startMatching() async {
@@ -70,7 +100,9 @@ class _SearchingPageState extends State<SearchingPage>
         gender: widget.selectedGender,
         ageRange: widget.ageRange,
         maxDistance: widget.maxDistance,
-        scheduledTime: widget.isScheduledMatch && widget.schedules != null && widget.schedules!.isNotEmpty
+        scheduledTime: widget.isScheduledMatch &&
+                widget.schedules != null &&
+                widget.schedules!.isNotEmpty
             ? widget.schedules!.first['date'] as DateTime
             : null,
       );
@@ -99,12 +131,15 @@ class _SearchingPageState extends State<SearchingPage>
 
   void _onMatchFound(Map<String, dynamic> matchedUser) {
     if (!mounted) return;
-    
+
+    // Cancel the search timer when match is found
+    _searchTimer?.cancel();
+
     // Check if this match is for the current user
     if (matchedUser['chatId'] != null) {
       // Clear SharedPreferences only after a successful match
       _clearPreferences();
-      
+
       setState(() {
         _isSearching = false;
         _matchFound = true;
@@ -130,9 +165,6 @@ class _SearchingPageState extends State<SearchingPage>
     await prefs.remove('ageRangeStart');
     await prefs.remove('ageRangeEnd');
     await prefs.remove('distance');
-    // Don't clear schedule-related preferences
-    // await prefs.remove('isScheduledMatch');
-    // await prefs.remove('schedules');
   }
 
   void _startChat() async {
@@ -149,7 +181,7 @@ class _SearchingPageState extends State<SearchingPage>
 
   void _showError() {
     if (!mounted) return;
-    
+
     DelightToastBar(
       autoDismiss: true,
       snackbarDuration: const Duration(seconds: 3),
@@ -168,7 +200,7 @@ class _SearchingPageState extends State<SearchingPage>
         ),
       ),
     ).show(context);
-    
+
     // Navigate back to match menu after a delay
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
@@ -182,6 +214,7 @@ class _SearchingPageState extends State<SearchingPage>
 
   @override
   void dispose() {
+    _searchTimer?.cancel(); // Cancel the timer
     _controller.dispose();
     // Cancel the request if it exists
     if (_currentRequestId != null) {
@@ -295,9 +328,11 @@ class _SearchingPageState extends State<SearchingPage>
                       CircleAvatar(
                         radius: 50,
                         backgroundColor: Colors.grey.shade200,
-                        backgroundImage: _matchedUser!['profileImage'].isNotEmpty
-                            ? MemoryImage(base64Decode(_matchedUser!['profileImage']))
-                            : null,
+                        backgroundImage:
+                            _matchedUser!['profileImage'].isNotEmpty
+                                ? MemoryImage(
+                                    base64Decode(_matchedUser!['profileImage']))
+                                : null,
                         child: _matchedUser!['profileImage'].isEmpty
                             ? const Icon(
                                 Icons.person,
@@ -345,7 +380,8 @@ class _SearchingPageState extends State<SearchingPage>
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.chat_bubble_outline, color: Colors.white),
+                            Icon(Icons.chat_bubble_outline,
+                                color: Colors.white),
                             SizedBox(width: 8),
                             Text(
                               'Start Chat',
@@ -369,14 +405,16 @@ class _SearchingPageState extends State<SearchingPage>
                     if (_currentRequestId != null) {
                       try {
                         final currentContext = context;
-                        await _matchingService.cancelRequest(_currentRequestId!);
-                        
+                        await _matchingService
+                            .cancelRequest(_currentRequestId!);
+
                         if (!mounted) return;
                         if (!currentContext.mounted) return;
-                        
+
                         Navigator.pushReplacement(
                           currentContext,
-                          FadePageRoute(builder: (context) => const FindMatchPage()),
+                          FadePageRoute(
+                              builder: (context) => const FindMatchPage()),
                         );
                       } catch (e) {
                         _logger.warning('Error in canceling request', e);
@@ -386,10 +424,11 @@ class _SearchingPageState extends State<SearchingPage>
                     } else {
                       final currentContext = context;
                       if (!currentContext.mounted) return;
-                      
+
                       Navigator.pushReplacement(
                         currentContext,
-                        FadePageRoute(builder: (context) => const FindMatchPage()),
+                        FadePageRoute(
+                            builder: (context) => const FindMatchPage()),
                       );
                     }
                   },

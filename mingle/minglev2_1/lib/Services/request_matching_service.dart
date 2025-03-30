@@ -33,7 +33,8 @@ class RequestMatchingService {
     if (currentUser == null) throw Exception('No authenticated user');
 
     // Get current user's data
-    final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+    final userDoc =
+        await _firestore.collection('users').doc(currentUser.uid).get();
     final userData = userDoc.data();
     if (userData == null) throw Exception('User data not found');
 
@@ -55,7 +56,7 @@ class RequestMatchingService {
         final today = DateTime.now();
         userAge = today.year - birthDate.year;
         // Adjust age if birthday hasn't occurred this year
-        if (today.month < birthDate.month || 
+        if (today.month < birthDate.month ||
             (today.month == birthDate.month && today.day < birthDate.day)) {
           userAge--;
         }
@@ -75,13 +76,15 @@ class RequestMatchingService {
       'maxDistance': maxDistance,
       'location': location,
       'createdAt': FieldValue.serverTimestamp(),
-      'scheduledTime': scheduledTime != null ? Timestamp.fromDate(scheduledTime) : null,
+      'scheduledTime':
+          scheduledTime != null ? Timestamp.fromDate(scheduledTime) : null,
       'timeRange': timeRange,
       'status': 'waiting',
       'userAge': userAge, // Add user's age to the request
     };
 
-    _logger.info('Creating request with timeRange: $timeRange and user age: $userAge');
+    _logger.info(
+        'Creating request with timeRange: $timeRange and user age: $userAge');
 
     // Add to requests collection
     final docRef = await _firestore.collection('requests').add(requestData);
@@ -128,21 +131,32 @@ class RequestMatchingService {
         _logger.severe('Error in match subscription: $error');
         if (error.toString().contains('requires an index')) {
           // Show a user-friendly message about the missing index
-          _logger.info('Please wait while the matching system is being set up. This may take a few minutes.');
+          _logger.info(
+              'Please wait while the matching system is being set up. This may take a few minutes.');
           // You might want to show this message to the user in the UI
         } else {
-          _logger.severe('An error occurred while searching for matches: $error');
+          _logger
+              .severe('An error occurred while searching for matches: $error');
         }
       });
 
       // Also listen for when this request gets matched
-      _firestore.collection('requests').doc(requestId).snapshots().listen((doc) {
+      _firestore
+          .collection('requests')
+          .doc(requestId)
+          .snapshots()
+          .listen((doc) {
         if (doc.exists) {
           final data = doc.data() as Map<String, dynamic>;
           if (data['status'] == 'matched' && data['matchedWith'] != null) {
-            _logger.info('Request was matched with user: ${data['matchedWith']}');
+            _logger
+                .info('Request was matched with user: ${data['matchedWith']}');
             // Get the matched user's information
-            _firestore.collection('users').doc(data['matchedWith']).get().then((userDoc) {
+            _firestore
+                .collection('users')
+                .doc(data['matchedWith'])
+                .get()
+                .then((userDoc) {
               if (userDoc.exists) {
                 final userData = userDoc.data() as Map<String, dynamic>;
                 // Calculate distance
@@ -176,9 +190,11 @@ class RequestMatchingService {
   }
 
   // Check if two requests are a potential match
-  Future<bool> _arePotentialMatches(Map<String, dynamic> request1, Map<String, dynamic> request2) async {
+  Future<bool> _arePotentialMatches(
+      Map<String, dynamic> request1, Map<String, dynamic> request2) async {
     // First check if category and place match
-    if (request1['category'] != request2['category'] || request1['place'] != request2['place']) {
+    if (request1['category'] != request2['category'] ||
+        request1['place'] != request2['place']) {
       _logger.info('Category or place mismatch');
       return false;
     }
@@ -188,27 +204,32 @@ class RequestMatchingService {
     final scheduledTime2 = request2['scheduledTime'] as Timestamp?;
     final timeRange1 = request1['timeRange'] as String?;
     final timeRange2 = request2['timeRange'] as String?;
-    
+
     if (scheduledTime1 != null && scheduledTime2 != null) {
       final time1 = scheduledTime1.toDate();
       final time2 = scheduledTime2.toDate();
-      
+
       // Check if the dates match
-      if (time1.year != time2.year || time1.month != time2.month || time1.day != time2.day) {
+      if (time1.year != time2.year ||
+          time1.month != time2.month ||
+          time1.day != time2.day) {
         _logger.info('Date mismatch');
         return false;
       }
-      
+
       // Check if the time ranges match
-      if (timeRange1 != null && timeRange2 != null && timeRange1 != timeRange2) {
+      if (timeRange1 != null &&
+          timeRange2 != null &&
+          timeRange1 != timeRange2) {
         _logger.info('Time range mismatch: $timeRange1 != $timeRange2');
         return false;
       }
-      
+
       // Check if the time difference is within 30 minutes
       final timeDiff = time1.difference(time2).abs();
       if (timeDiff.inMinutes > 30) {
-        _logger.info('Time difference too large: ${timeDiff.inMinutes} minutes');
+        _logger
+            .info('Time difference too large: ${timeDiff.inMinutes} minutes');
         return false;
       }
     } else if (scheduledTime1 != null || scheduledTime2 != null) {
@@ -230,7 +251,7 @@ class RequestMatchingService {
       try {
         final user1Data = (await user1Doc).data();
         final user2Data = (await user2Doc).data();
-        
+
         if (user1Data == null || user2Data == null) return false;
 
         // Get gender from match menu selection (request) and profile
@@ -240,13 +261,14 @@ class RequestMatchingService {
         final user2Gender = List<String>.from(user2Data['gender'] ?? []);
 
         // Check if the selected gender matches the other user's profile gender
-        final hasMatchingGender = 
-            (selectedGender1 == user2Gender.first) && 
+        final hasMatchingGender = (selectedGender1 == user2Gender.first) &&
             (selectedGender2 == user1Gender.first);
 
-        _logger.info('Checking gender match: Selected gender $selectedGender1 with profile gender ${user2Gender.first} and Selected gender $selectedGender2 with profile gender ${user1Gender.first}');
+        _logger.info(
+            'Checking gender match: Selected gender $selectedGender1 with profile gender ${user2Gender.first} and Selected gender $selectedGender2 with profile gender ${user1Gender.first}');
         if (!hasMatchingGender) {
-          _logger.warning('Gender mismatch: Selected gender does not match profile gender');
+          _logger.warning(
+              'Gender mismatch: Selected gender does not match profile gender');
           return false;
         }
         return true;
@@ -262,7 +284,7 @@ class RequestMatchingService {
         // Get age from requests
         final user1Age = request1['userAge'] as int?;
         final user2Age = request2['userAge'] as int?;
-        
+
         if (user1Age == null || user2Age == null) {
           _logger.warning('Age data missing in requests');
           return false;
@@ -273,10 +295,13 @@ class RequestMatchingService {
         final ageRange2 = request2['ageRange'] as Map<String, dynamic>;
 
         // Check if ages are within each other's preferred ranges
-        final isAge1InRange2 = user1Age >= ageRange2['start'] && user1Age <= ageRange2['end'];
-        final isAge2InRange1 = user2Age >= ageRange1['start'] && user2Age <= ageRange1['end'];
+        final isAge1InRange2 =
+            user1Age >= ageRange2['start'] && user1Age <= ageRange2['end'];
+        final isAge2InRange1 =
+            user2Age >= ageRange1['start'] && user2Age <= ageRange1['end'];
 
-        _logger.info('Checking age match: User1 age $user1Age in range ${ageRange2['start']}-${ageRange2['end']} and User2 age $user2Age in range ${ageRange1['start']}-${ageRange1['end']}');
+        _logger.info(
+            'Checking age match: User1 age $user1Age in range ${ageRange2['start']}-${ageRange2['end']} and User2 age $user2Age in range ${ageRange1['start']}-${ageRange1['end']}');
         if (!isAge1InRange2 || !isAge2InRange1) {
           _logger.warning('Age mismatch based on request ages and preferences');
           return false;
@@ -293,7 +318,7 @@ class RequestMatchingService {
       try {
         final user1Data = (await user1Doc).data();
         final user2Data = (await user2Doc).data();
-        
+
         if (user1Data == null || user2Data == null) return false;
 
         // Get locations from profiles
@@ -308,7 +333,8 @@ class RequestMatchingService {
         // Get max distance preferences from requests
         final maxDistance1 = request1['maxDistance'] as double;
         final maxDistance2 = request2['maxDistance'] as double;
-        final maxAllowedDistance = maxDistance1 < maxDistance2 ? maxDistance1 : maxDistance2;
+        final maxAllowedDistance =
+            maxDistance1 < maxDistance2 ? maxDistance1 : maxDistance2;
 
         // Calculate distance between users using profile locations
         final distance = _calculateDistance(
@@ -318,7 +344,8 @@ class RequestMatchingService {
           location2['longitude'] as double,
         );
 
-        _logger.info('Distance between users from profiles: $distance km, Max allowed: $maxAllowedDistance km');
+        _logger.info(
+            'Distance between users from profiles: $distance km, Max allowed: $maxAllowedDistance km');
         if (distance > maxAllowedDistance) {
           _logger.warning('Distance too far based on profile locations');
           return false;
@@ -335,14 +362,15 @@ class RequestMatchingService {
       try {
         final user1Data = (await user1Doc).data();
         final user2Data = (await user2Doc).data();
-        
+
         if (user1Data == null || user2Data == null) return true;
 
         // Check religion compatibility
         final religion1 = List<String>.from(user1Data['religion'] ?? []);
         final religion2 = List<String>.from(user2Data['religion'] ?? []);
         if (religion1.isNotEmpty && religion2.isNotEmpty) {
-          final hasMatchingReligion = religion1.any((r) => religion2.contains(r));
+          final hasMatchingReligion =
+              religion1.any((r) => religion2.contains(r));
           if (!hasMatchingReligion) {
             _logger.info('Religion mismatch');
             return false;
@@ -361,10 +389,13 @@ class RequestMatchingService {
         }
 
         // Check education level compatibility
-        final education1 = List<String>.from(user1Data['education level'] ?? []);
-        final education2 = List<String>.from(user2Data['education level'] ?? []);
+        final education1 =
+            List<String>.from(user1Data['education level'] ?? []);
+        final education2 =
+            List<String>.from(user2Data['education level'] ?? []);
         if (education1.isNotEmpty && education2.isNotEmpty) {
-          final hasMatchingEducation = education1.any((e) => education2.contains(e));
+          final hasMatchingEducation =
+              education1.any((e) => education2.contains(e));
           if (!hasMatchingEducation) {
             _logger.info('Education level mismatch');
             return false;
@@ -372,10 +403,13 @@ class RequestMatchingService {
         }
 
         // Check relationship status compatibility
-        final relationship1 = List<String>.from(user1Data['relationship status'] ?? []);
-        final relationship2 = List<String>.from(user2Data['relationship status'] ?? []);
+        final relationship1 =
+            List<String>.from(user1Data['relationship status'] ?? []);
+        final relationship2 =
+            List<String>.from(user2Data['relationship status'] ?? []);
         if (relationship1.isNotEmpty && relationship2.isNotEmpty) {
-          final hasMatchingStatus = relationship1.any((s) => relationship2.contains(s));
+          final hasMatchingStatus =
+              relationship1.any((s) => relationship2.contains(s));
           if (!hasMatchingStatus) {
             _logger.info('Relationship status mismatch');
             return false;
@@ -404,10 +438,13 @@ class RequestMatchingService {
         }
 
         // Check physical activity level compatibility
-        final activity1 = List<String>.from(user1Data['physical activity level'] ?? []);
-        final activity2 = List<String>.from(user2Data['physical activity level'] ?? []);
+        final activity1 =
+            List<String>.from(user1Data['physical activity level'] ?? []);
+        final activity2 =
+            List<String>.from(user2Data['physical activity level'] ?? []);
         if (activity1.isNotEmpty && activity2.isNotEmpty) {
-          final hasMatchingActivity = activity1.any((a) => activity2.contains(a));
+          final hasMatchingActivity =
+              activity1.any((a) => activity2.contains(a));
           if (!hasMatchingActivity) {
             _logger.info('Physical activity level mismatch');
             return false;
@@ -418,7 +455,8 @@ class RequestMatchingService {
         final personality1 = List<String>.from(user1Data['personality'] ?? []);
         final personality2 = List<String>.from(user2Data['personality'] ?? []);
         if (personality1.isNotEmpty && personality2.isNotEmpty) {
-          final hasMatchingPersonality = personality1.any((p) => personality2.contains(p));
+          final hasMatchingPersonality =
+              personality1.any((p) => personality2.contains(p));
           if (!hasMatchingPersonality) {
             _logger.info('Personality mismatch');
             return false;
@@ -450,16 +488,19 @@ class RequestMatchingService {
   }
 
   // Calculate distance between two points
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  double _calculateDistance(
+      double lat1, double lon1, double lat2, double lon2) {
     const double earthRadius = 6371; // Earth's radius in kilometers
 
     double dLat = _toRadians(lat2 - lat1);
     double dLon = _toRadians(lon2 - lon1);
-    
+
     double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_toRadians(lat1)) * math.cos(_toRadians(lat2)) *
-        math.sin(dLon / 2) * math.sin(dLon / 2);
-    
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
     double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return earthRadius * c;
   }
@@ -471,11 +512,14 @@ class RequestMatchingService {
   // Handle match between two users
   Future<void> _handleMatch(String requestId1, String requestId2) async {
     try {
-      _logger.info('Handling match between requests: $requestId1 and $requestId2');
-      
+      _logger
+          .info('Handling match between requests: $requestId1 and $requestId2');
+
       // Get both requests
-      final request1Doc = await _firestore.collection('requests').doc(requestId1).get();
-      final request2Doc = await _firestore.collection('requests').doc(requestId2).get();
+      final request1Doc =
+          await _firestore.collection('requests').doc(requestId1).get();
+      final request2Doc =
+          await _firestore.collection('requests').doc(requestId2).get();
 
       if (!request1Doc.exists || !request2Doc.exists) {
         _logger.warning('One or both requests no longer exist');
@@ -486,9 +530,15 @@ class RequestMatchingService {
       final request2Data = request2Doc.data() as Map<String, dynamic>;
 
       // Get both users' information
-      final user1Doc = await _firestore.collection('users').doc(request1Data['userId']).get();
-      final user2Doc = await _firestore.collection('users').doc(request2Data['userId']).get();
-      
+      final user1Doc = await _firestore
+          .collection('users')
+          .doc(request1Data['userId'])
+          .get();
+      final user2Doc = await _firestore
+          .collection('users')
+          .doc(request2Data['userId'])
+          .get();
+
       final user1Data = user1Doc.data() as Map<String, dynamic>;
       final user2Data = user2Doc.data() as Map<String, dynamic>;
 
@@ -501,9 +551,10 @@ class RequestMatchingService {
       );
 
       // Create a chat between the matched users
-      final chatId = _createChatId(request1Data['userId'], request2Data['userId']);
+      final chatId =
+          _createChatId(request1Data['userId'], request2Data['userId']);
       _logger.info('Creating chat with ID: $chatId');
-      
+
       // Create the chat first with match details including timeRange
       await _firestore.collection('chats').doc(chatId).set({
         'participants': [request1Data['userId'], request2Data['userId']],
@@ -575,7 +626,6 @@ class RequestMatchingService {
       _matchSubscription?.cancel();
       _currentRequestId = null;
       _logger.info('Match handling completed successfully');
-
     } catch (e) {
       _logger.severe('Error handling match: $e');
       rethrow;
@@ -597,7 +647,7 @@ class RequestMatchingService {
 
       // Delete the request from Firestore
       await _firestore.collection('requests').doc(requestId).delete();
-      
+
       // Clear the current request ID
       _currentRequestId = null;
     } catch (e) {
@@ -610,4 +660,4 @@ class RequestMatchingService {
     _matchSubscription?.cancel();
     _currentRequestId = null;
   }
-} 
+}

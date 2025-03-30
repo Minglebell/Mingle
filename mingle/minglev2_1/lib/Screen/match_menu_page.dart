@@ -108,6 +108,78 @@ class _FindMatchPageState extends State<FindMatchPage> {
     'Shopping': Icons.shopping_bag,
   };
 
+  final Map<String, IconData> genderIcons = {
+    'Male': Icons.male,
+    'Female': Icons.female,
+    'Non-binary': Icons.transgender,
+    'Transgender': Icons.transgender,
+    'LGBTQ+': Icons.diversity_3,
+    'Other': Icons.person_outline,
+  };
+
+  // Add this map for place icons
+  final Map<String, IconData> placeIcons = {
+    // Outdoor_Nature
+    "Parks": Icons.park,
+    "Beaches": Icons.beach_access,
+    "Lakes": Icons.water,
+    "Zoos": Icons.pets,
+    "Safari parks": Icons.forest,
+    "Amusement parks": Icons.attractions,
+    "Water parks": Icons.pool,
+
+    // Arts_Culture_Historical_Sites
+    "Museums": Icons.museum,
+    "Art galleries": Icons.art_track,
+    "Historical landmarks": Icons.account_balance,
+    "Temples": Icons.temple_buddhist,
+
+    // Entertainment_Recreation
+    "Movie theaters": Icons.movie,
+    "Bowling alleys": Icons.sports_cricket,
+    "Escape rooms": Icons.vrpano,
+    "Gaming centers": Icons.sports_esports,
+    "Live theaters": Icons.theater_comedy,
+    "Concert venues": Icons.music_note,
+    "Karaoke bars": Icons.mic,
+    "Aquariums": Icons.water,
+    "Ice-skating rinks": Icons.ice_skating,
+
+    // Dining_Cafes
+    "Thai restaurants": Icons.restaurant,
+    "Italian restaurants": Icons.restaurant,
+    "Japanese restaurants": Icons.restaurant,
+    "Chinese restaurants": Icons.restaurant,
+    "Korean restaurants": Icons.restaurant,
+    "Indian restaurants": Icons.restaurant,
+    "Vegan restaurants": Icons.restaurant,
+    "Buffet restaurants": Icons.restaurant_menu,
+    "Seafood restaurants": Icons.set_meal,
+    "Thai barbecue restaurants": Icons.outdoor_grill,
+    "Korean barbecue restaurants": Icons.outdoor_grill,
+    "Japanese barbecue restaurants": Icons.outdoor_grill,
+    "Thai-style hot pot restaurants": Icons.soup_kitchen,
+    "Chinese hot pot Restaurants": Icons.soup_kitchen,
+    "Japanese hot pot restaurants": Icons.soup_kitchen,
+    "Northeastern Thai restaurants": Icons.restaurant,
+    "Steak restaurant": Icons.restaurant,
+    "Sushi restaurant": Icons.set_meal,
+    "Dessert cafes": Icons.icecream,
+    "Coffee shops": Icons.coffee,
+
+    // Nightlife_Bars
+    "Bars": Icons.local_bar,
+    "Cocktail bars": Icons.local_bar,
+    "Pubs": Icons.sports_bar,
+    "Wine bars": Icons.wine_bar,
+
+    // Shopping
+    "Shopping malls": Icons.shopping_cart,
+    "Markets": Icons.storefront,
+    "Night markets": Icons.nightlife,
+    "Floating markets": Icons.directions_boat,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -587,427 +659,522 @@ class _FindMatchPageState extends State<FindMatchPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade100, Colors.white],
+            colors: [Colors.blue.shade50, Colors.white],
           ),
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Category Section
-              const Text(
-                'Select Category',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: Wrap(
-                  spacing: 8.0,
-                  runSpacing: 8.0,
-                  alignment: WrapAlignment.center,
-                  children: placeData.keys.map((String category) {
-                    return ChoiceChip(
-                      label: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            categoryIcons[category] ?? Icons.place,
-                            size: 20,
-                            color: selectedCategory == category
-                                ? Colors.white
-                                : Colors.black,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _formatCategory(category),
-                            style: TextStyle(
-                              color: selectedCategory == category
-                                  ? Colors.white
-                                  : Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                      selected: selectedCategory == category,
-                      onSelected: (bool selected) {
-                        setState(() {
-                          selectedCategory = selected ? category : null;
-                          selectedPlace = null; // Reset selected place when category changes
-                        });
-                        _saveSettings(); // Save settings after category change
-                      },
-                      selectedColor: Colors.blue,
-                      backgroundColor: Colors.grey[200],
-                    );
-                  }).toList(),
-                ),
-              ),
-              if (selectedCategory != null) ...[
-                const SizedBox(height: 20),
-                const Text(
-                  'Select Place',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Center(
-                  child: Wrap(
-                    spacing: 8.0,
-                    runSpacing: 8.0,
-                    alignment: WrapAlignment.center,
-                    children: placeData[selectedCategory]!.map((String place) {
-                      return ChoiceChip(
-                        label: Text(
-                          place,
-                          style: TextStyle(
-                            color: selectedPlace == place
-                                ? Colors.white
-                                : Colors.black,
-                          ),
-                        ),
-                        selected: selectedPlace == place,
-                        onSelected: (bool selected) {
-                          setState(() {
-                            selectedPlace = selected ? place : null;
-                          });
-                          _saveSettings(); // Save settings after place change
-                        },
-                        selectedColor: Colors.blue,
-                        backgroundColor: Colors.grey[200],
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-
-              // Gender Section
+              _buildSectionTitle('Select Category'),
+              const SizedBox(height: 12),
+              _buildCategorySelection(),
+              
+              const SizedBox(height: 24),
+              _buildSectionTitle('Select Place'),
+              const SizedBox(height: 12),
+              if (selectedCategory != null && placeData[selectedCategory] != null)
+                _buildPlaceChips(placeData[selectedCategory]!),
+              
+              const SizedBox(height: 24),
+              _buildSectionTitle('Select Gender'),
+              const SizedBox(height: 12),
+              _buildGenderSelection(),
+              
+              const SizedBox(height: 24),
+              _buildSectionTitle('Age Range'),
+              const SizedBox(height: 8),
+              _buildAgeRangeSlider(),
+              
+              const SizedBox(height: 24),
+              _buildSectionTitle('Distance'),
+              const SizedBox(height: 8),
+              _buildDistanceSlider(),
+              
+              const SizedBox(height: 24),
+              _buildScheduleSection(),
+              
+              const SizedBox(height: 32),
+              _buildMatchButton(context),
+              
               const SizedBox(height: 20),
-              const Text(
-                'Select Gender',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButton<String>(
-                    value: selectedGender,
-                    hint: const Text(
-                      'Choose gender',
-                      style: TextStyle(color: Colors.black54),
-                    ),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        selectedGender = newValue;
-                      });
-                      _saveSettings(); // Save settings after gender change
-                    },
-                    items: genderOptions
-                        .map<DropdownMenuItem<String>>((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(
-                          value,
-                          style: const TextStyle(color: Colors.black),
-                        ),
-                      );
-                    }).toList(),
-                    underline: Container(),
-                  ),
-                ),
-              ),
-
-              // Age Range Section
-              const SizedBox(height: 20),
-              const Text(
-                'Age Range',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      '${ageRange.start.round()} - ${ageRange.end.round()} years',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    RangeSlider(
-                      values: ageRange,
-                      min: 20,
-                      max: 80,
-                      divisions: 60,
-                      labels: RangeLabels(
-                        ageRange.start.round().toString(),
-                        ageRange.end.round().toString(),
-                      ),
-                      onChanged: (RangeValues values) {
-                        setState(() {
-                          ageRange = values;
-                        });
-                        _saveSettings(); // Save settings after age range change
-                      },
-                      activeColor: Colors.blue,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Distance Section
-              const SizedBox(height: 20),
-              const Text(
-                'Set Distance (in km)',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      '${distance.round()} km',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    Slider(
-                      value: distance,
-                      min: 1,
-                      max: 20,
-                      divisions: 19,
-                      onChanged: (double value) {
-                        setState(() {
-                          distance = value;
-                        });
-                        _saveSettings(); // Save settings after distance change
-                      },
-                      activeColor: Colors.blue,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Schedule Section (moved to bottom)
-              const SizedBox(height: 20),
-              const Text(
-                'Schedule',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: Column(
-                  children: [
-                    // Add schedule button
-                    if (schedules.length < 5)
-                      TextButton.icon(
-                        onPressed: () => _addSchedule(context),
-                        icon: const Icon(Icons.add, color: Colors.blue),
-                        label: const Text(
-                          'Add Schedule',
-                          style: TextStyle(color: Colors.blue),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 80),
             ],
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          if (schedules.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: FloatingActionButton(
-                heroTag: 'viewSchedules',
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text('Your Schedules'),
-                        content: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: schedules.map((schedule) {
-                              if (schedule['timeRange'] == null || schedule['date'] == null) {
-                                return Container();
-                              }
-                              return ListTile(
-                                leading: Icon(timeRanges[schedule['timeRange']]!['icon']),
-                                title: Text(
-                                  '${schedule['date'].day}/${schedule['date'].month}/${schedule['date'].year}',
-                                ),
-                                subtitle: Text(schedule['timeRange']),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.red),
-                                  onPressed: () async {
-                                    try {
-                                      // Store the context before async operation
-                                      final dialogContext = context;
-                                      
-                                      // Cancel the request in Firestore
-                                      final matchingService = RequestMatchingService(dialogContext);
-                                      await matchingService.cancelRequest(schedule['requestId']);
+    );
+  }
 
-                                      setState(() {
-                                        schedules.remove(schedule);
-                                      });
-                                      _saveSettings();
-                                      
-                                      if (!dialogContext.mounted) return;
-                                      Navigator.of(dialogContext).pop();
-                                      DelightToastBar(
-                                        autoDismiss: true,
-                                        snackbarDuration: const Duration(seconds: 3),
-                                        builder: (context) => const ToastCard(
-                                          leading: Icon(
-                                            Icons.check_circle,
-                                            size: 24,
-                                            color: Colors.green,
-                                          ),
-                                          title: Text(
-                                            'Schedule removed successfully',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                        ),
-                                      ).show(context);
-                                    } catch (e) {
-                                      _logger.warning('Error canceling schedule', e);
-                                      DelightToastBar(
-                                        autoDismiss: true,
-                                        snackbarDuration: const Duration(seconds: 3),
-                                        builder: (context) => const ToastCard(
-                                          leading: Icon(
-                                            Icons.error,
-                                            size: 24,
-                                            color: Colors.red,
-                                          ),
-                                          title: Text(
-                                            'Failed to remove schedule. Please try again.',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                        ),
-                                      ).show(context);
-                                    }
-                                  },
-                                ),
-                                onTap: () => _showScheduleDetailsDialog(context, schedule),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Close'),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-                backgroundColor: Colors.blue,
-                child: const Icon(Icons.schedule),
-              ),
-            ),
-          Container(
-            margin: const EdgeInsets.only(bottom: 20),
-            child: ElevatedButton(
-              onPressed: () {
-                bool isValid = selectedCategory != null &&
-                    selectedPlace != null &&
-                    selectedGender != null;
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Colors.black87,
+      ),
+    );
+  }
 
-                if (isValid) {
-                  Navigator.pushReplacement(
-                    context,
-                    FadePageRoute(
-                      builder: (context) => SearchingPage(
-                        selectedGender: selectedGender!,
-                        ageRange: ageRange,
-                        maxDistance: distance,
-                        selectedPlace: selectedPlace ?? 'Any',
-                        selectedCategory: selectedCategory ?? 'Any',
-                        isScheduledMatch: false,
-                        schedules: null,
-                      ),
-                    ),
-                  );
-                } else {
-                  DelightToastBar(
-                    autoDismiss: true,
-                    snackbarDuration: const Duration(seconds: 3),
-                    builder: (context) => const ToastCard(
-                      leading: Icon(
-                        Icons.error,
-                        size: 24,
-                        color: Colors.red,
-                      ),
-                      title: Text(
-                        'Please select all required fields',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ).show(context);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: const Text(
-                'Find Matches',
+  Widget _buildCategorySelection() {
+    return SizedBox(
+      width: double.infinity,  // Make container take full width
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,  // Center column contents
+            mainAxisAlignment: MainAxisAlignment.center,   // Center vertically
+            children: [
+              const Text(
+                'Category',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
                 ),
+                textAlign: TextAlign.center,  // Center the title text
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                alignment: WrapAlignment.center,
+                children: placeData.keys.map((String category) {
+                  return ChoiceChip(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          categoryIcons[category] ?? Icons.category,
+                          size: 20,
+                          color: selectedCategory == category ? Colors.white : Colors.black,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          category.replaceAll('_', ' '),
+                          style: TextStyle(
+                            color: selectedCategory == category ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                    selected: selectedCategory == category,
+                    onSelected: (bool selected) {
+                      setState(() {
+                        selectedCategory = selected ? category : null;
+                        selectedPlace = null;
+                      });
+                      _saveSettings();
+                    },
+                    selectedColor: Colors.blue,
+                    backgroundColor: Colors.grey.shade200,
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceChips(List<String> places) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            const Text(
+              'Place',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 12),
+            Center(
+              child: Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                alignment: WrapAlignment.center,
+                children: places.map((String place) {
+                  return ChoiceChip(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          placeIcons[place] ?? Icons.place,
+                          size: 20,
+                          color: selectedPlace == place ? Colors.white : Colors.black,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          place,
+                          style: TextStyle(
+                            color: selectedPlace == place ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                    selected: selectedPlace == place,
+                    onSelected: (bool selected) {
+                      setState(() {
+                        selectedPlace = selected ? place : null;
+                      });
+                      _saveSettings();
+                    },
+                    selectedColor: Colors.blue,
+                    backgroundColor: Colors.grey.shade200,
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGenderSelection() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            const Text(
+              'Gender Preference',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                alignment: WrapAlignment.center,
+                children: genderOptions.map((String gender) {
+                  return ChoiceChip(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          genderIcons[gender] ?? Icons.person,
+                          size: 20,
+                          color: selectedGender == gender ? Colors.white : Colors.black,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          gender,
+                          style: TextStyle(
+                            color: selectedGender == gender ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                    selected: selectedGender == gender,
+                    onSelected: (bool selected) {
+                      setState(() {
+                        selectedGender = selected ? gender : null;
+                      });
+                      _saveSettings();
+                    },
+                    selectedColor: Colors.blue,
+                    backgroundColor: Colors.grey.shade200,
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAgeRangeSlider() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Text(
+              '${ageRange.start.round()} - ${ageRange.end.round()} years',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            RangeSlider(
+              values: ageRange,
+              min: 20,
+              max: 80,
+              divisions: 60,
+              labels: RangeLabels(
+                ageRange.start.round().toString(),
+                ageRange.end.round().toString(),
+              ),
+              onChanged: (RangeValues values) {
+                setState(() {
+                  ageRange = values;
+                });
+                _saveSettings();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDistanceSlider() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Text(
+              '${distance.round()} km',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Slider(
+              value: distance,
+              min: 1,
+              max: 20,
+              divisions: 19,
+              label: distance.round().toString(),
+              onChanged: (double value) {
+                setState(() {
+                  distance = value;
+                });
+                _saveSettings();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScheduleSection() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Scheduled Matches',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: schedules.length,
+              itemBuilder: (context, index) {
+                final schedule = schedules[index];
+                return Dismissible(
+                  key: Key(schedule['requestId'] ?? DateTime.now().toString()),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20.0),
+                    color: Colors.red,
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                    ),
+                  ),
+                  onDismissed: (direction) async {
+                    try {
+                      if (schedule['requestId'] != null) {
+                        final matchingService = RequestMatchingService(context);
+                        await matchingService.cancelRequest(schedule['requestId']);
+                      }
+                      
+                      setState(() {
+                        schedules.removeAt(index);
+                      });
+                      
+                      await _saveSettings();
+
+                      if (!context.mounted) return;
+                      DelightToastBar(
+                        autoDismiss: true,
+                        snackbarDuration: const Duration(seconds: 3),
+                        builder: (context) => const ToastCard(
+                          leading: Icon(
+                            Icons.check_circle,
+                            size: 24,
+                            color: Colors.green,
+                          ),
+                          title: Text(
+                            'Schedule deleted successfully',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ).show(context);
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      DelightToastBar(
+                        autoDismiss: true,
+                        snackbarDuration: const Duration(seconds: 3),
+                        builder: (context) => const ToastCard(
+                          leading: Icon(
+                            Icons.error,
+                            size: 24,
+                            color: Colors.red,
+                          ),
+                          title: Text(
+                            'Failed to delete schedule',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ).show(context);
+                    }
+                  },
+                  child: ListTile(
+                    leading: Icon(timeRanges[schedule['timeRange']]?['icon'] ?? Icons.schedule),
+                    title: Text('${schedule['date'].day}/${schedule['date'].month}/${schedule['date'].year}'),
+                    subtitle: Text(schedule['timeRange'] ?? ''),
+                    onTap: () => _showScheduleDetailsDialog(context, schedule),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () async {
+                        try {
+                          if (schedule['requestId'] != null) {
+                            final matchingService = RequestMatchingService(context);
+                            await matchingService.cancelRequest(schedule['requestId']);
+                          }
+                          
+                          setState(() {
+                            schedules.removeAt(index);
+                          });
+                          
+                          await _saveSettings();
+
+                          if (!context.mounted) return;
+                          DelightToastBar(
+                            autoDismiss: true,
+                            snackbarDuration: const Duration(seconds: 3),
+                            builder: (context) => const ToastCard(
+                              leading: Icon(
+                                Icons.check_circle,
+                                size: 24,
+                                color: Colors.green,
+                              ),
+                              title: Text(
+                                'Schedule deleted successfully',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ).show(context);
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          DelightToastBar(
+                            autoDismiss: true,
+                            snackbarDuration: const Duration(seconds: 3),
+                            builder: (context) => const ToastCard(
+                              leading: Icon(
+                                Icons.error,
+                                size: 24,
+                                color: Colors.red,
+                              ),
+                              title: Text(
+                                'Failed to delete schedule',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ).show(context);
+                        }
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+            if (schedules.length < 5)
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => _addSchedule(context),
+                  icon: const Icon(Icons.add, color: Colors.blue),
+                  label: const Text(
+                    'Add Schedule',
+                    style: TextStyle(color: Colors.blue),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMatchButton(BuildContext context) {
+    bool isValid = selectedCategory != null &&
+        selectedPlace != null &&
+        selectedGender != null;
+
+    return ElevatedButton(
+      onPressed: isValid ? () {
+        Navigator.pushReplacement(
+          context,
+          FadePageRoute(
+            builder: (context) => SearchingPage(
+              selectedGender: selectedGender!,
+              ageRange: ageRange,
+              maxDistance: distance,
+              selectedPlace: selectedPlace ?? 'Any',
+              selectedCategory: selectedCategory ?? 'Any',
+              isScheduledMatch: false,
+              schedules: null,
+            ),
           ),
-        ],
+        );
+      } : null,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blue,
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        minimumSize: const Size(double.infinity, 50),
+      ),
+      child: const Text(
+        'Find Match Now',
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
       ),
     );
   }

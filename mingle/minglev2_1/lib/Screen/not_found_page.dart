@@ -11,7 +11,7 @@ class NotFoundPage extends StatefulWidget {
   const NotFoundPage({super.key});
 
   @override
-  _NotFoundPageState createState() => _NotFoundPageState();
+  State<NotFoundPage> createState() => _NotFoundPageState();
 }
 
 class _NotFoundPageState extends State<NotFoundPage> {
@@ -20,30 +20,30 @@ class _NotFoundPageState extends State<NotFoundPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
+      appBar: const CustomAppBar(
         title: 'Not Found',
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Icon(Icons.error_outline, size: 50, color: Colors.red),
-            SizedBox(height: 20),
-            Text(
+            const Icon(Icons.error_outline, size: 50, color: Colors.red),
+            const SizedBox(height: 20),
+            const Text(
               'No matches found. Please try again or go back to the match menu.',
               style: TextStyle(fontSize: 16),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
                 // Try Again: Navigate back to SearchingPage
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => SearchingPage(
+                    builder: (context) => const SearchingPage(
                       selectedGender: 'Male', // Default value
-                      ageRange: const RangeValues(18, 100), // Default range
+                      ageRange: RangeValues(18, 100), // Default range
                       maxDistance: 10.0, // Default distance
                       selectedPlace: 'Any', // Default place
                       selectedCategory: 'Any', // Default category
@@ -58,7 +58,7 @@ class _NotFoundPageState extends State<NotFoundPage> {
                   vertical: 15,
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'Try Again',
                 style: TextStyle(
                   fontSize: 24,
@@ -66,13 +66,13 @@ class _NotFoundPageState extends State<NotFoundPage> {
                 ),
               ),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () {
                 // Go Back to Match Menu
                 Navigator.pushReplacement(
                   context,
-                  FadePageRoute(builder: (context) => FindMatchPage()),
+                  FadePageRoute(builder: (context) => const FindMatchPage()),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -82,7 +82,7 @@ class _NotFoundPageState extends State<NotFoundPage> {
                   vertical: 15,
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'Go Back to Match Menu',
                 style: TextStyle(
                   fontSize: 24,
@@ -107,13 +107,13 @@ class _NotFoundPageState extends State<NotFoundPage> {
             case 1:
               Navigator.pushReplacement(
                 context,
-                FadePageRoute(builder: (context) => ChatListPage()),
+                FadePageRoute(builder: (context) => const ChatListPage()),
               );
               break;
             case 2:
               Navigator.pushReplacement(
                 context,
-                FadePageRoute(builder: (context) => ProfileDisplayPage()),
+                FadePageRoute(builder: (context) => const ProfileDisplayPage()),
               );
               break;
           }

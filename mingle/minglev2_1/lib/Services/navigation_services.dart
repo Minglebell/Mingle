@@ -52,18 +52,18 @@ class NavigationService {
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   final Map<String, WidgetBuilder> routes = {
-    '/': (context) => AuthPage(),
-    '/editProfile': (context) => ProfileEditPage(),
-    '/profile': (context) => ProfileDisplayPage(),
-    '/match': (context) => FindMatchPage(),
-    '/search': (context) => SearchingPage(
+    '/': (context) => const AuthPage(),
+    '/editProfile': (context) => const ProfileEditPage(),
+    '/profile': (context) => const ProfileDisplayPage(),
+    '/match': (context) => const FindMatchPage(),
+    '/search': (context) => const SearchingPage(
       selectedGender: 'Male',
-      ageRange: const RangeValues(18, 100),
+      ageRange: RangeValues(18, 100),
       maxDistance: 10.0,
       selectedPlace: 'Any',
       selectedCategory: 'Any',
     ),
-    '/chatList': (context) => ChatListPage(),
+    '/chatList': (context) => const ChatListPage(),
   };
 
   Future<dynamic> navigateTo(String routeName, {dynamic arguments}) {

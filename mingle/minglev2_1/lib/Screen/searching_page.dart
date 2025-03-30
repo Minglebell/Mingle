@@ -8,6 +8,7 @@ import 'package:minglev2_1/Widget/custom_app_bar.dart';
 import 'package:minglev2_1/services/request_matching_service.dart';
 import 'package:delightful_toast/delight_toast.dart';
 import 'package:delightful_toast/toast/components/toast_card.dart';
+import 'package:logging/logging.dart';
 
 class SearchingPage extends StatefulWidget {
   final String selectedGender;
@@ -30,7 +31,7 @@ class SearchingPage extends StatefulWidget {
   });
 
   @override
-  _SearchingPageState createState() => _SearchingPageState();
+  State<SearchingPage> createState() => _SearchingPageState();
 }
 
 class _SearchingPageState extends State<SearchingPage>
@@ -43,6 +44,7 @@ class _SearchingPageState extends State<SearchingPage>
   String? _currentRequestId;
   Map<String, dynamic>? _matchedUser;
   bool _matchFound = false;
+  final _logger = Logger('SearchingPage');
 
   @override
   void initState() {
@@ -77,7 +79,7 @@ class _SearchingPageState extends State<SearchingPage>
       // Listen for matches
       _listenForMatches();
     } catch (e) {
-      print('Error in matching: $e');
+      _logger.warning('Error in matching', e);
       if (mounted) {
         _showError();
       }
@@ -119,42 +121,9 @@ class _SearchingPageState extends State<SearchingPage>
       // Navigate to chat list page with the chat ID
       Navigator.pushReplacement(
         context,
-        FadePageRoute(builder: (context) => ChatListPage()),
+        FadePageRoute(builder: (context) => const ChatListPage()),
       );
     }
-  }
-
-  void _showNoMatchesFound() {
-    if (!mounted) return;
-    
-    DelightToastBar(
-      autoDismiss: true,
-      snackbarDuration: const Duration(seconds: 3),
-      builder: (context) => ToastCard(
-        leading: const Icon(
-          Icons.info,
-          size: 24,
-          color: Colors.orange,
-        ),
-        title: Text(
-          'No matches found. Try adjusting your preferences.',
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-          ),
-        ),
-      ),
-    ).show(context);
-    
-    // Navigate back to match menu after a delay
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          FadePageRoute(builder: (context) => FindMatchPage()),
-        );
-      }
-    });
   }
 
   void _showError() {
@@ -163,15 +132,15 @@ class _SearchingPageState extends State<SearchingPage>
     DelightToastBar(
       autoDismiss: true,
       snackbarDuration: const Duration(seconds: 3),
-      builder: (context) => ToastCard(
-        leading: const Icon(
+      builder: (context) => const ToastCard(
+        leading: Icon(
           Icons.error,
           size: 24,
           color: Colors.red,
         ),
         title: Text(
           'An error occurred while searching for matches.',
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 16,
           ),
@@ -184,7 +153,7 @@ class _SearchingPageState extends State<SearchingPage>
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          FadePageRoute(builder: (context) => FindMatchPage()),
+          FadePageRoute(builder: (context) => const FindMatchPage()),
         );
       }
     });
@@ -213,38 +182,38 @@ class _SearchingPageState extends State<SearchingPage>
             if (_isSearching) ...[
               RotationTransition(
                 turns: _animation,
-                child: Icon(Icons.search, size: 50, color: Colors.blue),
+                child: const Icon(Icons.search, size: 50, color: Colors.blue),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Text(
                 'Looking for matches at ${widget.selectedPlace}...',
-                style: TextStyle(fontSize: 18),
+                style: const TextStyle(fontSize: 18),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 10),
-              Text(
+              const SizedBox(height: 10),
+              const Text(
                 'Tips: The more distance you have, more likely you will found someone.',
                 style: TextStyle(fontSize: 16),
                 textAlign: TextAlign.center,
               ),
             ] else if (_matchFound && _matchedUser != null) ...[
-              Icon(Icons.celebration, size: 50, color: Colors.green),
-              SizedBox(height: 20),
+              const Icon(Icons.celebration, size: 50, color: Colors.green),
+              const SizedBox(height: 20),
               Text(
                 _matchedUser!['name'] as String,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Text(
                 '${_matchedUser!['age']} years old',
-                style: TextStyle(fontSize: 18),
+                style: const TextStyle(fontSize: 18),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Text(
                 '${_matchedUser!['distance']} km away',
-                style: TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 16),
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
               ElevatedButton(
                 onPressed: _startChat,
                 style: ElevatedButton.styleFrom(
@@ -254,7 +223,7 @@ class _SearchingPageState extends State<SearchingPage>
                     vertical: 15,
                   ),
                 ),
-                child: Text(
+                child: const Text(
                   'Start Chat',
                   style: TextStyle(
                     fontSize: 24,
@@ -263,29 +232,36 @@ class _SearchingPageState extends State<SearchingPage>
                 ),
               ),
             ],
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             if (!_matchFound)
               ElevatedButton(
                 onPressed: () async {
                   if (_currentRequestId != null) {
                     try {
+                      // Store context before async gap
+                      final currentContext = context;
                       await _matchingService.cancelRequest(_currentRequestId!);
-                      if (mounted) {
-                        Navigator.pushReplacement(
-                          context,
-                          FadePageRoute(builder: (context) => FindMatchPage()),
-                        );
-                      }
+                      
+                      if (!mounted) return;
+                      if (!currentContext.mounted) return;
+                      
+                      Navigator.pushReplacement(
+                        currentContext,
+                        FadePageRoute(builder: (context) => const FindMatchPage()),
+                      );
                     } catch (e) {
-                      print('Error canceling request: $e');
-                      if (mounted) {
-                        _showError();
-                      }
+                      _logger.warning('Error in canceling request', e);
+                      if (!mounted) return;
+                      _showError();
                     }
                   } else {
+                    // Store context for the non-async path too
+                    final currentContext = context;
+                    if (!currentContext.mounted) return;
+                    
                     Navigator.pushReplacement(
-                      context,
-                      FadePageRoute(builder: (context) => FindMatchPage()),
+                      currentContext,
+                      FadePageRoute(builder: (context) => const FindMatchPage()),
                     );
                   }
                 },
@@ -296,7 +272,7 @@ class _SearchingPageState extends State<SearchingPage>
                     vertical: 15,
                   ),
                 ),
-                child: Text(
+                child: const Text(
                   'Cancel',
                   style: TextStyle(
                     fontSize: 24,
@@ -316,12 +292,12 @@ class _SearchingPageState extends State<SearchingPage>
           if (index == 1) {
             Navigator.pushReplacement(
               context,
-              FadePageRoute(builder: (context) => ChatListPage()),
+              FadePageRoute(builder: (context) => const ChatListPage()),
             );
           } else if (index == 2) {
             Navigator.pushReplacement(
               context,
-              FadePageRoute(builder: (context) => ProfileDisplayPage()),
+              FadePageRoute(builder: (context) => const ProfileDisplayPage()),
             );
           }
         },

@@ -92,14 +92,14 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
   Future<void> _selectBirthday(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().subtract(Duration(days: 20 * 365)),
+      initialDate: DateTime.now().subtract(const Duration(days: 7300)),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: const Color(0xFF6C9BCF),
+            colorScheme: const ColorScheme.light(
+              primary:  Color(0xFF6C9BCF),
               onPrimary: Colors.white,
               surface: Colors.white,
               onSurface: Colors.black,
@@ -305,7 +305,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF6C9BCF).withOpacity(0.3),
+                              color: const Color(0xFF6C9BCF).withAlpha(76),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
@@ -495,7 +495,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF6C9BCF).withOpacity(0.3),
+                            color: const Color(0xFF6C9BCF).withAlpha(76),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),

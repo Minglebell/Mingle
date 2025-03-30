@@ -9,6 +9,7 @@ import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
+import 'package:logging/logging.dart';
 
 class ProfileEditPage extends ConsumerStatefulWidget {
   const ProfileEditPage({super.key});
@@ -18,7 +19,7 @@ class ProfileEditPage extends ConsumerStatefulWidget {
 }
 
 class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
-  XFile? _image;
+  final _logger = Logger('ProfileEditPage');
   String? _imageUrl;
   bool showBottomNavBar = true; // Controls visibility of the bottom nav bar
   int currentPageIndex = 2;
@@ -42,14 +43,14 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         imageQuality: 85,
       );
 
-      if (pickedImage != null) {
-        setState(() {
-          _image = pickedImage;
-        });
-
+      if (pickedImage != null && context.mounted) {
+        // Store context before async operation
+        final currentContext = context;
+        
         // Show loading indicator
+        if (!currentContext.mounted) return;
         showDialog(
-          context: context,
+          context: currentContext,
           barrierDismissible: false,
           builder: (BuildContext context) {
             return const Center(
@@ -61,11 +62,9 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         try {
           final user = FirebaseAuth.instance.currentUser;
           if (user != null) {
-            // Convert image to base64
             final bytes = await pickedImage.readAsBytes();
             final base64Image = base64Encode(bytes);
 
-            // Update Firestore with the base64 image
             await FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
@@ -74,7 +73,6 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               'profileImageUpdatedAt': FieldValue.serverTimestamp(),
             });
 
-            // Get the updated document
             final doc = await FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
@@ -82,12 +80,14 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
             final data = doc.data();
             if (data != null && data['profileImage'] != null) {
+              if (!mounted) return;
               setState(() {
                 _imageUrl = data['profileImage'];
               });
 
+              if (!currentContext.mounted) return;
               // Close loading indicator
-              Navigator.of(context).pop();
+              Navigator.of(currentContext).pop();
 
               // Show success message
               DelightToastBar(
@@ -107,12 +107,15 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                     ),
                   ),
                 ),
-              ).show(context);
+              ).show(currentContext);
             }
           }
         } catch (e) {
+          _logger.warning('Error updating profile picture', e);
+          
+          if (!currentContext.mounted) return;
           // Close loading indicator
-          Navigator.of(context).pop();
+          Navigator.of(currentContext).pop();
           
           // Show error message
           DelightToastBar(
@@ -132,11 +135,17 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 ),
               ),
             ),
-          ).show(context);
+          ).show(currentContext);
         }
       }
     } catch (e) {
-      print('Error picking/processing image: $e');
+      _logger.warning('Error picking/processing image', e);
+      if (!mounted) return;
+      
+      // Store context before using it
+      final currentContext = context;
+      if (!currentContext.mounted) return;
+      
       DelightToastBar(
         autoDismiss: true,
         snackbarDuration: const Duration(seconds: 3),
@@ -154,7 +163,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             ),
           ),
         ),
-      ).show(context);
+      ).show(currentContext);
     }
   }
 
@@ -169,13 +178,14 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
         final data = doc.data();
         if (data != null && data['profileImage'] != null) {
+          if (!mounted) return;
           setState(() {
             _imageUrl = data['profileImage'];
           });
         }
       }
     } catch (e) {
-      print('Error loading profile image: $e');
+      _logger.warning('Error loading profile image', e);
     }
   }
 
@@ -254,7 +264,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF6C9BCF).withOpacity(0.3),
+                      color: const Color(0xFF6C9BCF).withAlpha(76), // 0.3 * 255 ≈ 76
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -382,7 +392,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withAlpha(25),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -638,7 +648,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 );
               }
               
-              return Container(
+              return SizedBox(
                 width: double.maxFinite,
                 height: 200, // Fixed height for scrollable content
                 child: SingleChildScrollView(

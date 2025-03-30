@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:logging/logging.dart';
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final _logger = Logger('ChatService');
 
   // Get chat stream
   Stream<QuerySnapshot> getChatStream(String chatId) {
@@ -54,7 +56,7 @@ class ChatService {
       // Check if recipient is currently in the chat page
       final isRecipientInChat = activeUsers.contains(recipientId);
       
-      print('Debug: Sending message to chat $chatId - Recipient in chat: $isRecipientInChat');
+      _logger.info('Sending message to chat $chatId - Recipient in chat: $isRecipientInChat');
 
       // Update chat document
       final chatRef = _firestore.collection('chats').doc(chatId);
@@ -81,9 +83,9 @@ class ChatService {
       batch.update(chatRef, updates);
       await batch.commit();
       
-      print('Debug: Successfully sent message with unread count: ${updates['unreadCount']}');
+      _logger.info('Successfully sent message with unread count: ${updates['unreadCount']}');
     } catch (e) {
-      print('Error sending message: $e');
+      _logger.severe('Error sending message: $e');
       rethrow;
     }
   }
@@ -127,7 +129,7 @@ class ChatService {
     if (currentUser == null) throw Exception('No authenticated user');
 
     try {
-      print('Debug: Starting to mark messages as read in chat $chatId');
+      _logger.info('Starting to mark messages as read in chat $chatId');
       
       // Get all unread messages from other users
       final messages = await _firestore
@@ -139,7 +141,7 @@ class ChatService {
           .get();
 
       if (messages.docs.isEmpty) {
-        print('Debug: No unread messages found in chat $chatId');
+        _logger.info('No unread messages found in chat $chatId');
         // Update chat document to reflect no unread messages
         await _firestore.collection('chats').doc(chatId).update({
           'hasUnreadMessages': false,
@@ -151,7 +153,7 @@ class ChatService {
         return;
       }
 
-      print('Debug: Found ${messages.docs.length} unread messages in chat $chatId');
+      _logger.info('Found ${messages.docs.length} unread messages in chat $chatId');
 
       final batch = _firestore.batch();
       
@@ -170,9 +172,9 @@ class ChatService {
       });
 
       await batch.commit();
-      print('Debug: Successfully marked messages as read in chat $chatId');
+      _logger.info('Successfully marked messages as read in chat $chatId');
     } catch (e) {
-      print('Error marking messages as read: $e');
+      _logger.severe('Error marking messages as read: $e');
       rethrow;
     }
   }
@@ -183,7 +185,7 @@ class ChatService {
     if (currentUser == null) throw Exception('No authenticated user');
 
     try {
-      print('Debug: Syncing unread status for chat $chatId');
+      _logger.info('Syncing unread status for chat $chatId');
       
       // Get all unread messages
       final messages = await _firestore
@@ -195,7 +197,7 @@ class ChatService {
           .get();
 
       final unreadCount = messages.docs.length;
-      print('Debug: Found $unreadCount unread messages');
+      _logger.info('Found $unreadCount unread messages');
 
       // Update chat document with current unread status
       await _firestore.collection('chats').doc(chatId).update({
@@ -206,9 +208,9 @@ class ChatService {
         },
       });
 
-      print('Debug: Successfully synced unread status');
+      _logger.info('Successfully synced unread status');
     } catch (e) {
-      print('Error syncing unread status: $e');
+      _logger.severe('Error syncing unread status: $e');
       rethrow;
     }
   }
@@ -231,16 +233,16 @@ class ChatService {
   // Get match details
   Future<Map<String, dynamic>> getMatchDetails(String chatId) async {
     try {
-      print('Debug: Fetching match details for chat $chatId');
+      _logger.info('Fetching match details for chat $chatId');
       final chatDoc = await _firestore.collection('chats').doc(chatId).get();
       final chatData = chatDoc.data();
       
       if (chatData == null) {
-        print('Debug: Chat data is null for chat $chatId');
+        _logger.warning('Chat data is null for chat $chatId');
         throw Exception('Chat not found');
       }
 
-      print('Debug: Raw chat data: $chatData');
+      _logger.info('Raw chat data: $chatData');
       
       // Access the nested matchDetails object
       final matchDetails = chatData['matchDetails'] as Map<String, dynamic>? ?? {};
@@ -255,10 +257,10 @@ class ChatService {
             : '',
       };
       
-      print('Debug: Processed match details: $details');
+      _logger.info('Processed match details: $details');
       return details;
     } catch (e) {
-      print('Error fetching match details: $e');
+      _logger.severe('Error fetching match details: $e');
       return {
         'category': '',
         'place': '',
@@ -277,7 +279,7 @@ class ChatService {
     DateTime? matchDate,
   }) async {
     try {
-      print('Debug: Updating match details for chat $chatId');
+      _logger.info('Updating match details for chat $chatId');
       final updates = <String, dynamic>{};
       
       if (category != null) updates['category'] = category;
@@ -285,12 +287,12 @@ class ChatService {
       if (schedule != null) updates['schedule'] = schedule;
       if (matchDate != null) updates['matchDate'] = Timestamp.fromDate(matchDate);
       
-      print('Debug: Updates to apply: $updates');
+      _logger.info('Updates to apply: $updates');
       
       await _firestore.collection('chats').doc(chatId).update(updates);
-      print('Debug: Successfully updated match details');
+      _logger.info('Successfully updated match details');
     } catch (e) {
-      print('Error updating match details: $e');
+      _logger.severe('Error updating match details: $e');
       rethrow;
     }
   }
@@ -298,14 +300,14 @@ class ChatService {
   // Unmatch with a user
   Future<void> unmatch(String chatId) async {
     try {
-      print('Debug: Unmatching chat $chatId');
+      _logger.info('Unmatching chat $chatId');
       final currentUser = _auth.currentUser;
       if (currentUser == null) throw Exception('No authenticated user');
 
       // Get the chat document
       final chatDoc = await _firestore.collection('chats').doc(chatId).get();
       if (!chatDoc.exists) {
-        print('Debug: Chat document already deleted');
+        _logger.info('Chat document already deleted');
         return; // Chat already deleted, nothing to do
       }
 
@@ -314,7 +316,7 @@ class ChatService {
       
       // Check if current user is still a participant
       if (!participants.contains(currentUser.uid)) {
-        print('Debug: User is no longer a participant in this chat');
+        _logger.info('User is no longer a participant in this chat');
         return; // User is no longer a participant, nothing to do
       }
       
@@ -331,18 +333,18 @@ class ChatService {
           batch.delete(doc.reference);
         }
         await batch.commit();
-        print('Debug: Successfully deleted all messages');
+        _logger.info('Successfully deleted all messages');
       } catch (e) {
-        print('Debug: Could not delete messages: $e');
+        _logger.warning('Could not delete messages: $e');
         // Continue even if message deletion fails
       }
 
       // Then delete the chat document
       try {
         await _firestore.collection('chats').doc(chatId).delete();
-        print('Debug: Successfully deleted chat document');
+        _logger.info('Successfully deleted chat document');
       } catch (e) {
-        print('Debug: Could not delete chat document: $e');
+        _logger.warning('Could not delete chat document: $e');
         // Continue even if chat document deletion fails
       }
 
@@ -352,16 +354,16 @@ class ChatService {
           await _firestore.collection('users').doc(participantId).update({
             'chats': FieldValue.arrayRemove([chatId])
           });
-          print('Debug: Successfully removed chat reference from user $participantId');
+          _logger.info('Successfully removed chat reference from user $participantId');
         } catch (e) {
-          print('Debug: Could not remove chat reference from user $participantId: $e');
+          _logger.warning('Could not remove chat reference from user $participantId: $e');
           // Continue with other users even if one fails
         }
       }
 
-      print('Debug: Successfully unmatched chat $chatId');
+      _logger.info('Successfully unmatched chat $chatId');
     } catch (e) {
-      print('Debug: Error during unmatch: $e');
+      _logger.severe('Error during unmatch: $e');
       // Don't rethrow the error, just log it
     }
   }
@@ -380,7 +382,7 @@ class ChatService {
         });
       }
     } catch (e) {
-      print('Error updating active users: $e');
+      _logger.severe('Error updating active users: $e');
     }
   }
 } 

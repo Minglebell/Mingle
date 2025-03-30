@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import 'dart:async';
 import 'dart:math' as math;
-import 'navigation_services.dart';
 
 class RequestMatchingService {
+  final _logger = Logger('RequestMatchingService');
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   StreamSubscription? _matchSubscription;
@@ -80,7 +81,7 @@ class RequestMatchingService {
       'userAge': userAge, // Add user's age to the request
     };
 
-    print('Creating request with timeRange: $timeRange and user age: $userAge');
+    _logger.info('Creating request with timeRange: $timeRange and user age: $userAge');
 
     // Add to requests collection
     final docRef = await _firestore.collection('requests').add(requestData);
@@ -98,13 +99,13 @@ class RequestMatchingService {
     // Get the current user's request
     _firestore.collection('requests').doc(requestId).get().then((requestDoc) {
       if (!requestDoc.exists) {
-        print('Request document does not exist: $requestId');
+        _logger.warning('Request document does not exist: $requestId');
         return;
       }
 
       final requestData = requestDoc.data() as Map<String, dynamic>;
       final userId = requestData['userId'] as String;
-      print('Listening for matches for user: $userId');
+      _logger.info('Listening for matches for user: $userId');
 
       // Query for potential matches
       _matchSubscription = _firestore
@@ -113,24 +114,24 @@ class RequestMatchingService {
           .where('userId', isNotEqualTo: userId)
           .snapshots()
           .listen((snapshot) async {
-        print('Found ${snapshot.docs.length} potential matches');
+        _logger.info('Found ${snapshot.docs.length} potential matches');
         for (var doc in snapshot.docs) {
           final matchData = doc.data();
-          print('Checking match with user: ${matchData['userId']}');
+          _logger.info('Checking match with user: ${matchData['userId']}');
           if (await _arePotentialMatches(requestData, matchData)) {
-            print('Match found! Creating chat...');
+            _logger.info('Match found! Creating chat...');
             await _handleMatch(requestId, doc.id);
             break;
           }
         }
       }, onError: (error) {
-        print('Error in match subscription: $error');
+        _logger.severe('Error in match subscription: $error');
         if (error.toString().contains('requires an index')) {
           // Show a user-friendly message about the missing index
-          print('Please wait while the matching system is being set up. This may take a few minutes.');
+          _logger.info('Please wait while the matching system is being set up. This may take a few minutes.');
           // You might want to show this message to the user in the UI
         } else {
-          print('An error occurred while searching for matches: $error');
+          _logger.severe('An error occurred while searching for matches: $error');
         }
       });
 
@@ -139,7 +140,7 @@ class RequestMatchingService {
         if (doc.exists) {
           final data = doc.data() as Map<String, dynamic>;
           if (data['status'] == 'matched' && data['matchedWith'] != null) {
-            print('Request was matched with user: ${data['matchedWith']}');
+            _logger.info('Request was matched with user: ${data['matchedWith']}');
             // Get the matched user's information
             _firestore.collection('users').doc(data['matchedWith']).get().then((userDoc) {
               if (userDoc.exists) {
@@ -178,7 +179,7 @@ class RequestMatchingService {
   Future<bool> _arePotentialMatches(Map<String, dynamic> request1, Map<String, dynamic> request2) async {
     // First check if category and place match
     if (request1['category'] != request2['category'] || request1['place'] != request2['place']) {
-      print('Category or place mismatch');
+      _logger.info('Category or place mismatch');
       return false;
     }
 
@@ -194,25 +195,25 @@ class RequestMatchingService {
       
       // Check if the dates match
       if (time1.year != time2.year || time1.month != time2.month || time1.day != time2.day) {
-        print('Date mismatch');
+        _logger.info('Date mismatch');
         return false;
       }
       
       // Check if the time ranges match
       if (timeRange1 != null && timeRange2 != null && timeRange1 != timeRange2) {
-        print('Time range mismatch: $timeRange1 != $timeRange2');
+        _logger.info('Time range mismatch: $timeRange1 != $timeRange2');
         return false;
       }
       
       // Check if the time difference is within 30 minutes
       final timeDiff = time1.difference(time2).abs();
       if (timeDiff.inMinutes > 30) {
-        print('Time difference too large: ${timeDiff.inMinutes} minutes');
+        _logger.info('Time difference too large: ${timeDiff.inMinutes} minutes');
         return false;
       }
     } else if (scheduledTime1 != null || scheduledTime2 != null) {
       // If one has a schedule and the other doesn't, they don't match
-      print('Schedule mismatch - one has schedule, other doesn\'t');
+      _logger.info('Schedule mismatch - one has schedule, other doesn\'t');
       return false;
     }
 
@@ -243,14 +244,14 @@ class RequestMatchingService {
             (selectedGender1 == user2Gender.first) && 
             (selectedGender2 == user1Gender.first);
 
-        print('Checking gender match: Selected gender $selectedGender1 with profile gender ${user2Gender.first} and Selected gender $selectedGender2 with profile gender ${user1Gender.first}');
+        _logger.info('Checking gender match: Selected gender $selectedGender1 with profile gender ${user2Gender.first} and Selected gender $selectedGender2 with profile gender ${user1Gender.first}');
         if (!hasMatchingGender) {
-          print('Gender mismatch: Selected gender does not match profile gender');
+          _logger.warning('Gender mismatch: Selected gender does not match profile gender');
           return false;
         }
         return true;
       } catch (e) {
-        print('Error checking gender match: $e');
+        _logger.warning('Error checking gender match: $e');
         return false;
       }
     }
@@ -263,7 +264,7 @@ class RequestMatchingService {
         final user2Age = request2['userAge'] as int?;
         
         if (user1Age == null || user2Age == null) {
-          print('Age data missing in requests');
+          _logger.warning('Age data missing in requests');
           return false;
         }
 
@@ -275,14 +276,14 @@ class RequestMatchingService {
         final isAge1InRange2 = user1Age >= ageRange2['start'] && user1Age <= ageRange2['end'];
         final isAge2InRange1 = user2Age >= ageRange1['start'] && user2Age <= ageRange1['end'];
 
-        print('Checking age match: User1 age $user1Age in range ${ageRange2['start']}-${ageRange2['end']} and User2 age $user2Age in range ${ageRange1['start']}-${ageRange1['end']}');
+        _logger.info('Checking age match: User1 age $user1Age in range ${ageRange2['start']}-${ageRange2['end']} and User2 age $user2Age in range ${ageRange1['start']}-${ageRange1['end']}');
         if (!isAge1InRange2 || !isAge2InRange1) {
-          print('Age mismatch based on request ages and preferences');
+          _logger.warning('Age mismatch based on request ages and preferences');
           return false;
         }
         return true;
       } catch (e) {
-        print('Error checking age match: $e');
+        _logger.warning('Error checking age match: $e');
         return false;
       }
     }
@@ -300,7 +301,7 @@ class RequestMatchingService {
         final location2 = user2Data['location'] as Map<String, dynamic>?;
 
         if (location1 == null || location2 == null) {
-          print('Location data missing in profiles');
+          _logger.warning('Location data missing in profiles');
           return false;
         }
 
@@ -317,14 +318,14 @@ class RequestMatchingService {
           location2['longitude'] as double,
         );
 
-        print('Distance between users from profiles: $distance km, Max allowed: $maxAllowedDistance km');
+        _logger.info('Distance between users from profiles: $distance km, Max allowed: $maxAllowedDistance km');
         if (distance > maxAllowedDistance) {
-          print('Distance too far based on profile locations');
+          _logger.warning('Distance too far based on profile locations');
           return false;
         }
         return true;
       } catch (e) {
-        print('Error checking distance match: $e');
+        _logger.warning('Error checking distance match: $e');
         return false;
       }
     }
@@ -343,7 +344,7 @@ class RequestMatchingService {
         if (religion1.isNotEmpty && religion2.isNotEmpty) {
           final hasMatchingReligion = religion1.any((r) => religion2.contains(r));
           if (!hasMatchingReligion) {
-            print('Religion mismatch');
+            _logger.info('Religion mismatch');
             return false;
           }
         }
@@ -354,7 +355,7 @@ class RequestMatchingService {
         if (budget1.isNotEmpty && budget2.isNotEmpty) {
           final hasMatchingBudget = budget1.any((b) => budget2.contains(b));
           if (!hasMatchingBudget) {
-            print('Budget level mismatch');
+            _logger.info('Budget level mismatch');
             return false;
           }
         }
@@ -365,7 +366,7 @@ class RequestMatchingService {
         if (education1.isNotEmpty && education2.isNotEmpty) {
           final hasMatchingEducation = education1.any((e) => education2.contains(e));
           if (!hasMatchingEducation) {
-            print('Education level mismatch');
+            _logger.info('Education level mismatch');
             return false;
           }
         }
@@ -376,7 +377,7 @@ class RequestMatchingService {
         if (relationship1.isNotEmpty && relationship2.isNotEmpty) {
           final hasMatchingStatus = relationship1.any((s) => relationship2.contains(s));
           if (!hasMatchingStatus) {
-            print('Relationship status mismatch');
+            _logger.info('Relationship status mismatch');
             return false;
           }
         }
@@ -387,7 +388,7 @@ class RequestMatchingService {
         if (smoking1.isNotEmpty && smoking2.isNotEmpty) {
           final hasMatchingSmoking = smoking1.any((s) => smoking2.contains(s));
           if (!hasMatchingSmoking) {
-            print('Smoking preference mismatch');
+            _logger.info('Smoking preference mismatch');
             return false;
           }
         }
@@ -397,7 +398,7 @@ class RequestMatchingService {
         if (alcohol1.isNotEmpty && alcohol2.isNotEmpty) {
           final hasMatchingAlcohol = alcohol1.any((a) => alcohol2.contains(a));
           if (!hasMatchingAlcohol) {
-            print('Alcohol preference mismatch');
+            _logger.info('Alcohol preference mismatch');
             return false;
           }
         }
@@ -408,7 +409,7 @@ class RequestMatchingService {
         if (activity1.isNotEmpty && activity2.isNotEmpty) {
           final hasMatchingActivity = activity1.any((a) => activity2.contains(a));
           if (!hasMatchingActivity) {
-            print('Physical activity level mismatch');
+            _logger.info('Physical activity level mismatch');
             return false;
           }
         }
@@ -419,15 +420,15 @@ class RequestMatchingService {
         if (personality1.isNotEmpty && personality2.isNotEmpty) {
           final hasMatchingPersonality = personality1.any((p) => personality2.contains(p));
           if (!hasMatchingPersonality) {
-            print('Personality mismatch');
+            _logger.info('Personality mismatch');
             return false;
           }
         }
 
-        print('All additional preferences match!');
+        _logger.info('All additional preferences match!');
         return true;
       } catch (e) {
-        print('Error checking additional preferences: $e');
+        _logger.warning('Error checking additional preferences: $e');
         return true; // Default to true if there's an error
       }
     }
@@ -442,7 +443,7 @@ class RequestMatchingService {
 
     final allChecksPassed = results.every((result) => result);
     if (allChecksPassed) {
-      print('All matching criteria passed!');
+      _logger.info('All matching criteria passed!');
       return true;
     }
     return false;
@@ -470,14 +471,14 @@ class RequestMatchingService {
   // Handle match between two users
   Future<void> _handleMatch(String requestId1, String requestId2) async {
     try {
-      print('Handling match between requests: $requestId1 and $requestId2');
+      _logger.info('Handling match between requests: $requestId1 and $requestId2');
       
       // Get both requests
       final request1Doc = await _firestore.collection('requests').doc(requestId1).get();
       final request2Doc = await _firestore.collection('requests').doc(requestId2).get();
 
       if (!request1Doc.exists || !request2Doc.exists) {
-        print('One or both requests no longer exist');
+        _logger.warning('One or both requests no longer exist');
         return;
       }
 
@@ -501,7 +502,7 @@ class RequestMatchingService {
 
       // Create a chat between the matched users
       final chatId = _createChatId(request1Data['userId'], request2Data['userId']);
-      print('Creating chat with ID: $chatId');
+      _logger.info('Creating chat with ID: $chatId');
       
       // Create the chat first with match details including timeRange
       await _firestore.collection('chats').doc(chatId).set({
@@ -564,19 +565,19 @@ class RequestMatchingService {
           _firestore.collection('requests').doc(requestId1).delete(),
           _firestore.collection('requests').doc(requestId2).delete()
         ]);
-        print('Successfully deleted matched requests');
+        _logger.info('Successfully deleted matched requests');
       } catch (e) {
-        print('Warning: Could not delete requests: $e');
+        _logger.warning('Warning: Could not delete requests: $e');
         // Continue even if deletion fails, as the requests are marked as matched
       }
 
       // Cancel the subscription
       _matchSubscription?.cancel();
       _currentRequestId = null;
-      print('Match handling completed successfully');
+      _logger.info('Match handling completed successfully');
 
     } catch (e) {
-      print('Error handling match: $e');
+      _logger.severe('Error handling match: $e');
       rethrow;
     }
   }
@@ -600,7 +601,7 @@ class RequestMatchingService {
       // Clear the current request ID
       _currentRequestId = null;
     } catch (e) {
-      print('Error canceling request: $e');
+      _logger.severe('Error canceling request: $e');
       rethrow;
     }
   }

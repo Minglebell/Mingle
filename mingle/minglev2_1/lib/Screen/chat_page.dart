@@ -4,6 +4,7 @@ import 'package:minglev2_1/Services/chat_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
+import 'package:logging/logging.dart';
 import 'dart:convert';
 
 class ChatPage extends StatefulWidget {
@@ -19,7 +20,7 @@ class ChatPage extends StatefulWidget {
   });
 
   @override
-  _ChatPageState createState() => _ChatPageState();
+  State<ChatPage> createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
@@ -27,6 +28,7 @@ class _ChatPageState extends State<ChatPage> {
   final ChatService _chatService = ChatService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final ScrollController _scrollController = ScrollController();
+  final Logger _logger = Logger('ChatPage');
   Stream<QuerySnapshot>? _messagesStream;
   StreamSubscription? _messagesSubscription;
   bool _hasMarkedMessagesAsRead = false;
@@ -93,54 +95,60 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _markMessagesAsRead() async {
     if (_hasMarkedMessagesAsRead) {
-      print('Debug: Messages already marked as read');
+      _logger.fine('Messages already marked as read');
       return;
     }
 
     try {
       await _chatService.markMessagesAsRead(widget.chatId);
       _hasMarkedMessagesAsRead = true;
-      print('Debug: Successfully marked messages as read');
+      _logger.info('Successfully marked messages as read');
     } catch (e) {
-      print('Error marking messages as read: $e');
+      _logger.severe('Error marking messages as read: $e');
     }
   }
 
   Future<void> _fetchMatchDetails() async {
     try {
-      print('Debug: Starting to fetch match details for chat ${widget.chatId}');
+      _logger.info('Starting to fetch match details for chat ${widget.chatId}');
       final details = await _chatService.getMatchDetails(widget.chatId);
-      print('Debug: Received match details: $details');
-      if (mounted) {
-        setState(() {
-          _matchDetails = details;
-        });
-        print('Debug: Updated match details in state: $_matchDetails');
-      }
+      _logger.fine('Received match details: $details');
+      if (!mounted) return;
+      
+      setState(() {
+        _matchDetails = details;
+      });
+      _logger.fine('Updated match details in state: $_matchDetails');
     } catch (e) {
-      print('Error fetching match details: $e');
+      _logger.severe('Error fetching match details: $e');
     }
   }
 
   void _sendMessage() async {
-    if (_messageController.text.isNotEmpty) {
-      try {
-        await _chatService.sendMessage(widget.chatId, _messageController.text);
-        _messageController.clear();
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send message: $e')),
-        );
-      }
+    if (_messageController.text.isEmpty) return;
+    
+    final messageText = _messageController.text;
+    _messageController.clear();
+
+    try {
+      await _chatService.sendMessage(widget.chatId, messageText);
+    } catch (e) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send message: $e')),
+      );
     }
   }
 
   void _showMatchDetails() {
-    print('Debug: Showing match details dialog with data: $_matchDetails');
+    _logger.fine('Showing match details dialog with data: $_matchDetails');
+    if (!mounted) return;
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Match Details'),
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('Match Details'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -149,40 +157,40 @@ class _ChatPageState extends State<ChatPage> {
               if (_matchDetails['category'] != null && _matchDetails['category'].toString().isNotEmpty)
                 Text(
                   'Category: ${_matchDetails['category']}',
-                  style: TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 16),
                 ),
-              if (_matchDetails['category'] != null && _matchDetails['category'].toString().isNotEmpty) SizedBox(height: 8),
+              if (_matchDetails['category'] != null && _matchDetails['category'].toString().isNotEmpty) const SizedBox(height: 8),
               if (_matchDetails['place'] != null && _matchDetails['place'].toString().isNotEmpty)
                 Text(
                   'Place: ${_matchDetails['place']}',
-                  style: TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 16),
                 ),
-              if (_matchDetails['place'] != null && _matchDetails['place'].toString().isNotEmpty) SizedBox(height: 8),
+              if (_matchDetails['place'] != null && _matchDetails['place'].toString().isNotEmpty) const SizedBox(height: 8),
               if (_matchDetails['schedule'] != null) ...[
-                Text(
+                const Text(
                   'Schedule:',
-                  style: TextStyle(
+                  style:  TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 if (_matchDetails['schedule'] is Timestamp)
                   Text(
                     'Date: ${(_matchDetails['schedule'] as Timestamp).toDate().day}/${(_matchDetails['schedule'] as Timestamp).toDate().month}/${(_matchDetails['schedule'] as Timestamp).toDate().year}',
-                    style: TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: 16),
                   )
                 else if (_matchDetails['schedule'] is String && (_matchDetails['schedule'] as String).isNotEmpty)
                   Text(
                     'Date: ${_matchDetails['schedule']}',
-                    style: TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: 16),
                   ),
                 if (_matchDetails['timeRange'] != null && (_matchDetails['timeRange'] as String).isNotEmpty)
                   Text(
                     'Time: ${_matchDetails['timeRange']}',
-                    style: TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: 16),
                   ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
               ],
               if (_matchDetails['matchDate'] != null && (_matchDetails['matchDate'] as String).isNotEmpty)
                 Text(
@@ -207,21 +215,21 @@ class _ChatPageState extends State<ChatPage> {
         actions: [
           TextButton(
             onPressed: () async {
-              // Show confirmation dialog first
+              // Show confirmation dialog
               final bool? confirm = await showDialog<bool>(
-                context: context,
-                builder: (BuildContext context) {
+                context: dialogContext,
+                builder: (BuildContext confirmContext) {
                   return AlertDialog(
-                    title: Text('Confirm Unmatch'),
+                    title: const Text('Confirm Unmatch'),
                     content: Text('Are you sure you want to unmatch with ${widget.chatPersonName}? This action cannot be undone.'),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        child: Text('Cancel'),
+                        onPressed: () => Navigator.of(confirmContext).pop(false),
+                        child: const Text('Cancel'),
                       ),
                       TextButton(
-                        onPressed: () => Navigator.of(context).pop(true),
-                        child: Text(
+                        onPressed: () => Navigator.of(confirmContext).pop(true),
+                        child: const Text(
                           'Unmatch',
                           style: TextStyle(color: Colors.red),
                         ),
@@ -231,17 +239,21 @@ class _ChatPageState extends State<ChatPage> {
                 },
               );
 
-              if (confirm != true) {
-                return; // User cancelled the unmatch
-              }
+              if (confirm != true || !mounted) return;
 
+              if (!dialogContext.mounted) return;
+
+              // Store contexts before async gap
+              final navigatorContext = Navigator.of(dialogContext);
+              final scaffoldContext = ScaffoldMessenger.of(dialogContext);
+              
               // Show loading dialog
               showDialog(
-                context: context,
+                context: dialogContext,
                 barrierDismissible: false,
-                builder: (BuildContext context) {
-                  return WillPopScope(
-                    onWillPop: () async => false,
+                builder: (BuildContext loadingContext) {
+                  return const PopScope(
+                    canPop: false,
                     child: AlertDialog(
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -258,32 +270,31 @@ class _ChatPageState extends State<ChatPage> {
 
               try {
                 await _chatService.unmatch(widget.chatId);
-                if (mounted) {
-                  Navigator.of(context).pop(); // Close the loading dialog
-                  Navigator.of(context).pop(); // Close the match details dialog
-                  Navigator.of(context).pop(); // Go back to chat list
-                }
+                if (!mounted) return;
+                
+                navigatorContext.pop(); // Close the loading dialog
+                navigatorContext.pop(); // Close the match details dialog
+                Navigator.of(context).pop(); // Go back to chat list
               } catch (e) {
-                if (mounted) {
-                  Navigator.of(context).pop(); // Close the loading dialog
-                  // Show a user-friendly error message
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Unable to unmatch at this time. Please try again later.'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
+                if (!mounted) return;
+                
+                navigatorContext.pop(); // Close the loading dialog
+                scaffoldContext.showSnackBar(
+                  const SnackBar(
+                    content: Text('Unable to unmatch at this time. Please try again later.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
-            child: Text(
+            child: const Text(
               'Unmatch',
               style: TextStyle(color: Colors.red),
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Close'),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -452,7 +463,7 @@ class _ChatPageState extends State<ChatPage> {
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: Colors.black.withAlpha(15),
                                       blurRadius: 4,
                                       offset: const Offset(0, 2),
                                     ),
@@ -487,7 +498,7 @@ class _ChatPageState extends State<ChatPage> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.done_all, size: 16, color: Colors.blue),
+                                      const Icon(Icons.done_all, size: 16, color: Colors.blue),
                                       const SizedBox(width: 4),
                                       Text(
                                         'Read',
@@ -513,7 +524,7 @@ class _ChatPageState extends State<ChatPage> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withAlpha(15),
                     blurRadius: 4,
                     offset: const Offset(0, -2),
                   ),
@@ -543,7 +554,7 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                   const SizedBox(width: 12),
                   Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.blue,
                       shape: BoxShape.circle,
                     ),

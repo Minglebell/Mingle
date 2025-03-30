@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import 'dart:math' as math;
 
 class MatchingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final _logger = Logger('MatchingService');
 
   // Calculate distance between two points using the Haversine formula
   double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -102,7 +104,7 @@ class MatchingService {
 
       return matches;
     } catch (e) {
-      print('Error finding matches: $e');
+      _logger.severe('Error finding matches: $e');
       return [];
     }
   }
@@ -142,7 +144,7 @@ class MatchingService {
 
       return chatId;
     } catch (e) {
-      print('Error creating chat: $e');
+      _logger.severe('Error creating chat: $e');
       rethrow;
     }
   }

@@ -9,12 +9,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:minglev2_1/Services/request_matching_service.dart';
 import 'dart:async';
+import 'package:logging/logging.dart';
+
+// Create a logger instance
+final _logger = Logger('FindMatchPage');
 
 class FindMatchPage extends StatefulWidget {
   const FindMatchPage({super.key});
 
   @override
-  _FindMatchPageState createState() => _FindMatchPageState();
+  State<FindMatchPage> createState() => _FindMatchPageState();
 }
 
 class _FindMatchPageState extends State<FindMatchPage> {
@@ -109,7 +113,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
     super.initState();
     _loadSavedSettings();
     // Start periodic check for expired schedules
-    _scheduleCheckTimer = Timer.periodic(Duration(minutes: 1), (timer) {
+     _scheduleCheckTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
       _checkAndCancelExpiredSchedules();
     });
   }
@@ -170,7 +174,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
         });
       }
     } catch (e) {
-      print('Error loading saved settings: $e');
+      _logger.warning('Error loading saved settings', e);
     }
   }
 
@@ -214,7 +218,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
         await prefs.setString('schedules', schedulesJson);
       }
     } catch (e) {
-      print('Error saving settings: $e');
+      _logger.warning('Error saving settings', e);
     }
   }
 
@@ -243,15 +247,22 @@ class _FindMatchPageState extends State<FindMatchPage> {
     
     for (var schedule in expiredSchedules) {
       try {
+        if (!context.mounted) return;
+        // Store context before async operation
+        final currentContext = context;
+        if (!currentContext.mounted) return;
+        
         // Cancel the request in Firestore
-        final matchingService = RequestMatchingService(context);
+        final matchingService = RequestMatchingService(currentContext);
         await matchingService.cancelRequest(schedule['requestId']);
 
+        if (!context.mounted) return;
         setState(() {
           schedules.remove(schedule);
         });
         
         // Show notification that schedule was cancelled
+        if (!currentContext.mounted) return;
         DelightToastBar(
           autoDismiss: true,
           snackbarDuration: const Duration(seconds: 3),
@@ -269,13 +280,13 @@ class _FindMatchPageState extends State<FindMatchPage> {
               ),
             ),
           ),
-        ).show(context);
+        ).show(currentContext);
       } catch (e) {
-        print('Error cancelling expired schedule: $e');
+        _logger.warning('Error cancelling expired schedule', e);
       }
     }
     
-    if (expiredSchedules.isNotEmpty) {
+    if (expiredSchedules.isNotEmpty && mounted) {
       await _saveSettings();
     }
   }
@@ -302,19 +313,21 @@ class _FindMatchPageState extends State<FindMatchPage> {
   }
 
   Future<void> _addSchedule(BuildContext context) async {
+    
     if (schedules.length >= 5) {
+      if (!context.mounted) return;
       DelightToastBar(
         autoDismiss: true,
         snackbarDuration: const Duration(seconds: 3),
-        builder: (context) => ToastCard(
-          leading: const Icon(
+        builder: (context) => const ToastCard(
+          leading: Icon(
             Icons.warning,
             size: 24,
             color: Colors.orange,
           ),
           title: Text(
             'Maximum 5 schedules allowed',
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 16,
             ),
@@ -324,20 +337,20 @@ class _FindMatchPageState extends State<FindMatchPage> {
       return;
     }
 
-    // Check if required fields are selected before allowing schedule addition
     if (selectedCategory == null || selectedPlace == null || selectedGender == null) {
+      if (!context.mounted) return;
       DelightToastBar(
         autoDismiss: true,
         snackbarDuration: const Duration(seconds: 3),
-        builder: (context) => ToastCard(
-          leading: const Icon(
+        builder: (context) => const ToastCard(
+          leading: Icon(
             Icons.error,
             size: 24,
             color: Colors.red,
           ),
           title: Text(
             'Please select category, place, and gender before adding schedule',
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 16,
             ),
@@ -347,20 +360,21 @@ class _FindMatchPageState extends State<FindMatchPage> {
       return;
     }
 
+    if (!context.mounted) return;
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2101),
     );
-    
-    if (picked != null) {
+
+    if (picked != null && context.mounted) {
       String? selectedTime;
       await showDialog(
         context: context,
-        builder: (BuildContext context) {
+        builder: (BuildContext dialogContext) {
           return AlertDialog(
-            title: Text('Select Time Range'),
+            title: const Text('Select Time Range'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -380,9 +394,9 @@ class _FindMatchPageState extends State<FindMatchPage> {
                       ),
                     ),
                     subtitle: !isValid 
-                      ? Text('Time range already passed', style: TextStyle(color: Colors.red))
+                      ? const Text('Time range already passed', style: TextStyle(color: Colors.red))
                       : exists 
-                        ? Text('Schedule already exists', style: TextStyle(color: Colors.orange))
+                        ? const Text('Schedule already exists', style: TextStyle(color: Colors.orange))
                         : null,
                     enabled: isValid && !exists,
                     onTap: () {
@@ -397,7 +411,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
         },
       );
 
-      if (selectedTime != null && selectedCategory != null && selectedPlace != null && selectedGender != null) {
+      if (selectedTime != null && context.mounted) {
         // Create a new schedule
         final newSchedule = {
           'date': picked,
@@ -420,15 +434,15 @@ class _FindMatchPageState extends State<FindMatchPage> {
         DelightToastBar(
           autoDismiss: true,
           snackbarDuration: const Duration(seconds: 3),
-          builder: (context) => ToastCard(
-            leading: const Icon(
+          builder: (context) => const ToastCard(
+            leading: Icon(
               Icons.check_circle,
               size: 24,
               color: Colors.green,
             ),
             title: Text(
               'Schedule added successfully',
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 16,
               ),
@@ -452,20 +466,20 @@ class _FindMatchPageState extends State<FindMatchPage> {
           // Store the request ID in the schedule
           newSchedule['requestId'] = matchingService.currentRequestId;
         } catch (e) {
-          print('Error creating request for schedule: $e');
-          // Show error message
+          _logger.warning('Error creating request for schedule', e);
+          if (!context.mounted) return;
           DelightToastBar(
             autoDismiss: true,
             snackbarDuration: const Duration(seconds: 3),
-            builder: (context) => ToastCard(
-              leading: const Icon(
+            builder: (context) =>const  ToastCard(
+              leading: Icon(
                 Icons.error,
                 size: 24,
                 color: Colors.red,
               ),
               title: Text(
                 'Failed to create matching request. Please try again.',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                 ),
@@ -477,13 +491,6 @@ class _FindMatchPageState extends State<FindMatchPage> {
         await _saveSettings(); // Save settings after adding schedule
       }
     }
-  }
-
-  void _removeSchedule(int index) {
-    setState(() {
-      schedules.removeAt(index);
-    });
-    _saveSettings(); // Save settings after removing schedule
   }
 
   String _formatCategory(String category) {
@@ -505,8 +512,8 @@ class _FindMatchPageState extends State<FindMatchPage> {
           title: Row(
             children: [
               Icon(timeRanges[schedule['timeRange']]!['icon'], color: Colors.blue),
-              SizedBox(width: 8),
-              Text('Schedule Details'),
+              const SizedBox(width: 8),
+              const Text('Schedule Details'),
             ],
           ),
           content: SingleChildScrollView(
@@ -515,40 +522,40 @@ class _FindMatchPageState extends State<FindMatchPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: Icon(Icons.calendar_today),
-                  title: Text('Date'),
+                  leading: const Icon(Icons.calendar_today),
+                  title: const Text('Date'),
                   subtitle: Text(
                     '${schedule['date'].day}/${schedule['date'].month}/${schedule['date'].year}',
                   ),
                 ),
                 ListTile(
-                  leading: Icon(Icons.access_time),
-                  title: Text('Time Range'),
+                  leading: const Icon(Icons.access_time),
+                  title: const Text('Time Range'),
                   subtitle: Text(schedule['timeRange'] ?? ''),
                 ),
                 ListTile(
                   leading: Icon(categoryIcons[schedule['category']] ?? Icons.category),
-                  title: Text('Category'),
+                  title: const Text('Category'),
                   subtitle: Text(_formatCategory(schedule['category'])),
                 ),
                 ListTile(
-                  leading: Icon(Icons.place),
-                  title: Text('Place'),
+                  leading: const Icon(Icons.place),
+                  title: const Text('Place'),
                   subtitle: Text(schedule['place'] ?? ''),
                 ),
                 ListTile(
-                  leading: Icon(Icons.person),
-                  title: Text('Preferred Gender'),
+                  leading: const Icon(Icons.person),
+                  title: const Text('Preferred Gender'),
                   subtitle: Text(schedule['gender'] ?? ''),
                 ),
                 ListTile(
-                  leading: Icon(Icons.person_outline),
-                  title: Text('Age Range'),
+                  leading: const Icon(Icons.person_outline),
+                  title: const Text('Age Range'),
                   subtitle: Text('${schedule['ageRange']?['start']?.round() ?? 20} - ${schedule['ageRange']?['end']?.round() ?? 30} years'),
                 ),
                 ListTile(
-                  leading: Icon(Icons.social_distance),
-                  title: Text('Distance'),
+                  leading: const Icon(Icons.social_distance),
+                  title: const Text('Distance'),
                   subtitle: Text('${(schedule['distance'] ?? 10).round()} km'),
                 ),
               ],
@@ -557,7 +564,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Close'),
+              child: const Text('Close'),
             ),
           ],
         );
@@ -568,7 +575,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
+      appBar: const CustomAppBar(
         title: 'Find Partner',
       ),
       bottomNavigationBar: CustomBottomNavBar(
@@ -600,7 +607,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Category Section
-              Text(
+              const Text(
                 'Select Category',
                 style: TextStyle(
                   fontSize: 20,
@@ -608,7 +615,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   color: Colors.black87,
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Center(
                 child: Wrap(
                   spacing: 8.0,
@@ -626,7 +633,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                                 ? Colors.white
                                 : Colors.black,
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text(
                             _formatCategory(category),
                             style: TextStyle(
@@ -652,8 +659,8 @@ class _FindMatchPageState extends State<FindMatchPage> {
                 ),
               ),
               if (selectedCategory != null) ...[
-                SizedBox(height: 20),
-                Text(
+                const SizedBox(height: 20),
+                const Text(
                   'Select Place',
                   style: TextStyle(
                     fontSize: 20,
@@ -661,7 +668,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                     color: Colors.black87,
                   ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Center(
                   child: Wrap(
                     spacing: 8.0,
@@ -693,8 +700,8 @@ class _FindMatchPageState extends State<FindMatchPage> {
               ],
 
               // Gender Section
-              SizedBox(height: 20),
-              Text(
+              const SizedBox(height: 20),
+              const Text(
                 'Select Gender',
                 style: TextStyle(
                   fontSize: 20,
@@ -702,10 +709,10 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   color: Colors.black87,
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Center(
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border.all(color: Colors.grey),
@@ -713,7 +720,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   ),
                   child: DropdownButton<String>(
                     value: selectedGender,
-                    hint: Text(
+                    hint: const Text(
                       'Choose gender',
                       style: TextStyle(color: Colors.black54),
                     ),
@@ -729,7 +736,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                         value: value,
                         child: Text(
                           value,
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                         ),
                       );
                     }).toList(),
@@ -739,8 +746,8 @@ class _FindMatchPageState extends State<FindMatchPage> {
               ),
 
               // Age Range Section
-              SizedBox(height: 20),
-              Text(
+              const SizedBox(height: 20),
+              const Text(
                 'Age Range',
                 style: TextStyle(
                   fontSize: 20,
@@ -748,13 +755,13 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   color: Colors.black87,
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Center(
                 child: Column(
                   children: [
                     Text(
                       '${ageRange.start.round()} - ${ageRange.end.round()} years',
-                      style: TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 16),
                     ),
                     RangeSlider(
                       values: ageRange,
@@ -778,8 +785,8 @@ class _FindMatchPageState extends State<FindMatchPage> {
               ),
 
               // Distance Section
-              SizedBox(height: 20),
-              Text(
+              const SizedBox(height: 20),
+              const Text(
                 'Set Distance (in km)',
                 style: TextStyle(
                   fontSize: 20,
@@ -787,13 +794,13 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   color: Colors.black87,
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Center(
                 child: Column(
                   children: [
                     Text(
                       '${distance.round()} km',
-                      style: TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 16),
                     ),
                     Slider(
                       value: distance,
@@ -813,8 +820,8 @@ class _FindMatchPageState extends State<FindMatchPage> {
               ),
 
               // Schedule Section (moved to bottom)
-              SizedBox(height: 20),
-              Text(
+              const SizedBox(height: 20),
+              const Text(
                 'Schedule',
                 style: TextStyle(
                   fontSize: 20,
@@ -822,7 +829,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   color: Colors.black87,
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Center(
                 child: Column(
                   children: [
@@ -830,8 +837,8 @@ class _FindMatchPageState extends State<FindMatchPage> {
                     if (schedules.length < 5)
                       TextButton.icon(
                         onPressed: () => _addSchedule(context),
-                        icon: Icon(Icons.add, color: Colors.blue),
-                        label: Text(
+                        icon: const Icon(Icons.add, color: Colors.blue),
+                        label: const Text(
                           'Add Schedule',
                           style: TextStyle(color: Colors.blue),
                         ),
@@ -839,7 +846,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   ],
                 ),
               ),
-              SizedBox(height: 80),
+              const SizedBox(height: 80),
             ],
           ),
         ),
@@ -858,7 +865,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        title: Text('Your Schedules'),
+                        title: const Text('Your Schedules'),
                         content: SingleChildScrollView(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -873,30 +880,35 @@ class _FindMatchPageState extends State<FindMatchPage> {
                                 ),
                                 subtitle: Text(schedule['timeRange']),
                                 trailing: IconButton(
-                                  icon: Icon(Icons.close, color: Colors.red),
+                                  icon: const Icon(Icons.close, color: Colors.red),
                                   onPressed: () async {
                                     try {
+                                      // Store the context before async operation
+                                      final dialogContext = context;
+                                      
                                       // Cancel the request in Firestore
-                                      final matchingService = RequestMatchingService(context);
+                                      final matchingService = RequestMatchingService(dialogContext);
                                       await matchingService.cancelRequest(schedule['requestId']);
 
                                       setState(() {
                                         schedules.remove(schedule);
                                       });
                                       _saveSettings();
-                                      Navigator.of(context).pop();
+                                      
+                                      if (!dialogContext.mounted) return;
+                                      Navigator.of(dialogContext).pop();
                                       DelightToastBar(
                                         autoDismiss: true,
                                         snackbarDuration: const Duration(seconds: 3),
-                                        builder: (context) => ToastCard(
-                                          leading: const Icon(
+                                        builder: (context) => const ToastCard(
+                                          leading: Icon(
                                             Icons.check_circle,
                                             size: 24,
                                             color: Colors.green,
                                           ),
                                           title: Text(
                                             'Schedule removed successfully',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontWeight: FontWeight.w700,
                                               fontSize: 16,
                                             ),
@@ -904,19 +916,19 @@ class _FindMatchPageState extends State<FindMatchPage> {
                                         ),
                                       ).show(context);
                                     } catch (e) {
-                                      print('Error canceling schedule: $e');
+                                      _logger.warning('Error canceling schedule', e);
                                       DelightToastBar(
                                         autoDismiss: true,
                                         snackbarDuration: const Duration(seconds: 3),
-                                        builder: (context) => ToastCard(
-                                          leading: const Icon(
+                                        builder: (context) => const ToastCard(
+                                          leading: Icon(
                                             Icons.error,
                                             size: 24,
                                             color: Colors.red,
                                           ),
                                           title: Text(
                                             'Failed to remove schedule. Please try again.',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontWeight: FontWeight.w700,
                                               fontSize: 16,
                                             ),
@@ -934,19 +946,19 @@ class _FindMatchPageState extends State<FindMatchPage> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(),
-                            child: Text('Close'),
+                            child: const Text('Close'),
                           ),
                         ],
                       );
                     },
                   );
                 },
-                child: Icon(Icons.schedule),
                 backgroundColor: Colors.blue,
+                child: const Icon(Icons.schedule),
               ),
             ),
           Container(
-            margin: EdgeInsets.only(bottom: 20),
+            margin: const EdgeInsets.only(bottom: 20),
             child: ElevatedButton(
               onPressed: () {
                 bool isValid = selectedCategory != null &&
@@ -972,15 +984,15 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   DelightToastBar(
                     autoDismiss: true,
                     snackbarDuration: const Duration(seconds: 3),
-                    builder: (context) => ToastCard(
-                      leading: const Icon(
+                    builder: (context) => const ToastCard(
+                      leading: Icon(
                         Icons.error,
                         size: 24,
                         color: Colors.red,
                       ),
                       title: Text(
                         'Please select all required fields',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
                         ),
@@ -996,7 +1008,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
                   borderRadius: BorderRadius.circular(30),
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'Find Matches',
                 style: TextStyle(
                   fontSize: 18,

@@ -12,7 +12,7 @@ class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
 
   @override
-  _ChatListPageState createState() => _ChatListPageState();
+  State<ChatListPage> createState() => _ChatListPageState();
 }
 
 class _ChatListPageState extends State<ChatListPage> {
@@ -21,8 +21,8 @@ class _ChatListPageState extends State<ChatListPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final TextEditingController _searchController = TextEditingController();
   Stream<QuerySnapshot>? _chatsStream;
-  Map<String, int> _unreadCounts = {};
-  List<StreamSubscription> _subscriptions = [];
+  final Map<String, int> _unreadCounts = {};
+  final List<StreamSubscription> _subscriptions = [];
   String _searchQuery = '';
 
   @override
@@ -121,7 +121,7 @@ class _ChatListPageState extends State<ChatListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
+      appBar: const CustomAppBar(
         title: 'Chat',
       ),
       bottomNavigationBar: CustomBottomNavBar(
@@ -147,19 +147,19 @@ class _ChatListPageState extends State<ChatListPage> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search by name...',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: Icon(Icons.clear),
+                        icon: const Icon(Icons.clear),
                         onPressed: _clearSearch,
                       )
                     : null,
                 filled: true,
                 fillColor: Colors.grey[100],
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
             ),
           ),
@@ -168,7 +168,7 @@ class _ChatListPageState extends State<ChatListPage> {
               stream: _chatsStream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(
+                  return const Center(
                     child: Text(
                       'Something went wrong',
                       style: TextStyle(color: Colors.red),
@@ -177,7 +177,7 @@ class _ChatListPageState extends State<ChatListPage> {
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
+                  return const Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
                     ),
@@ -191,8 +191,8 @@ class _ChatListPageState extends State<ChatListPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
+                        const Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
+                        const SizedBox(height: 16),
                         Text(
                           'No chats yet',
                           style: TextStyle(
@@ -227,7 +227,7 @@ class _ChatListPageState extends State<ChatListPage> {
                         final participantName = nameSnapshot.data ?? 'Loading...';
                         
                         if (!_matchesSearch(participantName)) {
-                          return SizedBox.shrink();
+                          return const SizedBox.shrink();
                         }
                         
                         final otherParticipantId = participants.firstWhere(

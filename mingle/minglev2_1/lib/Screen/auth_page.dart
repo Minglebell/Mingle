@@ -90,20 +90,33 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
   }
 
   Future<void> _selectBirthday(BuildContext context) async {
+    // Calculate the latest allowed date (20 years ago from today)
+    final DateTime now = DateTime.now();
+    final DateTime latestAllowedDate = DateTime(
+      now.year - 20,
+      now.month,
+      now.day,
+    );
+    
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().subtract(const Duration(days: 7300)),
+      initialDate: latestAllowedDate,
       firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
+      lastDate: latestAllowedDate,
+      selectableDayPredicate: (DateTime date) {
+        // Only allow dates that would make the user 20 or older
+        return date.isBefore(latestAllowedDate) || date.isAtSameMomentAs(latestAllowedDate);
+      },
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary:  Color(0xFF6C9BCF),
+              primary: Color(0xFF6C9BCF),
               onPrimary: Colors.white,
               surface: Colors.white,
               onSurface: Colors.black,
             ),
+            dialogBackgroundColor: Colors.white,
           ),
           child: child!,
         );
@@ -111,7 +124,7 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
     );
 
     if (picked != null) {
-      final formattedDate = "${picked.day}/${picked.month}/${picked.year}";
+      final formattedDate = "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
       setState(() {
         _birthdayController.text = formattedDate;
       });
@@ -143,109 +156,161 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
     if (_formKey.currentState!.validate()) {
       try {
         if (isLogin) {
-          // Handle login with Firebase Auth
-          final UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-            email: _emailController.text,
-            password: _passwordController.text,
-          );
-          
-          if (userCredential.user != null) {
-            _showToast('Login successful!', false);
-            NavigationService().navigateToReplacement('/profile');
-          }
+          await _handleLogin();
         } else {
-          // Handle registration
-          if (!_isOver20YearsOld(_birthdayController.text)) {
-            _showToast('You must be at least 20 years old to register', true);
-            return;
-          }
-
-          if (_selectedGender == null) {
-            _showToast('Please select your gender', true);
-            return;
-          }
-
-          // Create user in Firebase Auth
-          final UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: _emailController.text,
-            password: _passwordController.text,
-          );
-
-          // Store user data in Firestore using the auth UID as document ID
-          if (userCredential.user != null) {
-            // Request location permission
-            bool hasLocationPermission = await LocationService.checkLocationPermission();
-            Map<String, dynamic>? locationData;
-            
-            if (hasLocationPermission) {
-              Position? position = await LocationService.getCurrentLocation();
-              if (position != null) {
-                locationData = {
-                  'latitude': position.latitude,
-                  'longitude': position.longitude,
-                  'accuracy': position.accuracy,
-                  'timestamp': FieldValue.serverTimestamp(),
-                };
-              }
-            }
-
-            await FirebaseFirestore.instance
-                .collection('users')
-                .doc(userCredential.user!.uid)
-                .set({
-              'email': _emailController.text,
-              'name': _nameController.text,
-              'birthday': _birthdayController.text,
-              'gender': [_selectedGender!],
-              'createdAt': FieldValue.serverTimestamp(),
-              'uid': userCredential.user!.uid,
-              'location': locationData,
-              'lastLocationUpdate': locationData != null ? FieldValue.serverTimestamp() : null,
-            });
-
-            // Show success message
-            _showToast('Registration successful! Please login with your credentials', false);
-            
-            // Clear the form
-            _emailController.clear();
-            _passwordController.clear();
-            _nameController.clear();
-            _birthdayController.clear();
-            setState(() {
-              _selectedGender = null;
-            });
-            
-            // Switch to login mode
-            setState(() {
-              isLogin = true;
-            });
-          }
+          await _handleRegistration();
         }
-      } on FirebaseAuthException catch (e) {
-        String errorMessage = 'An error occurred';
-        
-        switch (e.code) {
-          case 'weak-password':
-            errorMessage = 'The password provided is too weak';
-            break;
-          case 'email-already-in-use':
-            errorMessage = 'An account already exists for this email';
-            break;
-          case 'user-not-found':
-            errorMessage = 'No user found for that email';
-            break;
-          case 'wrong-password':
-            errorMessage = 'Wrong password provided';
-            break;
-          default:
-            errorMessage = e.message ?? 'An error occurred';
-        }
-        
-        _showToast('Error: $errorMessage', true);
       } catch (e) {
-        _showToast('Error: ${e.toString()}', true);
+        if (!mounted) return;
+        _showToast('An unexpected error occurred. Please try again', true);
+        _passwordController.clear();
       }
     }
+  }
+
+  Future<void> _handleLogin() async {
+    try {
+      final UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      
+      if (userCredential.user != null) {
+        if (!mounted) return;
+        _showToast('Login successful!', false);
+        NavigationService().navigateToReplacement('/profile');
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'No account found with this email';
+          break;
+        case 'wrong-password':
+          errorMessage = 'Incorrect password';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Please enter a valid email address';
+          break;
+        case 'user-disabled':
+          errorMessage = 'This account has been disabled';
+          break;
+        case 'too-many-requests':
+          errorMessage = 'Too many login attempts. Please try again later';
+          break;
+        case 'network-request-failed':
+          errorMessage = 'Network error. Please check your connection';
+          break;
+        default:
+          errorMessage = 'Login failed. Please try again';
+      }
+      
+      if (!mounted) return;
+      _showToast(errorMessage, true);
+      _passwordController.clear();
+    }
+  }
+
+  Future<void> _handleRegistration() async {
+    try {
+      // Validate age and gender first
+      if (!_isOver20YearsOld(_birthdayController.text)) {
+        _showToast('You must be at least 20 years old to register', true);
+        return;
+      }
+
+      if (_selectedGender == null) {
+        _showToast('Please select your gender', true);
+        return;
+      }
+
+      // Create user in Firebase Auth
+      final UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      // If registration successful, proceed with storing user data
+      if (userCredential.user != null) {
+        await _storeUserData(userCredential.user!.uid);
+        
+        if (!mounted) return;
+        _showToast('Registration successful! Please login with your credentials', false);
+        _clearRegistrationForm();
+        setState(() {
+          isLogin = true;
+        });
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      
+      switch (e.code) {
+        case 'weak-password':
+          errorMessage = 'Password should be at least 6 characters';
+          break;
+        case 'email-already-in-use':
+          errorMessage = 'This email is already registered';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Please enter a valid email address';
+          break;
+        case 'operation-not-allowed':
+          errorMessage = 'Registration is currently disabled';
+          break;
+        case 'network-request-failed':
+          errorMessage = 'Network error. Please check your connection';
+          break;
+        default:
+          errorMessage = 'Registration failed. Please try again';
+      }
+      
+      if (!mounted) return;
+      _showToast(errorMessage, true);
+      _passwordController.clear();
+    }
+  }
+
+  Future<void> _storeUserData(String uid) async {
+    // Request location permission
+    bool hasLocationPermission = await LocationService.checkLocationPermission();
+    Map<String, dynamic>? locationData;
+    
+    if (hasLocationPermission) {
+      Position? position = await LocationService.getCurrentLocation();
+      if (position != null) {
+        locationData = {
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'accuracy': position.accuracy,
+          'timestamp': FieldValue.serverTimestamp(),
+        };
+      }
+    }
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .set({
+      'email': _emailController.text,
+      'name': _nameController.text,
+      'birthday': _birthdayController.text,
+      'gender': [_selectedGender!],
+      'createdAt': FieldValue.serverTimestamp(),
+      'uid': uid,
+      'location': locationData,
+      'lastLocationUpdate': locationData != null ? FieldValue.serverTimestamp() : null,
+    });
+  }
+
+  void _clearRegistrationForm() {
+    _emailController.clear();
+    _passwordController.clear();
+    _nameController.clear();
+    _birthdayController.clear();
+    setState(() {
+      _selectedGender = null;
+    });
   }
 
   InputDecoration _getInputDecoration(String label, IconData icon, {Widget? suffixIcon}) {

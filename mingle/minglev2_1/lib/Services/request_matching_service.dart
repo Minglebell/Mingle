@@ -537,11 +537,19 @@ class RequestMatchingService {
       // Create matched user info for both users
       final matchedUserInfo1 = {
         'matchedUserName': user2Data['name'] ?? 'Unknown',
+        'matchedUserAge': user2Data['age']?.toString() ?? 'Unknown',
+        'matchedUserDistance': distance.toStringAsFixed(1),
+        'matchedUserGender': user2Data['gender'] ?? 'Unknown',
+        'matchedUserProfileImage': user2Data['profileImage'] ?? '',
         'chatId': chatId,
       };
 
       final matchedUserInfo2 = {
         'matchedUserName': user1Data['name'] ?? 'Unknown',
+        'matchedUserAge': user1Data['age']?.toString() ?? 'Unknown',
+        'matchedUserDistance': distance.toStringAsFixed(1),
+        'matchedUserGender': user1Data['gender'] ?? 'Unknown',
+        'matchedUserProfileImage': user1Data['profileImage'] ?? '',
         'chatId': chatId,
       };
 

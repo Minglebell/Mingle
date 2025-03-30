@@ -425,27 +425,35 @@ class _AuthPageState extends ConsumerState<AuthPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 40),
-                    // Logo or App Icon
+                    // Logo and App Name
                     Center(
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6C9BCF),
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF6C9BCF).withAlpha(76),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
+                      child: Column(
+                        children: [
+                          Image.asset(
+                            'assets/images/Activities.png',
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(height: 12),  // Space between logo and text
+                          const Text(
+                            'Mingle',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF6C9BCF),
+                              letterSpacing: 1.2,
                             ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.favorite,
-                          size: 60,
-                          color: Colors.white,
-                        ),
+                          ),
+                          const Text(
+                            'Find your activity partner',  // Subtitle
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF8E8E8E),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 40),

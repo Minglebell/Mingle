@@ -108,5 +108,4 @@ flutter:
       fonts:
         - asset: fonts/Itim-Regular.ttf
   assets:
-    - assets/images/OTP.png
     - assets/images/Activities.png

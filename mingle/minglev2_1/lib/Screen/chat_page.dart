@@ -37,6 +37,7 @@ class _ChatPageState extends State<ChatPage> {
   StreamSubscription? _chatSubscription;
   Map<String, dynamic> _matchDetails = {};
   final ImagePicker _imagePicker = ImagePicker();
+  String? _chatPersonImage;
 
   @override
   void initState() {
@@ -375,7 +376,305 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  void _showFullScreenImage(String base64Image) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.memory(
+                base64Decode(base64Image),
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showPlaceRecommendations() {
+    final category = _matchDetails['category'] ?? '';
+    final place = _matchDetails['place'] ?? '';
   
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Color(0xFFEEEEEE),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Recommended Places',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (category.isNotEmpty) ...[
+                          Text(
+                            'Based on your match category: $category',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF6C9BCF),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        ..._getRecommendedPlaces(category).map((place) => 
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withAlpha(13),
+                                  blurRadius: 5,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE8F1FF),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    _getCategoryIcon(place['type']),
+                                    color: const Color(0xFF6C9BCF),
+                                    size: 30,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        place['name'],
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        place['description'],
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.star,
+                                            size: 16,
+                                            color: Colors.amber[400],
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            place['rating'].toString(),
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Icon(
+                                            Icons.location_on,
+                                            size: 16,
+                                            color: Colors.grey[600],
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            place['distance'],
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.share),
+                                  color: const Color(0xFF6C9BCF),
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    _sharePlace(place);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ).toList(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<Map<String, dynamic>> _getRecommendedPlaces(String category) {
+    // This is a mock data function - in a real app, this would fetch from an API
+    switch (category.toLowerCase()) {
+      case 'coffee':
+        return [
+          {
+            'name': 'Starbucks Reserve',
+            'type': 'cafe',
+            'description': 'Premium coffee experience with unique blends',
+            'rating': 4.5,
+            'distance': '0.8 km',
+          },
+          {
+            'name': 'Local Coffee House',
+            'type': 'cafe',
+            'description': 'Cozy atmosphere with artisanal coffee',
+            'rating': 4.7,
+            'distance': '1.2 km',
+          },
+        ];
+      case 'dining':
+        return [
+          {
+            'name': 'The Garden Restaurant',
+            'type': 'restaurant',
+            'description': 'Fine dining with outdoor seating',
+            'rating': 4.8,
+            'distance': '1.5 km',
+          },
+          {
+            'name': 'Urban Kitchen',
+            'type': 'restaurant',
+            'description': 'Modern fusion cuisine in heart of city',
+            'rating': 4.6,
+            'distance': '2.0 km',
+          },
+        ];
+      case 'activity':
+        return [
+          {
+            'name': 'City Adventure Park',
+            'type': 'activity',
+            'description': 'Outdoor activities and adventure sports',
+            'rating': 4.4,
+            'distance': '3.2 km',
+          },
+          {
+            'name': 'Art Workshop Studio',
+            'type': 'activity',
+            'description': 'Creative workshops and classes',
+            'rating': 4.3,
+            'distance': '1.8 km',
+          },
+        ];
+      default:
+        return [
+          {
+            'name': 'Central Park',
+            'type': 'park',
+            'description': 'Beautiful park with walking trails',
+            'rating': 4.6,
+            'distance': '1.0 km',
+          },
+          {
+            'name': 'City Mall',
+            'type': 'shopping',
+            'description': 'Shopping and entertainment complex',
+            'rating': 4.4,
+            'distance': '2.5 km',
+          },
+        ];
+    }
+  }
+
+  IconData _getCategoryIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'cafe':
+        return Icons.coffee;
+      case 'restaurant':
+        return Icons.restaurant;
+      case 'activity':
+        return Icons.sports_basketball;
+      case 'park':
+        return Icons.park;
+      case 'shopping':
+        return Icons.shopping_bag;
+      default:
+        return Icons.place;
+    }
+  }
+
+  void _sharePlace(Map<String, dynamic> place) {
+    final message = "How about we check out ${place['name']}? "
+        "It's ${place['description']} and it's only ${place['distance']} away. "
+        "Rating: ${place['rating']} ⭐";
+  
+    _messageController.text = message;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -391,81 +690,28 @@ class _ChatPageState extends State<ChatPage> {
           onTap: _navigateToProfile,
           child: Row(
             children: [
-              FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(widget.partnerId)
-                    .get(),
-                builder: (context, snapshot) {
-                  return Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.grey[200],
-                        backgroundImage: snapshot.hasData &&
-                                (snapshot.data?.data() as Map<String,
-                                        dynamic>?)?['profileImage'] !=
-                                    null
-                            ? MemoryImage(base64Decode((snapshot.data?.data()
-                                as Map<String, dynamic>)['profileImage']))
-                            : null,
-                        child: (!snapshot.hasData ||
-                                (snapshot.data?.data() as Map<String,
-                                        dynamic>?)?['profileImage'] ==
-                                    null)
-                            ? Text(
-                                widget.chatPersonName[0].toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            border: Border.all(color: Colors.white, width: 2),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
+              CircleAvatar(
+                backgroundImage: _chatPersonImage != null
+                    ? MemoryImage(base64Decode(_chatPersonImage!))
+                    : null,
+                child: _chatPersonImage == null
+                    ? const Icon(Icons.person, color: Colors.grey)
+                    : null,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.chatPersonName,
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const Text(
-                      'Online',
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(width: 8),
+              Text(
+                widget.chatPersonName,
+                style: const TextStyle(color: Colors.black),
               ),
             ],
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.place, color: Colors.blue),
+            onPressed: _showPlaceRecommendations,
+            tooltip: 'Show recommended places',
+          ),
           IconButton(
             icon: const Icon(Icons.more_vert, color: Colors.blue),
             onPressed: _showMatchDetails,
@@ -722,34 +968,6 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _showFullScreenImage(String base64Image) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          backgroundColor: Colors.black,
-          appBar: AppBar(
-            backgroundColor: Colors.black,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-          body: Center(
-            child: InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 4.0,
-              child: Image.memory(
-                base64Decode(base64Image),
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
         ),
       ),
     );

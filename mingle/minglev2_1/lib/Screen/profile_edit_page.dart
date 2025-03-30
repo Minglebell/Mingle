@@ -519,7 +519,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         'Other'
       ],
       'Religion': [
-        'Non religiou',
+        'Non-religion',
         'Buddhist',
         'Christian',
         'Muslim',
@@ -529,13 +529,12 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         'Other'
       ],
       'Budget level': [
-        'Low (0-300)',
-        'Moderate (300-1000)',
-        'High (1000-5000)',
-        'Luxury (5000+)'
+        'Low (\$0-300)',
+        'Moderate (\$300-1000)',
+        'High (\$1000-5000)',
+        'Luxury (\$5000+)'
       ],
       'Education level': [
-        'High school or lower',
         'Bachelor\'s degree',
         'Master\'s degree',
         'Doctorate or higher'
@@ -551,13 +550,15 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         'Non-smoker',
         'Occasional smoker',
         'Only smoke when drinking',
-        'Regular smoker'
+        'Regular smoker',
+        'Avoidance with smoker'
       ],
       'Alcoholic': [
         'Never',
         'Rarely',
         'Occasionally',
-        'Regularly'
+        'Regularly',
+        'Avoidance'
       ],
       'Allergies': [
         'None',

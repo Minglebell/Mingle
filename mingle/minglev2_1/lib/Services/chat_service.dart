@@ -172,6 +172,7 @@ class ChatService {
         'category': matchDetails['category'] ?? '',
         'place': matchDetails['place'] ?? '',
         'schedule': matchDetails['scheduledTime'] ?? '',
+        'timeRange': matchDetails['timeRange'] ?? '',
         'matchDate': chatData['createdAt'] != null 
             ? (chatData['createdAt'] as Timestamp).toDate().toString().split(' ')[0]
             : '',
@@ -185,6 +186,7 @@ class ChatService {
         'category': '',
         'place': '',
         'schedule': '',
+        'timeRange': '',
         'matchDate': '',
       };
     }
@@ -225,27 +227,65 @@ class ChatService {
 
       // Get the chat document
       final chatDoc = await _firestore.collection('chats').doc(chatId).get();
-      if (!chatDoc.exists) throw Exception('Chat not found');
+      if (!chatDoc.exists) {
+        print('Debug: Chat document already deleted');
+        return; // Chat already deleted, nothing to do
+      }
 
       final chatData = chatDoc.data() as Map<String, dynamic>;
       final participants = List<String>.from(chatData['participants'] ?? []);
       
-      // Remove chat reference from both users' documents
-      await Future.wait([
-        _firestore.collection('users').doc(participants[0]).update({
-          'chats': FieldValue.arrayRemove([chatId])
-        }),
-        _firestore.collection('users').doc(participants[1]).update({
-          'chats': FieldValue.arrayRemove([chatId])
-        })
-      ]);
+      // Check if current user is still a participant
+      if (!participants.contains(currentUser.uid)) {
+        print('Debug: User is no longer a participant in this chat');
+        return; // User is no longer a participant, nothing to do
+      }
+      
+      // First delete all messages in the messages collection
+      try {
+        final messagesSnapshot = await _firestore
+            .collection('chats')
+            .doc(chatId)
+            .collection('messages')
+            .get();
+        
+        final batch = _firestore.batch();
+        for (var doc in messagesSnapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+        print('Debug: Successfully deleted all messages');
+      } catch (e) {
+        print('Debug: Could not delete messages: $e');
+        // Continue even if message deletion fails
+      }
 
-      // Delete the chat document and all its messages
-      await _firestore.collection('chats').doc(chatId).delete();
+      // Then delete the chat document
+      try {
+        await _firestore.collection('chats').doc(chatId).delete();
+        print('Debug: Successfully deleted chat document');
+      } catch (e) {
+        print('Debug: Could not delete chat document: $e');
+        // Continue even if chat document deletion fails
+      }
+
+      // Finally remove chat reference from both users' documents
+      for (var participantId in participants) {
+        try {
+          await _firestore.collection('users').doc(participantId).update({
+            'chats': FieldValue.arrayRemove([chatId])
+          });
+          print('Debug: Successfully removed chat reference from user $participantId');
+        } catch (e) {
+          print('Debug: Could not remove chat reference from user $participantId: $e');
+          // Continue with other users even if one fails
+        }
+      }
+
       print('Debug: Successfully unmatched chat $chatId');
     } catch (e) {
-      print('Error unmatching: $e');
-      rethrow;
+      print('Debug: Error during unmatch: $e');
+      // Don't rethrow the error, just log it
     }
   }
 } 

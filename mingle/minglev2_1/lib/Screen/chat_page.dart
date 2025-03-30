@@ -144,28 +144,45 @@ class _ChatPageState extends State<ChatPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (_matchDetails['category']?.isNotEmpty ?? false) ...[
+              if (_matchDetails['category'] != null && _matchDetails['category'].toString().isNotEmpty)
                 Text(
                   'Category: ${_matchDetails['category']}',
                   style: TextStyle(fontSize: 16),
                 ),
-                SizedBox(height: 8),
-              ],
-              if (_matchDetails['place']?.isNotEmpty ?? false) ...[
+              if (_matchDetails['category'] != null && _matchDetails['category'].toString().isNotEmpty) SizedBox(height: 8),
+              if (_matchDetails['place'] != null && _matchDetails['place'].toString().isNotEmpty)
                 Text(
                   'Place: ${_matchDetails['place']}',
                   style: TextStyle(fontSize: 16),
                 ),
-                SizedBox(height: 8),
-              ],
-              if (_matchDetails['schedule']?.isNotEmpty ?? false) ...[
+              if (_matchDetails['place'] != null && _matchDetails['place'].toString().isNotEmpty) SizedBox(height: 8),
+              if (_matchDetails['schedule'] != null) ...[
                 Text(
-                  'Schedule: ${_matchDetails['schedule']}',
-                  style: TextStyle(fontSize: 16),
+                  'Schedule:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                SizedBox(height: 4),
+                if (_matchDetails['schedule'] is Timestamp)
+                  Text(
+                    'Date: ${(_matchDetails['schedule'] as Timestamp).toDate().day}/${(_matchDetails['schedule'] as Timestamp).toDate().month}/${(_matchDetails['schedule'] as Timestamp).toDate().year}',
+                    style: TextStyle(fontSize: 16),
+                  )
+                else if (_matchDetails['schedule'] is String && (_matchDetails['schedule'] as String).isNotEmpty)
+                  Text(
+                    'Date: ${_matchDetails['schedule']}',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                if (_matchDetails['timeRange'] != null && (_matchDetails['timeRange'] as String).isNotEmpty)
+                  Text(
+                    'Time: ${_matchDetails['timeRange']}',
+                    style: TextStyle(fontSize: 16),
+                  ),
                 SizedBox(height: 16),
               ],
-              if (_matchDetails['matchDate']?.isNotEmpty ?? false)
+              if (_matchDetails['matchDate'] != null && (_matchDetails['matchDate'] as String).isNotEmpty)
                 Text(
                   'Match Date: ${_matchDetails['matchDate']}',
                   style: TextStyle(
@@ -173,7 +190,7 @@ class _ChatPageState extends State<ChatPage> {
                     color: Colors.grey[600],
                   ),
                 ),
-              if (_matchDetails.values.every((value) => value.isEmpty))
+              if (_matchDetails.isEmpty || (_matchDetails['category'] == null && _matchDetails['place'] == null && _matchDetails['schedule'] == null && _matchDetails['matchDate'] == null))
                 Text(
                   'No match details available',
                   style: TextStyle(
@@ -188,57 +205,82 @@ class _ChatPageState extends State<ChatPage> {
         actions: [
           TextButton(
             onPressed: () async {
-              // Show confirmation dialog
+              // Show confirmation dialog first
               final bool? confirm = await showDialog<bool>(
                 context: context,
                 builder: (BuildContext context) {
                   return AlertDialog(
-                    title: const Text('Confirm Unmatch'),
-                    content: const Text('Are you sure you want to unmatch with this person? This action cannot be undone.'),
+                    title: Text('Confirm Unmatch'),
+                    content: Text('Are you sure you want to unmatch with ${widget.chatPersonName}? This action cannot be undone.'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text('Cancel'),
+                        child: Text('Cancel'),
                       ),
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(true),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
+                        child: Text(
+                          'Unmatch',
+                          style: TextStyle(color: Colors.red),
                         ),
-                        child: const Text('Unmatch'),
                       ),
                     ],
                   );
                 },
               );
 
-              if (confirm == true) {
-                try {
-                  await _chatService.unmatch(widget.chatId);
-                  if (context.mounted) {
-                    Navigator.pop(context); // Close match details dialog
-                    Navigator.pop(context); // Close chat page
-                    NavigationService().navigateToReplacement('/chatList');
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to unmatch: $e')),
-                    );
-                  }
+              if (confirm != true) {
+                return; // User cancelled the unmatch
+              }
+
+              // Show loading dialog
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (BuildContext context) {
+                  return WillPopScope(
+                    onWillPop: () async => false,
+                    child: AlertDialog(
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Unmatching...'),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+
+              try {
+                await _chatService.unmatch(widget.chatId);
+                if (mounted) {
+                  Navigator.of(context).pop(); // Close the loading dialog
+                  Navigator.of(context).pop(); // Close the match details dialog
+                  Navigator.of(context).pop(); // Go back to chat list
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.of(context).pop(); // Close the loading dialog
+                  // Show a user-friendly error message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Unable to unmatch at this time. Please try again later.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                 }
               }
             },
             child: Text(
               'Unmatch',
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: Colors.red),
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(),
             child: Text('Close'),
           ),
         ],

@@ -7,8 +7,7 @@ import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:logging/logging.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geolocator/geolocator.dart';
+
 
 class ChatPage extends StatefulWidget {
   final String chatPersonName;
@@ -376,120 +375,7 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  Future<void> _shareLocation() async {
-    try {
-      // Check location permission
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permission denied')),
-          );
-          return;
-        }
-      }
-      
-      if (permission == LocationPermission.deniedForever) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Location permissions are permanently denied, please enable them in settings'),
-          ),
-        );
-        return;
-      }
-
-      // Check if location service is enabled
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enable location services')),
-        );
-        return;
-      }
-
-      // Show loading indicator
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const PopScope(
-            canPop: false,
-            child: AlertDialog(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Getting location...'),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-
-      // Get current location
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      if (!mounted) return;
-      Navigator.pop(context); // Dismiss loading dialog
-
-      // Show map dialog
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Share Location'),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 300,
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: LatLng(position.latitude, position.longitude),
-                  zoom: 15,
-                ),
-                markers: {
-                  Marker(
-                    markerId: const MarkerId('current_location'),
-                    position: LatLng(position.latitude, position.longitude),
-                  ),
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  await _chatService.sendMessage(
-                    widget.chatId,
-                    '📍 Shared Location\nhttps://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}',
-                  );
-                },
-                child: const Text('Share'),
-              ),
-            ],
-          );
-        },
-      );
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context); // Dismiss loading dialog if still showing
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to get location: $e')),
-      );
-    }
-  }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -802,12 +688,6 @@ class _ChatPageState extends State<ChatPage> {
                     onPressed: _pickAndSendImage,
                     color: const Color(0xFF6C9BCF),
                     tooltip: 'Send image',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.location_on),
-                    onPressed: _shareLocation,
-                    color: const Color(0xFF6C9BCF),
-                    tooltip: 'Share location',
                   ),
                   Expanded(
                     child: Container(

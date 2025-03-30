@@ -8,6 +8,7 @@ import '../Widget/bottom_navigation_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
+import 'dart:math' as math;
 
 class ProfileDisplayPage extends ConsumerStatefulWidget {
   final String? userId; // Optional - if null, show current user's profile
@@ -28,16 +29,18 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
   late Animation<double> _fadeAnimation;
   bool _isLoading = true;
   Map<String, dynamic>? _userProfile;
+  double? _distance;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 800), // Increased duration for smoother animation
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut, // Smoother curve
     );
 
     // Fetch profile data and image when the page is loaded
@@ -48,6 +51,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
         _isLoading = false;
       });
       _animationController.forward();
+      _calculateDistance();
     });
   }
 
@@ -91,6 +95,70 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
     } catch (e) {
       _logger.warning('Error loading profile image: $e');
     }
+  }
+
+  Future<void> _calculateDistance() async {
+    if (widget.userId == null) return; // Don't calculate for own profile
+
+    try {
+      // Get current user's location
+      final currentUserDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(FirebaseAuth.instance.currentUser?.uid)
+          .get();
+      
+      // Get partner's location
+      final partnerDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.userId)
+          .get();
+
+      final currentUserData = currentUserDoc.data();
+      final partnerData = partnerDoc.data();
+
+      if (currentUserData != null && 
+          partnerData != null && 
+          currentUserData['location'] != null && 
+          partnerData['location'] != null) {
+        
+        final currentLocation = currentUserData['location'] as Map<String, dynamic>;
+        final partnerLocation = partnerData['location'] as Map<String, dynamic>;
+
+        final distance = _calculateDistanceBetween(
+          currentLocation['latitude'] as double,
+          currentLocation['longitude'] as double,
+          partnerLocation['latitude'] as double,
+          partnerLocation['longitude'] as double,
+        );
+
+        setState(() {
+          _distance = distance;
+        });
+      }
+    } catch (e) {
+      _logger.warning('Error calculating distance: $e');
+    }
+  }
+
+  double _calculateDistanceBetween(
+      double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371; // Earth's radius in kilometers
+
+    double dLat = _toRadians(lat2 - lat1);
+    double dLon = _toRadians(lon2 - lon1);
+
+    double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
+    double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  double _toRadians(double degree) {
+    return degree * (math.pi / 180);
   }
 
   @override
@@ -138,138 +206,128 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
           : FadeTransition(
               opacity: _fadeAnimation,
               child: CustomScrollView(
+                physics: const BouncingScrollPhysics(), // Smoother scrolling
                 slivers: [
                   SliverAppBar(
-                    expandedHeight: 300.0,
+                    expandedHeight: 450.0, // Slightly increased for better spacing
                     floating: false,
                     pinned: true,
+                    stretch: true, // Enable stretching
                     backgroundColor: const Color(0xFF6C9BCF),
-                    title: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Mingle',
-                            style: TextStyle(
-                              color: Color(0xFF6C9BCF),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
-                          ),
-                        ),
-                        const Text(
-                          'Profile',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Color(0xFF6C9BCF),
-                              Color(0xFF4A90E2),
-                            ],
-                          ),
-                        ),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const SizedBox(
-                                  height: 60), // Add space for the app bar
-                              Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withAlpha(51),
-                                      blurRadius: 15,
-                                      offset: const Offset(0, 5),
-                                    ),
-                                  ],
-                                ),
-                                child: CircleAvatar(
-                                  radius: 75,
-                                  backgroundColor: Colors.white,
-                                  backgroundImage: _imageUrl != null
-                                      ? MemoryImage(base64Decode(_imageUrl!))
-                                      : null,
-                                  child: _imageUrl == null
-                                      ? const Icon(
-                                          Icons.person,
-                                          size: 75,
-                                          color: Colors.grey,
-                                        )
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                profile['name'] ?? 'No Name',
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 12,
-                                runSpacing: 8,
-                                alignment: WrapAlignment.center,
-                                children: [
-                                  if ((profile['gender'] as List<dynamic>?)
-                                          ?.isNotEmpty ??
-                                      false)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withAlpha(51),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        "Gender: ${(profile['gender'] as List<dynamic>).first}",
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  if (profile['age']?.isNotEmpty ?? false)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withAlpha(51),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        "Age: ${profile['age']}",
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
+                    flexibleSpace: LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints constraints) {
+                        final double percentage = ((constraints.maxHeight - kToolbarHeight) /
+                            (450.0 - kToolbarHeight))
+                            .clamp(0.0, 1.0);
+                        return FlexibleSpaceBar(
+                          background: Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Color(0xFF6C9BCF),
+                                  Color(0xFF4A90E2),
                                 ],
                               ),
-                            ],
+                            ),
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 300),
+                              opacity: percentage,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(height: 60 * percentage),
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 300),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withAlpha((51 * percentage).toInt()),
+                                          blurRadius: 15 * percentage,
+                                          offset: Offset(0, 5 * percentage),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Hero(
+                                      tag: 'profile-${widget.userId ?? "current"}',
+                                      child: CircleAvatar(
+                                        radius: 75 * percentage,
+                                        backgroundColor: Colors.white,
+                                        backgroundImage: _imageUrl != null
+                                            ? MemoryImage(base64Decode(_imageUrl!))
+                                            : null,
+                                        child: _imageUrl == null
+                                            ? Icon(
+                                                Icons.person,
+                                                size: 75 * percentage,
+                                                color: Colors.grey,
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  AnimatedDefaultTextStyle(
+                                    duration: const Duration(milliseconds: 300),
+                                    style: TextStyle(
+                                      fontFamily: 'Itim',
+                                      fontSize: 28 * percentage,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                    child: Text(profile['name'] ?? 'No Name'),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  // Info Cards with animated container
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 300),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16 * percentage,
+                                      vertical: 8 * percentage,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        // Gender and Age Row
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            if ((profile['gender'] as List<dynamic>?)?.isNotEmpty ?? false)
+                                              Expanded(
+                                                child: _buildInfoCard(
+                                                  "Gender: ${(profile['gender'] as List<dynamic>).first}",
+                                                  percentage,
+                                                ),
+                                              ),
+                                            const SizedBox(width: 8),
+                                            if (profile['age']?.isNotEmpty ?? false)
+                                              Expanded(
+                                                child: _buildInfoCard(
+                                                  "Age: ${profile['age']}",
+                                                  percentage,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        // Distance Card
+                                        if (_distance != null && widget.userId != null)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 8),
+                                            child: _buildInfoCard(
+                                              "Distance: ${_distance!.toStringAsFixed(1)} km",
+                                              percentage,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -277,58 +335,64 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         children: [
-                          if (profile['bio']?.isNotEmpty ?? false)
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(16.0),
-                              margin: const EdgeInsets.only(bottom: 16.0),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.withAlpha(25),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Row(
-                                    children: [
-                                      Icon(
-                                        Icons.edit_note,
-                                        color: Color(0xFF6C9BCF),
-                                        size: 24,
-                                      ),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        "Bio",
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF333333),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    profile['bio'] as String,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Color(0xFF666666),
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16.0),
+                            margin: const EdgeInsets.only(bottom: 16.0),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withAlpha(25),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.edit_note,
+                                      color: Color(0xFF6C9BCF),
+                                      size: 24,
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      "Bio",
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF333333),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  profile['bio']?.isNotEmpty == true
+                                      ? profile['bio'] as String
+                                      : "This user hasn't written a bio yet.",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: profile['bio']?.isNotEmpty == true
+                                        ? const Color(0xFF666666)
+                                        : Colors.grey,
+                                    height: 1.5,
+                                    fontStyle: profile['bio']?.isNotEmpty == true
+                                        ? FontStyle.normal
+                                        : FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           _buildProfileDisplay(profile),
                           const SizedBox(height: 24),
-                          Container(
+                          if (widget.userId == null) Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
@@ -346,26 +410,20 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                               ],
                             ),
                             child: ElevatedButton(
-                              onPressed: widget.userId == null
-                                  ? () {
-                                      NavigationService().navigateToReplacement(
-                                          '/editProfile');
-                                    }
-                                  : null,
+                              onPressed: () {
+                                NavigationService().navigateToReplacement('/editProfile');
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.transparent,
                                 shadowColor: Colors.transparent,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: Text(
-                                widget.userId == null
-                                    ? "Edit Profile"
-                                    : "View Profile",
-                                style: const TextStyle(
+                              child: const Text(
+                                "Edit Profile",
+                                style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -462,6 +520,29 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildInfoCard(String text, double percentage) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: EdgeInsets.symmetric(
+        horizontal: 16 * percentage,
+        vertical: 8 * percentage,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha((51 * percentage).toInt()),
+        borderRadius: BorderRadius.circular(20 * percentage),
+      ),
+      child: AnimatedDefaultTextStyle(
+        duration: const Duration(milliseconds: 300),
+        style: TextStyle(
+          fontSize: 18 * percentage,
+          color: Colors.white,
+        ),
+        textAlign: TextAlign.center,
+        child: Text(text),
+      ),
     );
   }
 

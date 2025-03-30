@@ -281,9 +281,23 @@ class _AuthPageState extends ConsumerState<AuthPage>
   }
 
   Future<void> _storeUserData(String uid) async {
+    // Calculate age from birthday
+    final parts = _birthdayController.text.split('/');
+    final birthDate = DateTime(
+      int.parse(parts[2]), // year
+      int.parse(parts[1]), // month
+      int.parse(parts[0]), // day
+    );
+    final today = DateTime.now();
+    int age = today.year - birthDate.year;
+    // Adjust age if birthday hasn't occurred this year
+    if (today.month < birthDate.month ||
+        (today.month == birthDate.month && today.day < birthDate.day)) {
+      age--;
+    }
+
     // Request location permission
-    bool hasLocationPermission =
-        await LocationService.checkLocationPermission();
+    bool hasLocationPermission = await LocationService.checkLocationPermission();
     Map<String, dynamic>? locationData;
 
     if (hasLocationPermission) {
@@ -302,6 +316,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
       'email': _emailController.text,
       'name': _nameController.text,
       'birthday': _birthdayController.text,
+      'age': age.toString(), // Add age field
       'gender': [_selectedGender!],
       'createdAt': FieldValue.serverTimestamp(),
       'uid': uid,

@@ -116,7 +116,9 @@ class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderSt
               surface: Colors.white,
               onSurface: Colors.black,
             ),
-            dialogBackgroundColor: Colors.white,
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Colors.white,
+            ),
           ),
           child: child!,
         );

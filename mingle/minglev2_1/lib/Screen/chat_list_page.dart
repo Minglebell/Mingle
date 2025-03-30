@@ -124,6 +124,7 @@ class _ChatListPageState extends State<ChatListPage> {
       appBar: const CustomAppBar(
         title: 'Chat',
       ),
+      backgroundColor: Colors.white, // Changed to white to match search field
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _currentPageIndex,
         onDestinationSelected: (int index) {
@@ -141,25 +142,46 @@ class _ChatListPageState extends State<ChatListPage> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withAlpha(25),
+                  spreadRadius: 1,
+                  blurRadius: 3,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by name...',
-                prefixIcon: const Icon(Icons.search),
+                hintText: 'Search conversations...',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide.none,
                 ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear, color: Colors.blue),
                         onPressed: _clearSearch,
                       )
                     : null,
                 filled: true,
-                fillColor: Colors.grey[100],
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: const BorderSide(color: Colors.blue),
+                ),
               ),
             ),
           ),
@@ -168,10 +190,17 @@ class _ChatListPageState extends State<ChatListPage> {
               stream: _chatsStream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return const Center(
-                    child: Text(
-                      'Something went wrong',
-                      style: TextStyle(color: Colors.red),
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Something went wrong',
+                          style: TextStyle(color: Colors.red[300], fontSize: 16),
+                        ),
+                      ],
                     ),
                   );
                 }
@@ -180,6 +209,7 @@ class _ChatListPageState extends State<ChatListPage> {
                   return const Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                      strokeWidth: 3,
                     ),
                   );
                 }
@@ -191,13 +221,26 @@ class _ChatListPageState extends State<ChatListPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 80,
+                          color: Colors.grey[300],
+                        ),
                         const SizedBox(height: 16),
                         Text(
-                          'No chats yet',
+                          'No conversations yet',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
                             color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Start matching to begin chatting!',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[400],
                           ),
                         ),
                       ],
@@ -206,8 +249,52 @@ class _ChatListPageState extends State<ChatListPage> {
                 }
 
                 return ListView.builder(
-                  itemCount: chats.length,
+                  padding: const EdgeInsets.only(top: 8),
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: chats.length + 1, // +1 for potential "no results" message
                   itemBuilder: (context, index) {
+                    if (index == chats.length) {
+                      return FutureBuilder<int>(
+                        future: Future.wait(
+                          chats.map((chat) async {
+                            final chatData = chat.data() as Map<String, dynamic>;
+                            final participants = List<String>.from(chatData['participants'] ?? []);
+                            final name = await _getParticipantName(chat.id, participants);
+                            return _matchesSearch(name) ? 1 : 0;
+                          }),
+                        ).then((values) => values.reduce((a, b) => a + b)),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) return const SizedBox.shrink();
+                          
+                          final visibleItems = snapshot.data ?? 0;
+                          if (visibleItems == 0 && _searchQuery.isNotEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const SizedBox(height: 40),
+                                  Icon(
+                                    Icons.search_off,
+                                    size: 64,
+                                    color: Colors.grey[300],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No results found for "$_searchQuery"',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      );
+                    }
+
                     final chat = chats[index].data() as Map<String, dynamic>;
                     final chatId = chats[index].id;
                     
@@ -235,10 +322,8 @@ class _ChatListPageState extends State<ChatListPage> {
                           orElse: () => '',
                         );
                         
-                        return GestureDetector(
-                          onTap: () {
-                            NavigationService().navigateToChat(chatId, participantName, otherParticipantId);
-                          },
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 1),
                           child: ChatTile(
                             name: participantName,
                             message: lastMessage,
@@ -266,14 +351,16 @@ class _ChatListPageState extends State<ChatListPage> {
     final date = timestamp.toDate();
     final difference = now.difference(date);
 
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
+    if (difference.inDays > 7) {
+      return '${date.day}/${date.month}/${date.year}';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays}d';
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return '${difference.inHours}h';
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+      return '${difference.inMinutes}m';
     } else {
-      return 'Just now';
+      return 'now';
     }
   }
 }

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -385,4 +387,55 @@ class ChatService {
       _logger.severe('Error updating active users: $e');
     }
   }
-} 
+
+  Future<void> sendImageMessage(String chatId, XFile imageFile) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) throw Exception('No authenticated user');
+
+    try {
+      final bytes = await imageFile.readAsBytes();
+      final base64Image = base64Encode(bytes);
+      
+      final now = FieldValue.serverTimestamp();
+      final messageData = {
+        'type': 'image',
+        'image': base64Image,
+        'senderId': currentUser.uid,
+        'timestamp': now,
+        'read': false,
+        'createdAt': now,
+      };
+
+      // Start a batch write
+      final batch = _firestore.batch();
+
+      // Add message to chat
+      final messageRef = _firestore
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .doc();
+      batch.set(messageRef, messageData);
+
+      // Update chat document
+      final chatRef = _firestore.collection('chats').doc(chatId);
+      final updates = {
+        'lastMessage': '📷 Image',
+        'lastMessageTime': now,
+        'lastMessageSenderId': currentUser.uid,
+        'lastReadBy': {
+          currentUser.uid: now,
+        },
+      };
+
+      batch.update(chatRef, updates);
+
+      // Commit the batch
+      await batch.commit();
+      _logger.info('Image message sent successfully to chat $chatId');
+    } catch (e) {
+      _logger.severe('Error sending image message: $e');
+      throw Exception('Failed to send image message: $e');
+    }
+  }
+}

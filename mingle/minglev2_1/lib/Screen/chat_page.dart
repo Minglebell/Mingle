@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:logging/logging.dart';
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 
 class ChatPage extends StatefulWidget {
   final String chatPersonName;
@@ -34,6 +35,7 @@ class _ChatPageState extends State<ChatPage> {
   bool _hasMarkedMessagesAsRead = false;
   StreamSubscription? _chatSubscription;
   Map<String, dynamic> _matchDetails = {};
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -305,109 +307,144 @@ class _ChatPageState extends State<ChatPage> {
     NavigationService().navigateToProfile(widget.partnerId);
   }
 
+  Future<void> _pickAndSendImage() async {
+    try {
+      final XFile? pickedImage = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedImage != null && mounted) {
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return const PopScope(
+              canPop: false,
+              child: AlertDialog(
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Sending image...'),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+
+        try {
+          await _chatService.sendImageMessage(widget.chatId, pickedImage);
+          if (!mounted) return;
+          Navigator.pop(context); // Dismiss loading dialog
+        } catch (e) {
+          if (!mounted) return;
+          Navigator.pop(context); // Dismiss loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to send image: $e')),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error picking image: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.blue,
-        elevation: 2,
-        title: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.blue),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: GestureDetector(
+          onTap: _navigateToProfile,
           child: Row(
             children: [
-              GestureDetector(
-                onTap: _navigateToProfile,
-                child: FutureBuilder<DocumentSnapshot>(
-                  future: FirebaseFirestore.instance.collection('users').doc(widget.partnerId).get(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return CircleAvatar(
+              FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance.collection('users').doc(widget.partnerId).get(),
+                builder: (context, snapshot) {
+                  return Stack(
+                    children: [
+                      CircleAvatar(
                         radius: 20,
-                        backgroundColor: Colors.white,
-                        child: Text(
-                          widget.chatPersonName[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage: snapshot.hasData && (snapshot.data?.data() as Map<String, dynamic>?)?['profileImage'] != null
+                            ? MemoryImage(base64Decode((snapshot.data?.data() as Map<String, dynamic>)['profileImage']))
+                            : null,
+                        child: (!snapshot.hasData || (snapshot.data?.data() as Map<String, dynamic>?)?['profileImage'] == null)
+                            ? Text(
+                                widget.chatPersonName[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            border: Border.all(color: Colors.white, width: 2),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                         ),
-                      );
-                    }
-
-                    final userData = snapshot.data?.data() as Map<String, dynamic>?;
-                    final profileImage = userData?['profileImage'];
-
-                    return CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.white,
-                      backgroundImage: profileImage != null
-                          ? MemoryImage(base64Decode(profileImage))
-                          : null,
-                      child: profileImage == null
-                          ? Text(
-                              widget.chatPersonName[0].toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          : null,
-                    );
-                  },
-                ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: GestureDetector(
-                  onTap: _navigateToProfile,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.chatPersonName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.chatPersonName,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
-                      Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'Online',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
+                    ),
+                    const Text(
+                      'Online',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 12,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.more_vert),
-                onPressed: _showMatchDetails,
-                color: Colors.white,
               ),
             ],
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: Colors.blue),
+            onPressed: _showMatchDetails,
+          ),
+        ],
       ),
       body: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-        ),
+        color: Colors.grey[50], // Light grey background for better contrast
         child: Column(
           children: [
             Expanded(
@@ -415,15 +452,55 @@ class _ChatPageState extends State<ChatPage> {
                 stream: _messagesStream,
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Something went wrong',
+                            style: TextStyle(color: Colors.red[300], fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    );
                   }
 
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6C9BCF)),
+                      ),
+                    );
                   }
 
                   final messages = snapshot.data?.docs ?? [];
                   final currentUserId = _auth.currentUser?.uid;
+
+                  if (messages.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline, 
+                            size: 48, 
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No messages yet\nStart the conversation!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
                   return ListView.builder(
                     controller: _scrollController,
@@ -435,7 +512,7 @@ class _ChatPageState extends State<ChatPage> {
                       final isMe = message['senderId'] == currentUserId;
                       final timestamp = message['timestamp'] as Timestamp?;
                       final timeString = timestamp != null 
-                          ? '${timestamp.toDate().hour}:${timestamp.toDate().minute.toString().padLeft(2, '0')}'
+                          ? '${timestamp.toDate().hour.toString().padLeft(2, '0')}:${timestamp.toDate().minute.toString().padLeft(2, '0')}'
                           : '';
 
                       return Align(
@@ -444,17 +521,17 @@ class _ChatPageState extends State<ChatPage> {
                           constraints: BoxConstraints(
                             maxWidth: MediaQuery.of(context).size.width * 0.75,
                           ),
-                          margin: const EdgeInsets.only(bottom: 12),
+                          margin: EdgeInsets.only(
+                            bottom: 8,
+                            left: isMe ? 50 : 0,
+                            right: isMe ? 0 : 50,
+                          ),
                           child: Column(
                             crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
                                 decoration: BoxDecoration(
-                                  color: isMe ? Colors.blue : Colors.white,
+                                  color: isMe ? const Color(0xFF6C9BCF) : Colors.white,
                                   borderRadius: BorderRadius.only(
                                     topLeft: const Radius.circular(16),
                                     topRight: const Radius.circular(16),
@@ -463,53 +540,76 @@ class _ChatPageState extends State<ChatPage> {
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withAlpha(15),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 3,
+                                      offset: const Offset(0, 1),
                                     ),
                                   ],
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(16),
+                                    topRight: const Radius.circular(16),
+                                    bottomLeft: Radius.circular(isMe ? 16 : 4),
+                                    bottomRight: Radius.circular(isMe ? 4 : 16),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (message['type'] == 'image')
+                                        GestureDetector(
+                                          onTap: () => _showFullScreenImage(message['image']),
+                                          child: Container(
+                                            constraints: BoxConstraints(
+                                              maxHeight: MediaQuery.of(context).size.height * 0.3,
+                                            ),
+                                            child: Image.memory(
+                                              base64Decode(message['image']),
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          child: Text(
+                                            message['text'] ?? '',
+                                            style: TextStyle(
+                                              color: isMe ? Colors.white : Colors.black87,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      message['text'] ?? '',
+                                      timeString,
                                       style: TextStyle(
-                                        color: isMe ? Colors.white : Colors.black87,
-                                        fontSize: 16,
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
                                       ),
                                     ),
-                                    if (timeString.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        timeString,
-                                        style: TextStyle(
-                                          color: isMe ? Colors.white70 : Colors.grey[600],
-                                          fontSize: 12,
-                                        ),
+                                    if (isMe) ...[
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        message['read'] == true ? Icons.done_all : Icons.done,
+                                        size: 16,
+                                        color: message['read'] == true ? const Color(0xFF6C9BCF) : Colors.grey[600],
                                       ),
                                     ],
                                   ],
                                 ),
                               ),
-                              if (isMe && message['read'] == true && index == 0)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4, right: 4),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.done_all, size: 16, color: Colors.blue),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Read',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                             ],
                           ),
                         ),
@@ -524,49 +624,82 @@ class _ChatPageState extends State<ChatPage> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withAlpha(15),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 3,
+                    offset: const Offset(0, -1),
                   ),
                 ],
               ),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.photo_library),
+                    onPressed: _pickAndSendImage,
+                    color: const Color(0xFF6C9BCF),
+                    tooltip: 'Send image',
+                  ),
                   Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: 'Type a message...',
-                        hintStyle: TextStyle(color: Colors.grey[400]),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: const InputDecoration(
+                          hintText: 'Type a message...',
+                          hintStyle: TextStyle(color: Colors.grey),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
+                        maxLines: null,
+                        textCapitalization: TextCapitalization.sentences,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.blue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white),
-                      onPressed: _sendMessage,
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: _sendMessage,
+                    color: const Color(0xFF6C9BCF),
+                    tooltip: 'Send message',
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showFullScreenImage(String base64Image) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.memory(
+                base64Decode(base64Image),
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
         ),
       ),
     );

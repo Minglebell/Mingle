@@ -3,7 +3,6 @@ import '../Widget/bottom_navigation_bar.dart';
 import 'package:minglev2_1/Screen/chat_list_page.dart';
 import 'package:minglev2_1/Screen/profile_display_page.dart';
 import 'package:minglev2_1/Screen/match_menu_page.dart';
-import 'not_found_page.dart';
 import 'package:minglev2_1/Services/navigation_services.dart';
 import 'package:minglev2_1/Widget/custom_app_bar.dart';
 import 'package:minglev2_1/services/request_matching_service.dart';
@@ -12,7 +11,6 @@ import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'dart:async';
 
 class SearchingPage extends StatefulWidget {
   final String selectedGender;
@@ -49,8 +47,6 @@ class _SearchingPageState extends State<SearchingPage>
   Map<String, dynamic>? _matchedUser;
   bool _matchFound = false;
   final _logger = Logger('SearchingPage');
-  Timer? _searchTimer;
-  final int _searchTimeoutMinutes = 1; // Adjust timeout duration as needed
 
   @override
   void initState() {
@@ -63,32 +59,6 @@ class _SearchingPageState extends State<SearchingPage>
     _matchingService = RequestMatchingService(context);
 
     _startMatching();
-    _startSearchTimer();
-  }
-
-  void _startSearchTimer() {
-    _searchTimer = Timer(Duration(minutes: _searchTimeoutMinutes), () {
-      if (mounted && !_matchFound) {
-        // Cancel the current request
-        if (_currentRequestId != null) {
-          _matchingService.cancelRequest(_currentRequestId!);
-        }
-
-        // Navigate to not found page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const NotFoundPage(
-              selectedGender: 'Male', // Default value
-              ageRange: RangeValues(18, 100), // Default range
-              maxDistance: 10.0, // Default distance
-              selectedPlace: 'Any', // Default place
-              selectedCategory: 'Any', // Default category
-            ),
-          ),
-        );
-      }
-    });
   }
 
   Future<void> _startMatching() async {
@@ -131,9 +101,6 @@ class _SearchingPageState extends State<SearchingPage>
 
   void _onMatchFound(Map<String, dynamic> matchedUser) {
     if (!mounted) return;
-
-    // Cancel the search timer when match is found
-    _searchTimer?.cancel();
 
     // Check if this match is for the current user
     if (matchedUser['chatId'] != null) {
@@ -214,7 +181,6 @@ class _SearchingPageState extends State<SearchingPage>
 
   @override
   void dispose() {
-    _searchTimer?.cancel(); // Cancel the timer
     _controller.dispose();
     // Cancel the request if it exists
     if (_currentRequestId != null) {

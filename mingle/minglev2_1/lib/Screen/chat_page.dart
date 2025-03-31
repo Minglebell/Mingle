@@ -779,7 +779,7 @@ class _ChatPageState extends State<ChatPage> {
       // Try nearby search with more parameters
       final result = await googlePlace.search.getNearBySearch(
         Location(lat: location.lat, lng: location.lng),
-        5000, // 5km radius
+        10000, // 10km radius
         type: googlePlaceType,
         keyword: category, // Add keyword for better matching
       );
@@ -795,7 +795,7 @@ class _ChatPageState extends State<ChatPage> {
       _logger.info('Trying without type constraint');
       final fallbackResult = await googlePlace.search.getNearBySearch(
         Location(lat: location.lat, lng: location.lng),
-        5000, // 5km radius
+        10000, // 10km radius
         keyword: category, // Use only keyword
       );
 

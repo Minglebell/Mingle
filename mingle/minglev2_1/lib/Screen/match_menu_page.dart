@@ -181,12 +181,15 @@ class _FindMatchPageState extends State<FindMatchPage> {
     "Floating markets": Icons.directions_boat,
   };
 
+  // Add this at the top of the class with other variables
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
     _loadSavedSettings();
     // Start periodic check for expired schedules
-     _scheduleCheckTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+    _scheduleCheckTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
       _checkAndCancelExpiredSchedules();
     });
   }
@@ -635,9 +638,294 @@ class _FindMatchPageState extends State<FindMatchPage> {
     );
   }
 
+  // Modify the handleSuccessfulMatch method
+  void handleSuccessfulMatch(String requestId) {
+    setState(() {
+      // Remove the schedule with matching requestId
+      schedules.removeWhere((schedule) => schedule['requestId'] == requestId);
+    });
+    _saveSettings();
+    
+    // Close any open dialogs
+    if (navigatorKey.currentContext != null) {
+      Navigator.of(navigatorKey.currentContext!).popUntil((route) => route.isFirst);
+    }
+  }
+
+  // Add this method to reset the UI
+  void resetScheduleUI() {
+    setState(() {
+      schedules = [];
+    });
+    _saveSettings();
+  }
+
+  // Modify the _showCompactScheduleDetails method to include a reset button
+  void _showCompactScheduleDetails(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Active Schedules',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        if (schedules.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.refresh, color: Colors.blue),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    title: const Text('Reset All Schedules'),
+                                    content: const Text('Are you sure you want to reset all schedules?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          resetScheduleUI();
+                                          Navigator.of(context).pop(); // Close confirmation dialog
+                                          Navigator.of(context).pop(); // Close schedule details dialog
+                                        },
+                                        child: const Text('Reset', style: TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        Text(
+                          '${schedules.length}/5',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  child: schedules.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No active schedules',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: schedules.length,
+                        itemBuilder: (context, index) {
+                          final schedule = schedules[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: ExpansionTile(
+                              leading: Icon(
+                                timeRanges[schedule['timeRange']]?['icon'] ?? Icons.schedule,
+                                color: Colors.blue,
+                              ),
+                              title: Text(
+                                '${schedule['date'].day}/${schedule['date'].month}/${schedule['date'].year}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(schedule['timeRange'] ?? ''),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () async {
+                                      try {
+                                        if (schedule['requestId'] != null) {
+                                          final matchingService = RequestMatchingService(context);
+                                          await matchingService.cancelRequest(schedule['requestId']);
+                                        }
+                                        
+                                        setState(() {
+                                          schedules.removeAt(index);
+                                        });
+                                        
+                                        await _saveSettings();
+
+                                        // Close the dialog immediately after deletion
+                                        if (!context.mounted) return;
+                                        Navigator.of(context).pop();
+
+                                        // Show success message
+                                        DelightToastBar(
+                                          autoDismiss: true,
+                                          snackbarDuration: const Duration(seconds: 3),
+                                          builder: (context) => const ToastCard(
+                                            leading: Icon(
+                                              Icons.check_circle,
+                                              size: 24,
+                                              color: Colors.green,
+                                            ),
+                                            title: Text(
+                                              'Schedule deleted successfully',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ),
+                                        ).show(context);
+
+                                        // If no schedules left, rebuild the main screen and close any open dialogs
+                                        if (schedules.isEmpty) {
+                                          setState(() {});
+                                          if (context.mounted) {
+                                            Navigator.of(context).popUntil((route) => route.isFirst);
+                                          }
+                                        }
+                                      } catch (e) {
+                                        if (!context.mounted) return;
+                                        DelightToastBar(
+                                          autoDismiss: true,
+                                          snackbarDuration: const Duration(seconds: 3),
+                                          builder: (context) => const ToastCard(
+                                            leading: Icon(
+                                              Icons.error,
+                                              size: 24,
+                                              color: Colors.red,
+                                            ),
+                                            title: Text(
+                                              'Failed to delete schedule',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ),
+                                        ).show(context);
+                                      }
+                                    },
+                                  ),
+                                  const Icon(Icons.expand_more),
+                                ],
+                              ),
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _buildDetailRow(
+                                        Icons.category,
+                                        'Category',
+                                        _formatCategory(schedule['category']),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildDetailRow(
+                                        Icons.place,
+                                        'Place',
+                                        schedule['place'] ?? '',
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildDetailRow(
+                                        Icons.person,
+                                        'Preferred Gender',
+                                        schedule['gender'] ?? '',
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildDetailRow(
+                                        Icons.person_outline,
+                                        'Age Range',
+                                        '${schedule['ageRange']?['start']?.round() ?? 20} - ${schedule['ageRange']?['end']?.round() ?? 30} years',
+                                      ),
+                                      const SizedBox(height: 8),
+                                      _buildDetailRow(
+                                        Icons.social_distance,
+                                        'Distance',
+                                        '${(schedule['distance'] ?? 10).round()} km',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Add this new helper method
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Colors.blue),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: navigatorKey,
       appBar: const CustomAppBar(
         title: 'Find Partner',
       ),
@@ -656,54 +944,104 @@ class _FindMatchPageState extends State<FindMatchPage> {
           }
         },
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade50, Colors.white],
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.blue.shade50, Colors.white],
+              ),
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle('Select Category'),
+                  const SizedBox(height: 12),
+                  _buildCategorySelection(),
+                  
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Select Place'),
+                  const SizedBox(height: 12),
+                  if (selectedCategory != null && placeData[selectedCategory] != null)
+                    _buildPlaceChips(placeData[selectedCategory]!),
+                  
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Select Gender'),
+                  const SizedBox(height: 12),
+                  _buildGenderSelection(),
+                  
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Age Range'),
+                  const SizedBox(height: 8),
+                  _buildAgeRangeSlider(),
+                  
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Distance'),
+                  const SizedBox(height: 8),
+                  _buildDistanceSlider(),
+                  
+                  const SizedBox(height: 24),
+                  _buildScheduleSection(),
+                  
+                  // Add padding at the bottom to prevent content from being hidden behind the floating button
+                  const SizedBox(height: 80),
+                ],
+              ),
+            ),
           ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('Select Category'),
-              const SizedBox(height: 12),
-              _buildCategorySelection(),
-              
-              const SizedBox(height: 24),
-              _buildSectionTitle('Select Place'),
-              const SizedBox(height: 12),
-              if (selectedCategory != null && placeData[selectedCategory] != null)
-                _buildPlaceChips(placeData[selectedCategory]!),
-              
-              const SizedBox(height: 24),
-              _buildSectionTitle('Select Gender'),
-              const SizedBox(height: 12),
-              _buildGenderSelection(),
-              
-              const SizedBox(height: 24),
-              _buildSectionTitle('Age Range'),
-              const SizedBox(height: 8),
-              _buildAgeRangeSlider(),
-              
-              const SizedBox(height: 24),
-              _buildSectionTitle('Distance'),
-              const SizedBox(height: 8),
-              _buildDistanceSlider(),
-              
-              const SizedBox(height: 24),
-              _buildScheduleSection(),
-              
-              const SizedBox(height: 32),
-              _buildMatchButton(context),
-              
-              const SizedBox(height: 20),
-            ],
+          // Add floating schedule count widget
+          if (schedules.isNotEmpty)
+            Positioned(
+              top: 16,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => _showCompactScheduleDetails(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.schedule,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${schedules.length}/5',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: _buildMatchButton(context),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -977,163 +1315,38 @@ class _FindMatchPageState extends State<FindMatchPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Scheduled Matches',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: schedules.length,
-              itemBuilder: (context, index) {
-                final schedule = schedules[index];
-                return Dismissible(
-                  key: Key(schedule['requestId'] ?? DateTime.now().toString()),
-                  direction: DismissDirection.endToStart,
-                  background: Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20.0),
-                    color: Colors.red,
-                    child: const Icon(
-                      Icons.delete,
-                      color: Colors.white,
-                    ),
-                  ),
-                  onDismissed: (direction) async {
-                    try {
-                      if (schedule['requestId'] != null) {
-                        final matchingService = RequestMatchingService(context);
-                        await matchingService.cancelRequest(schedule['requestId']);
-                      }
-                      
-                      setState(() {
-                        schedules.removeAt(index);
-                      });
-                      
-                      await _saveSettings();
-
-                      if (!context.mounted) return;
-                      DelightToastBar(
-                        autoDismiss: true,
-                        snackbarDuration: const Duration(seconds: 3),
-                        builder: (context) => const ToastCard(
-                          leading: Icon(
-                            Icons.check_circle,
-                            size: 24,
-                            color: Colors.green,
-                          ),
-                          title: Text(
-                            'Schedule deleted successfully',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ).show(context);
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      DelightToastBar(
-                        autoDismiss: true,
-                        snackbarDuration: const Duration(seconds: 3),
-                        builder: (context) => const ToastCard(
-                          leading: Icon(
-                            Icons.error,
-                            size: 24,
-                            color: Colors.red,
-                          ),
-                          title: Text(
-                            'Failed to delete schedule',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ).show(context);
-                    }
-                  },
-                  child: ListTile(
-                    leading: Icon(timeRanges[schedule['timeRange']]?['icon'] ?? Icons.schedule),
-                    title: Text('${schedule['date'].day}/${schedule['date'].month}/${schedule['date'].year}'),
-                    subtitle: Text(schedule['timeRange'] ?? ''),
-                    onTap: () => _showScheduleDetailsDialog(context, schedule),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () async {
-                        try {
-                          if (schedule['requestId'] != null) {
-                            final matchingService = RequestMatchingService(context);
-                            await matchingService.cancelRequest(schedule['requestId']);
-                          }
-                          
-                          setState(() {
-                            schedules.removeAt(index);
-                          });
-                          
-                          await _saveSettings();
-
-                          if (!context.mounted) return;
-                          DelightToastBar(
-                            autoDismiss: true,
-                            snackbarDuration: const Duration(seconds: 3),
-                            builder: (context) => const ToastCard(
-                              leading: Icon(
-                                Icons.check_circle,
-                                size: 24,
-                                color: Colors.green,
-                              ),
-                              title: Text(
-                                'Schedule deleted successfully',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ).show(context);
-                        } catch (e) {
-                          if (!context.mounted) return;
-                          DelightToastBar(
-                            autoDismiss: true,
-                            snackbarDuration: const Duration(seconds: 3),
-                            builder: (context) => const ToastCard(
-                              leading: Icon(
-                                Icons.error,
-                                size: 24,
-                                color: Colors.red,
-                              ),
-                              title: Text(
-                                'Failed to delete schedule',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ).show(context);
-                        }
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-            if (schedules.length < 5)
-              Center(
-                child: TextButton.icon(
-                  onPressed: () => _addSchedule(context),
-                  icon: const Icon(Icons.add, color: Colors.blue),
-                  label: const Text(
-                    'Add Schedule',
-                    style: TextStyle(color: Colors.blue),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Scheduled Matches',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
+                if (schedules.isNotEmpty)
+                  Text(
+                    '${schedules.length}/5',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => _addSchedule(context),
+                icon: const Icon(Icons.add, color: Colors.blue),
+                label: const Text(
+                  'Add Schedule',
+                  style: TextStyle(color: Colors.blue),
+                ),
               ),
+            ),
           ],
         ),
       ),
@@ -1171,7 +1384,7 @@ class _FindMatchPageState extends State<FindMatchPage> {
         minimumSize: const Size(double.infinity, 50),
       ),
       child: const Text(
-        'Find Match Now',
+        'Matching',
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,

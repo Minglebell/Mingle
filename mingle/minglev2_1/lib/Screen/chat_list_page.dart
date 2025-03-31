@@ -123,8 +123,21 @@ class _ChatListPageState extends State<ChatListPage> {
   Widget _buildNewMatchesList(List<QueryDocumentSnapshot> allChats) {
     final newMatches = allChats.where((chat) {
       final chatData = chat.data() as Map<String, dynamic>;
-      return chatData['lastMessage'] == null;
+      // Only show in new matches if there are no messages and no lastMessageTime
+      return chatData['lastMessage'] == null && chatData['lastMessageTime'] == null;
     }).toList();
+
+    // Sort new matches by createdAt timestamp in descending order
+    newMatches.sort((a, b) {
+      final aData = a.data() as Map<String, dynamic>;
+      final bData = b.data() as Map<String, dynamic>;
+      final aTimestamp = aData['createdAt'] as Timestamp?;
+      final bTimestamp = bData['createdAt'] as Timestamp?;
+      
+      if (aTimestamp == null) return 1;
+      if (bTimestamp == null) return -1;
+      return bTimestamp.compareTo(aTimestamp);
+    });
 
     if (newMatches.isEmpty) return const SizedBox.shrink();
 
@@ -167,13 +180,10 @@ class _ChatListPageState extends State<ChatListPage> {
 
                     return GestureDetector(
                       onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/chat',
-                          arguments: {
-                            'chatId': chatId,
-                            'partnerId': otherParticipantId,
-                          },
+                        NavigationService().navigateToChat(
+                          chatId,
+                          participantName,
+                          otherParticipantId,
                         );
                       },
                       child: Container(
@@ -380,6 +390,20 @@ class _ChatListPageState extends State<ChatListPage> {
                 return Column(
                   children: [
                     _buildNewMatchesList(chats),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Messages',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ),
+                    ),
                     Expanded(
                       child: ListView.builder(
                         padding: const EdgeInsets.only(top: 8),
@@ -434,6 +458,11 @@ class _ChatListPageState extends State<ChatListPage> {
 
                           final chat = chats[index].data() as Map<String, dynamic>;
                           final chatId = chats[index].id;
+
+                          // Skip if this is a new match (no messages)
+                          if (chat['lastMessage'] == null) {
+                            return const SizedBox.shrink();
+                          }
 
                           final lastMessage = chat['lastMessage'] ?? '';
                           final lastMessageTime =

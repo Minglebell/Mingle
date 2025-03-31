@@ -413,6 +413,32 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                                     ),
                                     child: Text(profile['name'] ?? 'No Name'),
                                   ),
+                                  const SizedBox(height: 8),
+                                  // Add Rating Display
+                                  if (profile['averageRating'] != null)
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        ...List.generate(5, (index) {
+                                          return Icon(
+                                            index < (profile['averageRating'] as double).round()
+                                                ? Icons.star
+                                                : Icons.star_border,
+                                            color: Colors.amber,
+                                            size: 24 * percentage,
+                                          );
+                                        }),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${(profile['averageRating'] as double).toStringAsFixed(1)}',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 18 * percentage,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   const SizedBox(height: 16),
                                   // Info Cards with animated container
                                   AnimatedContainer(
@@ -469,6 +495,62 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16.0),
+                            margin: const EdgeInsets.only(bottom: 16.0),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withAlpha(25),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.edit_note,
+                                      color: Color(0xFF6C9BCF),
+                                      size: 24,
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      "Bio",
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF333333),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  profile['bio']?.isNotEmpty == true
+                                      ? profile['bio'] as String
+                                      : "This user hasn't written a bio yet.",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: profile['bio']?.isNotEmpty == true
+                                        ? const Color(0xFF666666)
+                                        : Colors.grey,
+                                    height: 1.5,
+                                    fontStyle: profile['bio']?.isNotEmpty == true
+                                        ? FontStyle.normal
+                                        : FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _buildProfileDisplay(profile),
                           // Add Rating Widget if viewing another user's profile
                           if (widget.userId != null) ...[
                             Container(
@@ -540,62 +622,6 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                               ),
                             ),
                           ],
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16.0),
-                            margin: const EdgeInsets.only(bottom: 16.0),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withAlpha(25),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Row(
-                                  children: [
-                                    Icon(
-                                      Icons.edit_note,
-                                      color: Color(0xFF6C9BCF),
-                                      size: 24,
-                                    ),
-                                    SizedBox(width: 12),
-                                    Text(
-                                      "Bio",
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF333333),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  profile['bio']?.isNotEmpty == true
-                                      ? profile['bio'] as String
-                                      : "This user hasn't written a bio yet.",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: profile['bio']?.isNotEmpty == true
-                                        ? const Color(0xFF666666)
-                                        : Colors.grey,
-                                    height: 1.5,
-                                    fontStyle: profile['bio']?.isNotEmpty == true
-                                        ? FontStyle.normal
-                                        : FontStyle.italic,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _buildProfileDisplay(profile),
                           const SizedBox(height: 24),
                           if (widget.userId == null) Container(
                             width: double.infinity,

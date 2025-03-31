@@ -9,7 +9,6 @@ import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_place/google_place.dart';
 
-
 class ChatPage extends StatefulWidget {
   final String chatPersonName;
   final String chatId;
@@ -39,7 +38,7 @@ class _ChatPageState extends State<ChatPage> {
   Map<String, dynamic> _matchDetails = {};
   final ImagePicker _imagePicker = ImagePicker();
   String? _chatPersonImage;
-  final googlePlace = GooglePlace('AIzaSyAlT7miIyYC-63raU7bT0lxoyUekhTI11o'); 
+  final googlePlace = GooglePlace('AIzaSyAlT7miIyYC-63raU7bT0lxoyUekhTI11o');
   final Map<String, List<SearchResult>> _placesCache = {};
   final Duration _cacheDuration = const Duration(hours: 1);
   final Map<String, DateTime> _cacheTimestamps = {};
@@ -63,7 +62,7 @@ class _ChatPageState extends State<ChatPage> {
           .collection('users')
           .doc(widget.partnerId)
           .get();
-      
+
       if (doc.exists && mounted) {
         setState(() {
           _chatPersonImage = doc.data()?['profileImage'] as String?;
@@ -430,7 +429,7 @@ class _ChatPageState extends State<ChatPage> {
   void _showPlaceRecommendations() async {
     final category = _matchDetails['category'] ?? '';
     final place = _matchDetails['place'] ?? '';
-    
+
     _logger.info('Category: $category, Place: $place'); // Debug log
 
     if (category.isEmpty || place.isEmpty) {
@@ -469,7 +468,8 @@ class _ChatPageState extends State<ChatPage> {
         _logger.warning('No places found for query: $category in $place');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('No places found for $category in $place. Try adjusting your search terms.'),
+            content: Text(
+                'No places found for $category in $place. Try adjusting your search terms.'),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -481,7 +481,7 @@ class _ChatPageState extends State<ChatPage> {
         backgroundColor: Colors.transparent,
         builder: (BuildContext context) {
           return DraggableScrollableSheet(
-            initialChildSize: 0.75, 
+            initialChildSize: 0.75,
             minChildSize: 0.5,
             maxChildSize: 0.95,
             builder: (context, scrollController) {
@@ -526,21 +526,22 @@ class _ChatPageState extends State<ChatPage> {
                       child: FutureBuilder<List<SearchResult>>(
                         future: _getRecommendedPlacesWithCache(category, place),
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
                             return const Center(
                               child: CircularProgressIndicator(),
                             );
                           }
 
                           if (snapshot.hasError) {
-                            _logger.severe('FutureBuilder error: ${snapshot.error}');
+                            _logger.severe(
+                                'FutureBuilder error: ${snapshot.error}');
                             return Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.error_outline, 
-                                       size: 48, 
-                                       color: Colors.red[300]),
+                                  Icon(Icons.error_outline,
+                                      size: 48, color: Colors.red[300]),
                                   const SizedBox(height: 16),
                                   Text(
                                     'Error loading places\n${snapshot.error}',
@@ -556,15 +557,14 @@ class _ChatPageState extends State<ChatPage> {
                           }
 
                           final places = snapshot.data ?? [];
-                          
+
                           if (places.isEmpty) {
                             return Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.search_off, 
-                                       size: 48, 
-                                       color: Colors.grey[400]),
+                                  Icon(Icons.search_off,
+                                      size: 48, color: Colors.grey[400]),
                                   const SizedBox(height: 16),
                                   Text(
                                     'No places found for\n$category in $place',
@@ -606,7 +606,8 @@ class _ChatPageState extends State<ChatPage> {
                                         width: 60,
                                         height: 60,
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                           image: DecorationImage(
                                             image: NetworkImage(
                                               'https://maps.googleapis.com/maps/api/place/photo?maxwidth=100&photo_reference=${place.photos![0].photoReference}&key=AIzaSyAlT7miIyYC-63raU7bT0lxoyUekhTI11o',
@@ -621,7 +622,8 @@ class _ChatPageState extends State<ChatPage> {
                                         height: 60,
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFE8F1FF),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: const Icon(
                                           Icons.place,
@@ -632,7 +634,8 @@ class _ChatPageState extends State<ChatPage> {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             place.name ?? 'Unnamed Place',
@@ -641,7 +644,8 @@ class _ChatPageState extends State<ChatPage> {
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
-                                          if (place.formattedAddress != null) ...[
+                                          if (place.formattedAddress !=
+                                              null) ...[
                                             const SizedBox(height: 4),
                                             Text(
                                               place.formattedAddress!,
@@ -712,7 +716,8 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  Future<List<SearchResult>> _getRecommendedPlacesWithCache(String category, String place) async {
+  Future<List<SearchResult>> _getRecommendedPlacesWithCache(
+      String category, String place) async {
     final cacheKey = '$category:$place';
     final now = DateTime.now();
 
@@ -725,7 +730,7 @@ class _ChatPageState extends State<ChatPage> {
 
     // Fetch new results
     final results = await _getRecommendedPlaces(category, place);
-    
+
     // Cache the results
     _placesCache[cacheKey] = results;
     _cacheTimestamps[cacheKey] = now;
@@ -733,12 +738,30 @@ class _ChatPageState extends State<ChatPage> {
     return results;
   }
 
-  Future<List<SearchResult>> _getRecommendedPlaces(String category, String place) async {
+  Future<List<SearchResult>> _getRecommendedPlaces(
+      String category, String place) async {
     try {
       String googlePlaceType = _mapCategoryToGoogleType(category);
       _logger.info('Searching for $googlePlaceType places in $place');
 
-      // First, get coordinates for the place
+      // First, try text search which combines location and type
+      final textSearchQuery = '$googlePlaceType in $place';
+      _logger.info('Text search query: $textSearchQuery');
+
+      final textResult =
+          await googlePlace.search.getTextSearch(textSearchQuery);
+
+      if (textResult?.status == 'OK' &&
+          textResult?.results != null &&
+          textResult!.results!.isNotEmpty) {
+        _logger.info(
+            'Text search successful: ${textResult.results!.length} results');
+        return textResult.results!;
+      }
+
+      _logger.info('Text search unsuccessful, trying geocode + nearby search');
+
+      // If text search fails, fallback to geocode + nearby search
       final locationResult = await googlePlace.search.getTextSearch(place);
       if (locationResult?.results == null || locationResult!.results!.isEmpty) {
         _logger.warning('Location not found: $place');
@@ -753,23 +776,35 @@ class _ChatPageState extends State<ChatPage> {
 
       _logger.info('Found coordinates: ${location.lat}, ${location.lng}');
 
-      // Search for places with simplified parameters first
+      // Try nearby search with more parameters
       final result = await googlePlace.search.getNearBySearch(
         Location(lat: location.lat, lng: location.lng),
         5000, // 5km radius
         type: googlePlaceType,
-        // Removed other filters temporarily for testing
+        keyword: category, // Add keyword for better matching
       );
 
-      _logger.info('Search status: ${result?.status}');
-      _logger.info('Results found: ${result?.results?.length ?? 0}');
+      _logger.info('Nearby search status: ${result?.status}');
+      _logger.info('Nearby results found: ${result?.results?.length ?? 0}');
 
       if (result?.status == 'OK' && result?.results != null) {
-        // Don't filter results yet, just return them all for testing
         return result!.results!;
       }
 
-      _logger.warning('No results found. Status: ${result?.status}');
+      // Last resort: try without type constraint
+      _logger.info('Trying without type constraint');
+      final fallbackResult = await googlePlace.search.getNearBySearch(
+        Location(lat: location.lat, lng: location.lng),
+        5000, // 5km radius
+        keyword: category, // Use only keyword
+      );
+
+      if (fallbackResult?.status == 'OK' && fallbackResult?.results != null) {
+        return fallbackResult!.results!;
+      }
+
+      _logger.warning(
+          'All search attempts failed. Status: ${fallbackResult?.status}');
       return [];
     } catch (e, stackTrace) {
       _logger.severe('Error fetching places: $e');
@@ -779,59 +814,42 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   String _mapCategoryToGoogleType(String category) {
-    // Map your categories to Google Places API types
-    switch (category.toLowerCase()) {
-      case 'bars':
-      case 'karaoke bars':
-        return 'bar';  // Make sure 'bar' is the exact type from Google Places API
-      case 'parks':
-        return 'park';
-      case 'beaches':
-        return 'natural_feature';
-      case 'lakes':
-        return 'natural_feature';
-      case 'zoos':
-        return 'zoo';
-      case 'safari parks':
-        return 'zoo';
-      case 'amusement parks':
-        return 'amusement_park';
-      case 'water parks':
-        return 'amusement_park';
-      case 'museums':
-        return 'museum';
-      case 'art galleries':
-        return 'art_gallery';
-      case 'historical landmarks':
-        return 'tourist_attraction';
-      case 'temples':
-        return 'place_of_worship';
-      case 'movie theaters':
-        return 'movie_theater';
-      case 'bowling alleys':
-        return 'bowling_alley';
-      case 'gaming centers':
-        return 'amusement_center';
-      case 'live theaters':
-        return 'theater';
-      case 'concert venues':
-        return 'stadium';
-      case 'aquariums':
-        return 'aquarium';
-      case 'ice-skating rinks':
-        return 'stadium';
-      default:
-        return 'point_of_interest';
-    }
+    // Use exact Google Places API type strings
+    // Reference: https://developers.google.com/maps/documentation/places/web-service/supported_types
+    final Map<String, String> typeMap = {
+      'bars': 'bar',
+      'karaoke bars': 'bar',
+      'coffee shops': 'cafe',
+      'restaurants': 'restaurant',
+      'cafes': 'cafe',
+      'parks': 'park',
+      'beaches': 'natural_feature',
+      'lakes': 'natural_feature',
+      'zoos': 'zoo',
+      'safari parks': 'zoo',
+      'amusement parks': 'amusement_park',
+      'water parks': 'amusement_park',
+      'museums': 'museum',
+      'art galleries': 'art_gallery',
+      'historical landmarks': 'tourist_attraction',
+      'temples': 'place_of_worship',
+      'movie theaters': 'movie_theater',
+      'bowling alleys': 'bowling_alley',
+      'gaming centers': 'amusement_center',
+      'live theaters': 'theater',
+      'concert venues': 'stadium',
+      'aquariums': 'aquarium',
+      'ice-skating rinks': 'ice_skating',
+    };
+
+    return typeMap[category.toLowerCase()] ?? 'point_of_interest';
   }
-
-
 
   void _sharePlace(SearchResult place) {
     final message = "How about we check out ${place.name}? "
         "It's located at ${place.formattedAddress}"
         "${place.rating != null ? "\nRating: ${place.rating} ⭐" : ""}";
-  
+
     _messageController.text = message;
   }
 

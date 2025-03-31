@@ -1290,8 +1290,8 @@ class _FindMatchPageState extends State<FindMatchPage> {
             Slider(
               value: distance,
               min: 1,
-              max: 20,
-              divisions: 19,
+              max: 50,
+              divisions: 49,
               label: distance.round().toString(),
               onChanged: (double value) {
                 setState(() {

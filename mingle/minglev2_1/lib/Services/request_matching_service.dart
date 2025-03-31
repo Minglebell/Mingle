@@ -805,9 +805,9 @@ class RequestMatchingService {
           'user1': users[i],
           'user2': users[j],
           'score': totalScore
-        });
-      }
-    }
+            });
+          }
+        }
     
     // Sort pairs by score in descending order
     allPairs.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));

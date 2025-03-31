@@ -88,7 +88,13 @@ service cloud.firestore {
         (resource.data.status == 'waiting' && 
          request.resource.data.status == 'matched' &&
          request.resource.data.chatId != null &&
-         request.auth.uid in get(/databases/$(database)/documents/chats/$(request.resource.data.chatId)).data.participants)
+         request.auth.uid in [resource.data.userId, request.resource.data.matchedWith]) ||
+        // Allow batch updates during matching process
+        (resource.data.status == 'waiting' && 
+         request.resource.data.status == 'matched' &&
+         request.resource.data.chatId != null &&
+         request.resource.data.matchedWith != null &&
+         request.auth.uid in [resource.data.userId, request.resource.data.matchedWith])
       );
       allow delete: if isAuthenticated() && (
         // Allow users to delete their own requests
@@ -96,7 +102,10 @@ service cloud.firestore {
         // Allow users to delete matched requests they're involved in
         (resource.data.status == 'matched' && 
          resource.data.chatId != null &&
-         request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.participants)
+         request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.participants) ||
+        // Allow batch deletions during matching process
+        (resource.data.status == 'matched' && 
+         request.auth.uid in [resource.data.userId, resource.data.matchedWith])
       );
     }
   }

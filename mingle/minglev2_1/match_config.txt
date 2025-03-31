@@ -1,0 +1,113 @@
+1. Smoking:
+-----------
+- Avoidance with smoker ↔ Non-smoker: +3
+- Avoidance with smoker → Occasional smoker: -5
+- Avoidance with smoker → Only smoke when drinking: -5
+- Avoidance with smoker → Regular smoker: mismatch
+- Non-smoker → Regular smoker: -5
+- Exact match: +3
+- Mismatch: 0
+
+2. Alcoholic:
+-------------
+- Never → Regularly: -3
+- Never ↔ Rarely: +1
+- Never ↔ Occasionally: 0
+- Rarely ↔ Occasionally: +1
+- Rarely → Regularly: -1
+- Occasionally ↔ Regularly: +1
+- Regularly → Never: -1
+- Regularly → Rarely: 0
+- Exact match: +3
+
+3. Allergies:
+-------------
+If Place is Zoos
+- Who have Animal dander: -3
+If Place is Seafood Restaurants
+- Who have Shellfish: -5
+If Place is Dessert cafes
+- Who have Milk: -2
+Other Place
+- Animal dander → who have Pet in ['Dog', 'Cat', 'Hamster', 'Rabbit', 'Bird']: -3
+- Dust → Regular smoker: -3
+- No significant allergy interaction: 0
+- Shared allergies: +2
+
+4. Transportation:
+------------------
+- No shared transportation methods: -1
+- At least one shared method: +1
+
+5. Physical Activity Level:
+-------------------------------------------
+If Place in ["Parks", "Beaches", "Lakes", "Zoos", "Safari parks", "Amusement parks", "Water parks"]
+- Low ↔ High mismatch: -5
+- Moderate ↔ High mismatch: -2
+- Exact match: +3
+Other Place
+- Mismatch: -1
+- Exact match: +2
+
+6. Personality:
+---------------
+- Ambivert ↔ Introverted: +2
+- Ambivert ↔ Extroverted: +2
+- Ambivert ↔ Ambivert: +2
+- Introverted ↔ Extroverted: +1
+- Introverted ↔ Introverted: -1
+- Extroverted ↔ Extroverted: +2
+
+7. Relationship Status:
+-----------------------
+- Single ↔ Single: +3
+- Single → Married: -3
+- Single → In a relationship: -3
+- Single → Unclear relationship: -1
+- Married ↔ In a relationship: 0
+- Married ↔ Unclear relationshi: 0
+- In a relationship ↔ Unclear relationshi: 0
+- Exact match: +1
+
+8. Education Level:
+-------------------
+- High school or lower ↔ Doctorate or higher: -1
+- High school or lower ↔ Master's: 0
+- High school or lower → Bachelor's: +1
+- Bachelor's ↔ Doctorate or higher: 0
+- Bachelor's ↔ Master's: +1
+- Bachelor's → High school or lower: 0
+- Doctorate or higher ↔ Master's: +1
+- Exact match: +2
+
+9. Budget Level:
+----------------
+- Mismatch: 0
+- Exact match: +3
+
+10. Religion:
+-------------
+If Place in [
+      "Thai restaurants", "Italian restaurants", "Japanese restaurants",
+      "Chinese restaurants", "Korean restaurants", "Indian restaurants",
+      "Buffet restaurants", "Thai barbecue restaurants", "Korean barbecue restaurants",
+      "Japanese barbecue restaurants", "Thai-style hot pot restaurants",
+      "Chinese hot pot Restaurants", "Japanese hot pot restaurants",
+      "Northeastern Thai restaurants", "Steak restaurant",
+    ]
+- Muslim ↔ Non-Muslim: -5
+Other Place
+- Muslim ↔ Non-Muslim: -1
+- Mismatch: 0
+- Exact match: +2
+
+11. Pets:
+---------
+- Shared pet type: +2
+- No significant pet interactions: 0
+
+11. averageRating:
+---------
+- +averageRating
+
+Use this to calcurate score of user preference → other preference

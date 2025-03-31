@@ -1,0 +1,72 @@
+      'Religion': [
+        'Non-religion',
+        'Buddhist',
+        'Christian',
+        'Muslim',
+        'Hindu',
+        'Agnostic',
+        'Atheist',
+        'Other'
+      ],
+      'Budget level': [
+        'Low (\$0-300)',
+        'Moderate (\$300-1000)',
+        'High (\$1000-5000)',
+        'Luxury (\$5000+)'
+      ],
+      'Education level': [
+        "High school or lower",
+        'Bachelor\'s degree',
+        'Master\'s degree',
+        'Doctorate or higher'
+      ],
+      'Relationship Status': [
+        'Single',
+        'Unclear relationship',
+        'In a relationship',
+        'Married',
+        'Other'
+      ],
+      'Smoking': [
+        'Avoidance with smoker'
+        'Non-smoker',
+        'Occasional smoker',
+        'Only smoke when drinking',
+        'Regular smoker',
+      ],
+      'Alcoholic': [
+        'Never',
+        'Rarely',
+        'Occasionally',
+        'Regularly',
+      ],
+      'Allergies': [
+        'Milk',
+        'Egg',
+        'Wheat',
+        'Nut',
+        'Shellfish',
+        'Pollen',
+        'Dust',
+        'Animal dander',
+        'Other'
+      ],
+      'Physical Activity level': ['Low', 'Moderate', 'High'],
+      'Transportation': [
+        'Own vehicle',
+        'Public transport',
+        'Ride-sharing',
+        'Walking',
+        'Other'
+      ],
+      'Pet': [
+        'Dog',
+        'Cat',
+        'Fish',
+        'Hamster',
+        'Rabbit',
+        'Bird',
+        'Turtle',
+        'Other'
+      ],
+      'Personality': ['Introverted', 'Extroverted', 'Ambivert', 'Other']

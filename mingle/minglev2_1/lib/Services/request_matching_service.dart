@@ -436,7 +436,7 @@ class RequestMatchingService {
               _logger.info('✅ Both users are still waiting, creating match...');
               
               // Add a small delay to ensure we have the latest state
-              await Future.delayed(Duration(milliseconds: 100));
+              await Future.delayed(const Duration(milliseconds: 100));
               
               // Final check to ensure we're still the best match
               final finalCurrentRequest = await _firestore.collection('requests').doc(requestId).get();

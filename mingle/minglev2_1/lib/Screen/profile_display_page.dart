@@ -217,26 +217,27 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
           .where('toUserId', isEqualTo: widget.userId)
           .get();
 
-      double totalRating = 0;
+      double totalRating = 0.0;  // Changed to double
       int ratingCount = ratingsSnapshot.docs.length;
 
       for (var doc in ratingsSnapshot.docs) {
-        totalRating += doc.data()['rating'];
+        // Convert rating to double
+        totalRating += (doc.data()['rating'] as num).toDouble();
       }
 
-      double averageRating = ratingCount > 0 ? totalRating / ratingCount : 0;
+      double averageRating = ratingCount > 0 ? totalRating / ratingCount : 0.0;
 
-      // Use set with merge to handle both new and existing users
       await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.userId)
           .set({
         'averageRating': averageRating,
         'ratingCount': ratingCount,
-      }, SetOptions(merge: true)); // This will merge with existing data
+      }, SetOptions(merge: true));
 
       setState(() {
         _userRating = rating;
+        _isRatingSubmitting = false;
       });
 
       if (mounted) {
@@ -262,33 +263,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
         ).show(context);
       }
     } catch (e) {
-      _logger.severe('Error saving rating: $e');
-      if (mounted) {
-        DelightToastBar(
-          autoDismiss: true,
-          snackbarDuration: const Duration(seconds: 3),
-          builder: (context) => Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: ListTile(
-              leading: const Icon(
-                Icons.error,
-                size: 24,
-                color: Colors.red,
-              ),
-              title: Text(
-                'Failed to save rating: $e',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-        ).show(context);
-      }
-    } finally {
+      _logger.warning('Error saving rating: $e');
       setState(() {
         _isRatingSubmitting = false;
       });
@@ -421,7 +396,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                                       children: [
                                         ...List.generate(5, (index) {
                                           return Icon(
-                                            index < (profile['averageRating'] as double).round()
+                                            index < ((profile['averageRating'] as num).toDouble()).round()
                                                 ? Icons.star
                                                 : Icons.star_border,
                                             color: Colors.amber,
@@ -430,7 +405,7 @@ class _ProfileDisplayPageState extends ConsumerState<ProfileDisplayPage>
                                         }),
                                         const SizedBox(width: 8),
                                         Text(
-                                          '${(profile['averageRating'] as double).toStringAsFixed(1)}',
+                                          (profile['averageRating'] as num).toDouble().toStringAsFixed(1),
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 18 * percentage,

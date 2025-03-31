@@ -21,11 +21,122 @@ class RequestMatchingService {
   String? _currentRequestId;
   final BuildContext context;
   Function(Map<String, dynamic>)? onMatchFound;
-  bool _isProcessingMatch = false; // Add lock mechanism
-  static bool _globalMatchLock = false; // Add global lock for all instances
+  bool _isProcessingMatch = false;
+  static bool _globalMatchLock = false;
+  Timer? _batchTimer;
+  static const batchInterval = Duration(seconds: 10);
+  List<Map<String, dynamic>> _currentBatch = [];
 
   RequestMatchingService(this.context) {
-    _configureLogger(); // Initialize logger configuration
+    _configureLogger();
+    _startBatchProcessing();
+  }
+
+  void _startBatchProcessing() {
+    _batchTimer?.cancel();
+    _batchTimer = Timer.periodic(batchInterval, (_) => _processBatch());
+  }
+
+  Future<void> _processBatch() async {
+    if (_isProcessingMatch || RequestMatchingService._globalMatchLock) {
+      _logger.info('⏳ Already processing a batch or global lock is active, skipping this batch');
+      return;
+    }
+
+    try {
+      // Check if user is authenticated
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        _logger.warning('⚠️ No authenticated user found, skipping batch processing');
+        return;
+      }
+
+      _isProcessingMatch = true;
+      RequestMatchingService._globalMatchLock = true;
+
+      _logger.info('🔄 Starting new batch processing cycle');
+      
+      // Get all waiting requests
+      final requestsSnapshot = await _firestore
+          .collection('requests')
+          .where('status', isEqualTo: 'waiting')
+          .get();
+
+      if (requestsSnapshot.docs.isEmpty) {
+        _logger.info('📭 No waiting requests found in this batch');
+        return;
+      }
+
+      _currentBatch = requestsSnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+
+      _logger.info('📦 Processing batch of ${_currentBatch.length} requests');
+
+      // Check basic matching criteria for all requests
+      List<Map<String, dynamic>> validRequests = [];
+      for (var request in _currentBatch) {
+        if (await _checkBasicMatchingCriteria(request)) {
+          validRequests.add(request);
+        }
+      }
+
+      if (validRequests.isEmpty) {
+        _logger.info('❌ No valid matches found in this batch');
+        return;
+      }
+
+      _logger.info('✅ Found ${validRequests.length} requests that passed basic criteria');
+
+      // Create score matrix for valid requests
+      await createScoreMatrix(validRequests);
+
+      // Find best matches using the score matrix
+      final matches = await _findBestMatches(validRequests);
+
+      // Process matches
+      for (var match in matches) {
+        try {
+          await _handleMatch(match['request1']['id'], match['request2']['id']);
+          _logger.info('🎉 Successfully created match between ${match['request1']['userId']} and ${match['request2']['userId']}');
+        } catch (e) {
+          _logger.severe('❌ Error creating match: $e');
+        }
+      }
+
+      _logger.info('✅ Batch processing completed');
+    } catch (e) {
+      _logger.severe('❌ Error in batch processing: $e');
+    } finally {
+      _isProcessingMatch = false;
+      RequestMatchingService._globalMatchLock = false;
+    }
+  }
+
+  Future<bool> _checkBasicMatchingCriteria(Map<String, dynamic> request) async {
+    try {
+      // Check if request is still waiting
+      final requestDoc = await _firestore.collection('requests').doc(request['id']).get();
+      if (!requestDoc.exists || requestDoc.data()?['status'] != 'waiting') {
+        return false;
+      }
+
+      // Check basic criteria (category, place, time, etc.)
+      for (var otherRequest in _currentBatch) {
+        if (otherRequest['id'] == request['id']) continue;
+
+        if (!await _arePotentialMatches(request, otherRequest)) {
+          return false;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      _logger.warning('⚠️ Error checking basic criteria: $e');
+      return false;
+    }
   }
 
   // Getter for current request ID
@@ -45,8 +156,7 @@ class RequestMatchingService {
     if (currentUser == null) throw Exception('No authenticated user');
 
     // Get current user's data
-    final userDoc =
-        await _firestore.collection('users').doc(currentUser.uid).get();
+    final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
     final userData = userDoc.data();
     if (userData == null) throw Exception('User data not found');
 
@@ -102,8 +212,78 @@ class RequestMatchingService {
     final docRef = await _firestore.collection('requests').add(requestData);
     _currentRequestId = docRef.id;
 
+    // Add to current batch
+    requestData['id'] = docRef.id;
+    _currentBatch.add(requestData);
+
     // Start listening for matches
     _listenForMatches(docRef.id);
+  }
+
+  // Create bidirectional score matrix for all waiting requests
+  Future<void> createScoreMatrix(List<Map<String, dynamic>> requests) async {
+    _logger.info('=== Creating Bidirectional Score Matrix ===');
+    
+    final n = requests.length;
+    
+    // Create matrix headers
+    _logger.info('\nScore Matrix:');
+    _logger.info('-' * (n * 15 + 5)); // Separator line
+    
+    // Print header row with user IDs
+    String headerRow = '     ';
+    for (var request in requests) {
+      final userId = request['userId'] as String;
+      headerRow += '${userId.substring(0, 5)}... ';
+    }
+    _logger.info(headerRow);
+    _logger.info('-' * (n * 15 + 5)); // Separator line
+    
+    // Calculate and print scores for each pair
+    for (var i = 0; i < n; i++) {
+      final request1 = requests[i];
+      final user1Id = request1['userId'] as String;
+      final user1Doc = await _firestore.collection('users').doc(user1Id).get();
+      final user1Data = user1Doc.data() as Map<String, dynamic>;
+      
+      String row = '${user1Id.substring(0, 5)}... ';
+      
+      for (var j = 0; j < n; j++) {
+        if (i == j) {
+          row += '   -    ';
+          continue;
+        }
+        
+        final request2 = requests[j];
+        final user2Id = request2['userId'] as String;
+        final user2Doc = await _firestore.collection('users').doc(user2Id).get();
+        final user2Data = user2Doc.data() as Map<String, dynamic>;
+        
+        // Calculate bidirectional scores
+        final score1to2 = await _calculateMatchScore(user1Data, user2Data, request1['place']);
+        final score2to1 = await _calculateMatchScore(user2Data, user1Data, request1['place']);
+        final totalScore = score1to2 + score2to1;
+        
+        // Format score for display
+        row += '${totalScore.toStringAsFixed(1).padLeft(6)} ';
+      }
+      
+      _logger.info(row);
+    }
+    
+    _logger.info('-' * (n * 15 + 5)); // Separator line
+    
+    // Print user details
+    _logger.info('\nUser Details:');
+    for (var request in requests) {
+      final userId = request['userId'] as String;
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      final userData = userDoc.data() as Map<String, dynamic>;
+      
+      _logger.info('${userId.substring(0, 5)}... - ${userData['name']} (${request['place']})');
+    }
+    
+    _logger.info('=== End of Score Matrix ===\n');
   }
 
   // Listen for potential matches
@@ -120,7 +300,20 @@ class RequestMatchingService {
 
       final requestData = requestDoc.data() as Map<String, dynamic>;
       final userId = requestData['userId'] as String;
-      _logger.info('Listening for matches for user: $userId');
+      
+      // Create initial score matrix
+      createScoreMatrix([requestData]);
+      
+      _logger.info('=== Starting Matching Process ===');
+      _logger.info('User: $userId');
+      _logger.info('Place: ${requestData['place']}');
+      _logger.info('Category: ${requestData['category']}');
+      _logger.info('Gender Preference: ${requestData['gender']}');
+      _logger.info('Age Range: ${requestData['ageRange']['start']}-${requestData['ageRange']['end']}');
+      _logger.info('Max Distance: ${requestData['maxDistance']}km');
+      _logger.info('Scheduled Time: ${requestData['scheduledTime']}');
+      _logger.info('Time Range: ${requestData['timeRange']}');
+      _logger.info('===============================');
 
       // Query for potential matches
       _matchSubscription = _firestore
@@ -130,16 +323,16 @@ class RequestMatchingService {
           .snapshots()
           .listen((snapshot) async {
         if (_isProcessingMatch || RequestMatchingService._globalMatchLock) {
-          _logger.info('Already processing a match or global lock is active, skipping this update');
+          _logger.info('⏳ Already processing a match or global lock is active, skipping this update');
           return;
         }
 
-        _logger.info('Found ${snapshot.docs.length} potential matches');
+        _logger.info('🔍 Found ${snapshot.docs.length} potential matches');
         
         // First check if current user is still waiting
         final currentRequestDoc = await _firestore.collection('requests').doc(requestId).get();
         if (!currentRequestDoc.exists || currentRequestDoc.data()?['status'] != 'waiting') {
-          _logger.info('Current user is no longer waiting for a match');
+          _logger.info('❌ Current user is no longer waiting for a match');
           _matchSubscription?.cancel();
           _currentRequestId = null;
           return;
@@ -154,14 +347,16 @@ class RequestMatchingService {
           
           // Check if the potential match is still waiting
           if (matchData['status'] != 'waiting') {
-            _logger.info('Potential match ${matchData['userId']} is no longer waiting');
+            _logger.info('⏳ Potential match ${matchData['userId']} is no longer waiting');
             continue;
           }
           
-          _logger.info('Checking match with user: ${matchData['userId']}');
+          _logger.info('👥 Checking match with user: ${matchData['userId']}');
           
           // Check if they are potential matches
           if (await _arePotentialMatches(requestData, matchData)) {
+            _logger.info('✅ Basic matching criteria passed');
+            
             // Get user data for scoring
             final user1Doc = await _firestore.collection('users').doc(userId).get();
             final user2Doc = await _firestore.collection('users').doc(matchData['userId']).get();
@@ -175,7 +370,7 @@ class RequestMatchingService {
               final score2to1 = await _calculateMatchScore(user2Data, user1Data, requestData['place']);
               final totalScore = score1to2 + score2to1;
               
-              _logger.info('Match score with ${matchData['userId']}: $totalScore (User1→User2: $score1to2, User2→User1: $score2to1)');
+              _logger.info('📊 Match score with ${matchData['userId']}: $totalScore (User1→User2: $score1to2, User2→User1: $score2to1)');
               
               // Use a unique key combining both user IDs
               final List<String> sortedIds = [userId, matchData['userId']];
@@ -195,8 +390,11 @@ class RequestMatchingService {
                   'user2Name': user2Data['name'],
                   'timestamp': matchData['createdAt'] as Timestamp? ?? Timestamp.now()
                 };
+                _logger.info('💫 Updated best score for this pair: $totalScore');
               }
             }
+          } else {
+            _logger.info('❌ Basic matching criteria failed');
           }
         }
         
@@ -212,15 +410,15 @@ class RequestMatchingService {
         });
         
         // Log all potential matches and their scores
-        _logger.info('All potential matches sorted by score:');
+        _logger.info('📋 All potential matches sorted by score:');
         for (var match in potentialMatches) {
-          _logger.info('User ${match['user1Name']} ↔ ${match['user2Name']}: Total Score = ${match['score']} (${match['score1to2']} + ${match['score2to1']})');
+          _logger.info('👥 ${match['user1Name']} ↔ ${match['user2Name']}: Total Score = ${match['score']} (${match['score1to2']} + ${match['score2to1']})');
         }
         
         // If we have any potential matches, take the best one
         if (potentialMatches.isNotEmpty) {
           final bestMatch = potentialMatches.first;
-          _logger.info('Best match found: ${bestMatch['user1Name']} ↔ ${bestMatch['user2Name']} with total score ${bestMatch['score']}');
+          _logger.info('🎯 Best match found: ${bestMatch['user1Name']} ↔ ${bestMatch['user2Name']} with total score ${bestMatch['score']}');
           
           // Set both local and global processing locks
           _isProcessingMatch = true;
@@ -235,7 +433,7 @@ class RequestMatchingService {
                 matchRequestCheck.exists && 
                 currentRequestCheck.data()?['status'] == 'waiting' && 
                 matchRequestCheck.data()?['status'] == 'waiting') {
-              _logger.info('Both users are still waiting, creating match...');
+              _logger.info('✅ Both users are still waiting, creating match...');
               
               // Add a small delay to ensure we have the latest state
               await Future.delayed(Duration(milliseconds: 100));
@@ -252,7 +450,7 @@ class RequestMatchingService {
                   // Get current user data for verification
                   final currentUserDoc = await _firestore.collection('users').doc(userId).get();
                   if (!currentUserDoc.exists) {
-                    _logger.warning('Current user data not found during verification');
+                    _logger.warning('❌ Current user data not found during verification');
                     return;
                   }
                   final user1Data = currentUserDoc.data() as Map<String, dynamic>;
@@ -281,10 +479,10 @@ class RequestMatchingService {
                         
                         if (verifyTotalScore > bestMatch['score']) {
                           isStillBestMatch = false;
-                          _logger.info('Found a better match during verification, skipping current match');
-                          break;
-                        }
-                      }
+                          _logger.info('⚠️ Found a better match during verification, skipping current match');
+            break;
+          }
+        }
                     }
                   }
                   
@@ -298,33 +496,34 @@ class RequestMatchingService {
                       try {
                         await _handleMatch(requestId, bestMatch['requestId']);
                         matchSuccess = true;
+                        _logger.info('🎉 Match created successfully!');
                       } catch (e) {
                         retryCount++;
                         if (e.toString().contains('permission-denied')) {
-                          _logger.warning('Permission denied while handling match (Attempt $retryCount). This might be due to concurrent updates.');
+                          _logger.warning('⚠️ Permission denied while handling match (Attempt $retryCount). This might be due to concurrent updates.');
                           if (retryCount < maxRetries) {
                             // Wait before retrying with exponential backoff
                             await Future.delayed(Duration(milliseconds: 500 * retryCount));
                             continue;
                           }
                         }
-                        _logger.severe('Error handling match: $e');
+                        _logger.severe('❌ Error handling match: $e');
                         break;
                       }
                     }
                     
                     if (!matchSuccess) {
-                      _logger.warning('Failed to create match after $maxRetries attempts');
+                      _logger.warning('❌ Failed to create match after $maxRetries attempts');
                     }
                   }
                 } catch (e) {
-                  _logger.severe('Error during match verification: $e');
+                  _logger.severe('❌ Error during match verification: $e');
                 }
               } else {
-                _logger.info('One or both users are no longer waiting after final check, skipping match');
+                _logger.info('⏳ One or both users are no longer waiting after final check, skipping match');
               }
             } else {
-              _logger.info('One or both users are no longer waiting, skipping match');
+              _logger.info('⏳ One or both users are no longer waiting, skipping match');
             }
           } finally {
             // Release both local and global processing locks
@@ -332,64 +531,19 @@ class RequestMatchingService {
             RequestMatchingService._globalMatchLock = false;
           }
         } else {
-          _logger.info('No valid matches found');
+          _logger.info('❌ No valid matches found');
         }
+        _logger.info('=== End of Matching Process ===');
       }, onError: (error) {
-        _logger.severe('Error in match subscription: $error');
+        _logger.severe('❌ Error in match subscription: $error');
         if (error.toString().contains('requires an index')) {
-          _logger.info('Please wait while the matching system is being set up. This may take a few minutes.');
+          _logger.info('⏳ Please wait while the matching system is being set up. This may take a few minutes.');
         } else {
-          _logger.severe('An error occurred while searching for matches: $error');
+          _logger.severe('❌ An error occurred while searching for matches: $error');
         }
         // Release both locks in case of error
         _isProcessingMatch = false;
         RequestMatchingService._globalMatchLock = false;
-      });
-
-      // Also listen for when this request gets matched
-      _firestore
-          .collection('requests')
-          .doc(requestId)
-          .snapshots()
-          .listen((doc) {
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>;
-          if (data['status'] == 'matched' && data['matchedWith'] != null) {
-            _logger.info('Request was matched with user: ${data['matchedWith']}');
-            // Get the matched user's information
-            _firestore
-                .collection('users')
-                .doc(data['matchedWith'])
-                .get()
-                .then((userDoc) {
-              if (userDoc.exists) {
-                final userData = userDoc.data() as Map<String, dynamic>;
-                // Calculate distance
-                final distance = _calculateDistance(
-                  data['location']['latitude'],
-                  data['location']['longitude'],
-                  userData['location']['latitude'],
-                  userData['location']['longitude'],
-                );
-
-                // Create matched user info
-                final matchedUserInfo = {
-                  'matchedUserName': userData['name'] ?? 'Unknown',
-                  'matchedUserAge': userData['age']?.toString() ?? 'Unknown',
-                  'matchedUserDistance': distance.toStringAsFixed(1),
-                  'matchedUserGender': userData['gender'] ?? 'Unknown',
-                  'matchedUserProfileImage': userData['profileImage'] ?? '',
-                  'chatId': data['chatId'],
-                };
-
-                // Call the onMatchFound callback
-                if (onMatchFound != null) {
-                  onMatchFound!(matchedUserInfo);
-                }
-              }
-            });
-          }
-        }
       });
     });
   }
@@ -397,7 +551,6 @@ class RequestMatchingService {
   // Calculate match score between two users based on preferences
   Future<double> _calculateMatchScore(Map<String, dynamic> user1Data, Map<String, dynamic> user2Data, String place) async {
     double score = 0.0;
-    _logger.info('Calculating match score between users: ${user1Data['name']} and ${user2Data['name']}');
 
     // Smoking preferences
     final smoking1 = List<String>.from(user1Data['smoking'] ?? []);
@@ -406,22 +559,16 @@ class RequestMatchingService {
       final smoking1Status = smoking1.first;
       final smoking2Status = smoking2.first;
       
-      _logger.info('Smoking preferences - User1: $smoking1Status, User2: $smoking2Status');
-      
       if (smoking1Status == smoking2Status) {
         score += 3;
-        _logger.info('Smoking exact match: +3');
       } else if (smoking1Status == 'Avoidance with smoker') {
         if (smoking2Status == 'Regular smoker') {
-          _logger.info('Smoking mismatch: Avoidance with smoker → Regular smoker');
           return double.negativeInfinity;
         } else if (['Occasional smoker', 'Only smoke when drinking'].contains(smoking2Status)) {
           score -= 5;
-          _logger.info('Smoking partial mismatch: -5');
         }
       } else if (smoking1Status == 'Non-smoker' && smoking2Status == 'Regular smoker') {
         score -= 5;
-        _logger.info('Smoking mismatch: Non-smoker → Regular smoker: -5');
       }
     }
 
@@ -432,11 +579,8 @@ class RequestMatchingService {
       final alcohol1Status = alcohol1.first;
       final alcohol2Status = alcohol2.first;
       
-      _logger.info('Alcohol preferences - User1: $alcohol1Status, User2: $alcohol2Status');
-      
       if (alcohol1Status == alcohol2Status) {
         score += 3;
-        _logger.info('Alcohol exact match: +3');
       } else {
         final alcoholScores = {
           'Never': {'Rarely': 1, 'Occasionally': 0, 'Regularly': -3},
@@ -446,7 +590,6 @@ class RequestMatchingService {
         };
         final alcoholScore = alcoholScores[alcohol1Status]?[alcohol2Status] ?? 0;
         score += alcoholScore;
-        _logger.info('Alcohol partial match: $alcoholScore');
       }
     }
 
@@ -454,24 +597,17 @@ class RequestMatchingService {
     final allergies1 = List<String>.from(user1Data['allergies'] ?? []);
     final allergies2 = List<String>.from(user2Data['allergies'] ?? []);
     if (allergies1.isNotEmpty && allergies2.isNotEmpty) {
-      _logger.info('Checking allergies - User1: $allergies1, User2: $allergies2');
-      
       if (place == 'Zoos' && allergies2.contains('Animal dander')) {
         score -= 3;
-        _logger.info('Allergy mismatch for Zoos: -3');
       } else if (place == 'Seafood Restaurants' && allergies2.contains('Shellfish')) {
         score -= 5;
-        _logger.info('Allergy mismatch for Seafood Restaurants: -5');
       } else if (place == 'Dessert cafes' && allergies2.contains('Milk')) {
         score -= 2;
-        _logger.info('Allergy mismatch for Dessert cafes: -2');
       }
       
-      // Check for shared allergies
       final sharedAllergies = allergies1.toSet().intersection(allergies2.toSet());
       if (sharedAllergies.isNotEmpty) {
         score += 2;
-        _logger.info('Shared allergies: +2');
       }
     }
 
@@ -479,15 +615,11 @@ class RequestMatchingService {
     final transport1 = List<String>.from(user1Data['transportation'] ?? []);
     final transport2 = List<String>.from(user2Data['transportation'] ?? []);
     if (transport1.isNotEmpty && transport2.isNotEmpty) {
-      _logger.info('Checking transportation - User1: $transport1, User2: $transport2');
-      
       final sharedTransport = transport1.toSet().intersection(transport2.toSet());
       if (sharedTransport.isEmpty) {
         score -= 1;
-        _logger.info('No shared transportation methods: -1');
       } else {
         score += 1;
-        _logger.info('Shared transportation methods: +1');
       }
     }
 
@@ -500,27 +632,20 @@ class RequestMatchingService {
         "Amusement parks", "Water parks"
       ];
       
-      _logger.info('Physical activity - User1: ${activity1.first}, User2: ${activity2.first}');
-      
       if (outdoorPlaces.contains(place)) {
         if (activity1.first == activity2.first) {
           score += 3;
-          _logger.info('Activity level exact match for outdoor place: +3');
         } else if ((activity1.first == 'Low' && activity2.first == 'High') ||
                    (activity1.first == 'High' && activity2.first == 'Low')) {
           score -= 5;
-          _logger.info('Activity level mismatch for outdoor place: -5');
         } else {
           score -= 2;
-          _logger.info('Activity level partial mismatch for outdoor place: -2');
         }
       } else {
         if (activity1.first == activity2.first) {
           score += 2;
-          _logger.info('Activity level exact match: +2');
         } else {
           score -= 1;
-          _logger.info('Activity level mismatch: -1');
         }
       }
     }
@@ -529,8 +654,6 @@ class RequestMatchingService {
     final personality1 = List<String>.from(user1Data['personality'] ?? []);
     final personality2 = List<String>.from(user2Data['personality'] ?? []);
     if (personality1.isNotEmpty && personality2.isNotEmpty) {
-      _logger.info('Personality - User1: ${personality1.first}, User2: ${personality2.first}');
-      
       final personalityScores = {
         'Ambivert': {'Introverted': 2, 'Extroverted': 2, 'Ambivert': 2},
         'Introverted': {'Extroverted': 1, 'Introverted': -1},
@@ -538,32 +661,25 @@ class RequestMatchingService {
       };
       final personalityScore = personalityScores[personality1.first]?[personality2.first] ?? 0;
       score += personalityScore;
-      _logger.info('Personality match score: $personalityScore');
     }
 
     // Relationship Status
     final relationship1 = List<String>.from(user1Data['relationship status'] ?? []);
     final relationship2 = List<String>.from(user2Data['relationship status'] ?? []);
     if (relationship1.isNotEmpty && relationship2.isNotEmpty) {
-      _logger.info('Relationship status - User1: ${relationship1.first}, User2: ${relationship2.first}');
-      
       if (relationship1.first == relationship2.first) {
         if (relationship1.first == 'Single') {
           score += 3;
-          _logger.info('Both single: +3');
         } else {
           score += 1;
-          _logger.info('Same relationship status: +1');
         }
       } else if (relationship1.first == 'Single' || relationship2.first == 'Single') {
         if (['Married', 'In a relationship'].contains(relationship1.first) || 
             ['Married', 'In a relationship'].contains(relationship2.first)) {
           score -= 3;
-          _logger.info('Single with married/in relationship: -3');
         } else if (relationship1.first == 'Unclear relationship' || 
                    relationship2.first == 'Unclear relationship') {
           score -= 1;
-          _logger.info('Single with unclear relationship: -1');
         }
       }
     }
@@ -572,11 +688,8 @@ class RequestMatchingService {
     final education1 = List<String>.from(user1Data['education level'] ?? []);
     final education2 = List<String>.from(user2Data['education level'] ?? []);
     if (education1.isNotEmpty && education2.isNotEmpty) {
-      _logger.info('Education level - User1: ${education1.first}, User2: ${education2.first}');
-      
       if (education1.first == education2.first) {
         score += 2;
-        _logger.info('Same education level: +2');
       } else {
         final educationScores = {
           'High school or lower': {
@@ -597,7 +710,6 @@ class RequestMatchingService {
         };
         final educationScore = educationScores[education1.first]?[education2.first] ?? 0;
         score += educationScore;
-        _logger.info('Education level score: $educationScore');
       }
     }
 
@@ -605,13 +717,8 @@ class RequestMatchingService {
     final budget1 = List<String>.from(user1Data['budget level'] ?? []);
     final budget2 = List<String>.from(user2Data['budget level'] ?? []);
     if (budget1.isNotEmpty && budget2.isNotEmpty) {
-      _logger.info('Budget level - User1: ${budget1.first}, User2: ${budget2.first}');
-      
       if (budget1.first == budget2.first) {
         score += 3;
-        _logger.info('Budget level exact match: +3');
-      } else {
-        _logger.info('Budget level mismatch: 0');
       }
     }
 
@@ -619,8 +726,6 @@ class RequestMatchingService {
     final religion1 = List<String>.from(user1Data['religion'] ?? []);
     final religion2 = List<String>.from(user2Data['religion'] ?? []);
     if (religion1.isNotEmpty && religion2.isNotEmpty) {
-      _logger.info('Religion - User1: ${religion1.first}, User2: ${religion2.first}');
-      
       final foodPlaces = [
         "Thai restaurants", "Italian restaurants", "Japanese restaurants",
         "Chinese restaurants", "Korean restaurants", "Indian restaurants",
@@ -632,14 +737,11 @@ class RequestMatchingService {
 
       if (religion1.first == religion2.first) {
         score += 2;
-        _logger.info('Same religion: +2');
       } else if (religion1.first == 'Muslim' || religion2.first == 'Muslim') {
         if (foodPlaces.contains(place)) {
           score -= 5;
-          _logger.info('Muslim-Non-Muslim mismatch in food place: -5');
         } else {
           score -= 1;
-          _logger.info('Muslim-Non-Muslim mismatch: -1');
         }
       }
     }
@@ -648,12 +750,9 @@ class RequestMatchingService {
     final pets1 = List<String>.from(user1Data['pets'] ?? []);
     final pets2 = List<String>.from(user2Data['pets'] ?? []);
     if (pets1.isNotEmpty && pets2.isNotEmpty) {
-      _logger.info('Pets - User1: $pets1, User2: $pets2');
-      
       final sharedPets = pets1.toSet().intersection(pets2.toSet());
       if (sharedPets.isNotEmpty) {
         score += 2;
-        _logger.info('Shared pet types: +2');
       }
     }
 
@@ -661,23 +760,20 @@ class RequestMatchingService {
     final rating1 = user1Data['averageRating'] as double?;
     final rating2 = user2Data['averageRating'] as double?;
     if (rating1 != null) {
-      _logger.info('User1 rating: $rating1');
       score += rating1;
-      _logger.info('Added User1 rating score: $rating1');
     }
     if (rating2 != null) {
-      _logger.info('User2 rating: $rating2');
       score += rating2;
-      _logger.info('Added User2 rating score: $rating2');
     }
 
-    _logger.info('Final match score: $score');
+    _logger.info('Final match score between ${user1Data['name']} and ${user2Data['name']}: $score');
     return score;
   }
 
   // Find best matches using complete graph algorithm
   Future<List<Map<String, dynamic>>> _findBestMatches(List<Map<String, dynamic>> users) async {
-    _logger.info('Finding best matches among ${users.length} users');
+    _logger.info('\n=== Starting Matching Process ===');
+    _logger.info('Total users to match: ${users.length}');
     
     final int n = users.length;
     final List<List<double>> scores = List.generate(
@@ -685,62 +781,107 @@ class RequestMatchingService {
     );
     
     // Calculate scores for all pairs
+    _logger.info('\nCalculating scores for all pairs...');
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
         if (i != j) {
-          _logger.info('Calculating score between ${users[i]['name']} and ${users[j]['name']}');
           final score = await _calculateMatchScore(
             users[i], users[j],
             users[i]['place'] ?? ''
           );
           scores[i][j] = score;
-          _logger.info('Score between ${users[i]['name']} and ${users[j]['name']}: $score');
         }
       }
+    }
+    
+    // Create a list of all possible pairs with their scores
+    List<Map<String, dynamic>> allPairs = [];
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        double totalScore = scores[i][j] + scores[j][i];
+        allPairs.add({
+          'user1Index': i,
+          'user2Index': j,
+          'user1': users[i],
+          'user2': users[j],
+          'score': totalScore
+        });
+      }
+    }
+    
+    // Sort pairs by score in descending order
+    allPairs.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
+    
+    // Log all possible pairs and their scores
+    _logger.info('\nAll possible pairs sorted by score:');
+    for (var pair in allPairs) {
+      _logger.info('${pair['user1']['name']} ↔ ${pair['user2']['name']}: ${pair['score']}');
     }
     
     // Find best matches
     List<Map<String, dynamic>> matches = [];
     Set<int> matched = {};
     
-    while (matched.length < n - 1) {
-      double bestScore = double.negativeInfinity;
-      int bestI = -1;
-      int bestJ = -1;
+    _logger.info('\nProcessing matches in order of highest score...');
+    // Process each pair in order of highest score
+    for (var pair in allPairs) {
+      final user1Index = pair['user1Index'] as int;
+      final user2Index = pair['user2Index'] as int;
       
-      // Find pair with highest bidirectional score
-      for (int i = 0; i < n; i++) {
-        if (matched.contains(i)) continue;
-        for (int j = i + 1; j < n; j++) {
-          if (matched.contains(j)) continue;
-          
-          double totalScore = scores[i][j] + scores[j][i];
-          _logger.info('Total bidirectional score between ${users[i]['name']} and ${users[j]['name']}: $totalScore');
-          
-          if (totalScore > bestScore) {
-            bestScore = totalScore;
-            bestI = i;
-            bestJ = j;
-          }
-        }
+      // Skip if either user is already matched
+      if (matched.contains(user1Index) || matched.contains(user2Index)) {
+        _logger.info('⏭️ Skipping ${pair['user1']['name']} ↔ ${pair['user2']['name']}: One or both users already matched');
+        continue;
       }
       
-      if (bestI != -1 && bestJ != -1) {
-        _logger.info('Found best match: ${users[bestI]['name']} ↔ ${users[bestJ]['name']} with score $bestScore');
-        matches.add({
-          'user1': users[bestI],
-          'user2': users[bestJ],
-          'score': bestScore
-        });
-        matched.add(bestI);
-        matched.add(bestJ);
-      } else {
-        _logger.info('No more valid matches found');
-        break;
+      // Add this match
+      matches.add({
+        'request1': pair['user1'],
+        'request2': pair['user2'],
+        'score': pair['score']
+      });
+      
+      // Mark both users as matched
+      matched.add(user1Index);
+      matched.add(user2Index);
+      
+      _logger.info('✅ Matched ${pair['user1']['name']} ↔ ${pair['user2']['name']} with score ${pair['score']}');
+      
+      // Process this match immediately
+      try {
+        await _handleMatch(pair['user1']['id'], pair['user2']['id']);
+        _logger.info('🎉 Successfully processed match between ${pair['user1']['name']} and ${pair['user2']['name']}');
+      } catch (e) {
+        _logger.severe('❌ Error processing match: $e');
+        // Remove the match if processing failed
+        matches.removeLast();
+        matched.remove(user1Index);
+        matched.remove(user2Index);
       }
     }
     
-    _logger.info('Final matches: ${matches.length} pairs');
+    // Log unmatched users
+    List<String> unmatchedUsers = [];
+    for (int i = 0; i < n; i++) {
+      if (!matched.contains(i)) {
+        unmatchedUsers.add(users[i]['name']);
+      }
+    }
+    
+    if (unmatchedUsers.isNotEmpty) {
+      _logger.info('\n⚠️ Unmatched users (will be considered in next batch):');
+      for (var name in unmatchedUsers) {
+        _logger.info('- $name');
+      }
+    }
+    
+    _logger.info('\n=== Matching Process Summary ===');
+    _logger.info('Total users: $n');
+    _logger.info('Total pairs considered: ${allPairs.length}');
+    _logger.info('Successful matches: ${matches.length}');
+    _logger.info('Unmatched users: ${unmatchedUsers.length}');
+    _logger.info('=== End of Matching Process ===\n');
+    
     return matches;
   }
 
@@ -969,7 +1110,7 @@ class RequestMatchingService {
     // If either score is negative infinity, it's a definite mismatch
     if (score1to2 == double.negativeInfinity || score2to1 == double.negativeInfinity) {
       _logger.info('Scoring system detected definite mismatch');
-      return false;
+    return false;
     }
 
     // Calculate total bidirectional score
@@ -1008,22 +1149,22 @@ class RequestMatchingService {
     const maxRetries = 3;
     
     while (retryCount < maxRetries) {
-      try {
+    try {
         _logger.info('Handling match between requests: $requestId1 and $requestId2 (Attempt ${retryCount + 1})');
 
         // Use a transaction to ensure atomic updates
         await _firestore.runTransaction((transaction) async {
-          // Get both requests
+      // Get both requests
           final request1Doc = await transaction.get(_firestore.collection('requests').doc(requestId1));
           final request2Doc = await transaction.get(_firestore.collection('requests').doc(requestId2));
 
-          if (!request1Doc.exists || !request2Doc.exists) {
-            _logger.warning('One or both requests no longer exist');
-            return;
-          }
+      if (!request1Doc.exists || !request2Doc.exists) {
+        _logger.warning('One or both requests no longer exist');
+        return;
+      }
 
-          final request1Data = request1Doc.data() as Map<String, dynamic>;
-          final request2Data = request2Doc.data() as Map<String, dynamic>;
+      final request1Data = request1Doc.data() as Map<String, dynamic>;
+      final request2Data = request2Doc.data() as Map<String, dynamic>;
 
           // Double check both requests are still waiting
           if (request1Data['status'] != 'waiting' || request2Data['status'] != 'waiting') {
@@ -1031,7 +1172,7 @@ class RequestMatchingService {
             return;
           }
 
-          // Get both users' information
+      // Get both users' information
           final user1Doc = await transaction.get(_firestore.collection('users').doc(request1Data['userId']));
           final user2Doc = await transaction.get(_firestore.collection('users').doc(request2Data['userId']));
 
@@ -1040,95 +1181,95 @@ class RequestMatchingService {
             return;
           }
 
-          final user1Data = user1Doc.data() as Map<String, dynamic>;
-          final user2Data = user2Doc.data() as Map<String, dynamic>;
+      final user1Data = user1Doc.data() as Map<String, dynamic>;
+      final user2Data = user2Doc.data() as Map<String, dynamic>;
 
-          // Calculate distance between users
-          final distance = _calculateDistance(
-            request1Data['location']['latitude'],
-            request1Data['location']['longitude'],
-            request2Data['location']['latitude'],
-            request2Data['location']['longitude'],
-          );
+      // Calculate distance between users
+      final distance = _calculateDistance(
+        request1Data['location']['latitude'],
+        request1Data['location']['longitude'],
+        request2Data['location']['latitude'],
+        request2Data['location']['longitude'],
+      );
 
-          // Create a chat between the matched users
+      // Create a chat between the matched users
           final chatId = _createChatId(request1Data['userId'], request2Data['userId']);
-          _logger.info('Creating chat with ID: $chatId');
+      _logger.info('Creating chat with ID: $chatId');
 
-          // Create the chat first with match details including timeRange
+      // Create the chat first with match details including timeRange
           transaction.set(_firestore.collection('chats').doc(chatId), {
-            'participants': [request1Data['userId'], request2Data['userId']],
-            'createdAt': FieldValue.serverTimestamp(),
-            'lastMessage': null,
-            'lastMessageTime': null,
-            'matchDetails': {
-              'place': request1Data['place'],
-              'category': request1Data['category'],
-              'scheduledTime': request1Data['scheduledTime'],
-              'timeRange': request1Data['timeRange'],
-            },
-          });
+        'participants': [request1Data['userId'], request2Data['userId']],
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastMessage': null,
+        'lastMessageTime': null,
+        'matchDetails': {
+          'place': request1Data['place'],
+          'category': request1Data['category'],
+          'scheduledTime': request1Data['scheduledTime'],
+          'timeRange': request1Data['timeRange'],
+        },
+      });
 
-          // Update both requests with the chat ID and match status
+      // Update both requests with the chat ID and match status
           transaction.update(_firestore.collection('requests').doc(requestId1), {
-            'chatId': chatId,
-            'status': 'matched',
-            'matchedWith': request2Data['userId'],
-            'matchedAt': FieldValue.serverTimestamp(),
+          'chatId': chatId,
+          'status': 'matched',
+          'matchedWith': request2Data['userId'],
+          'matchedAt': FieldValue.serverTimestamp(),
           });
 
           transaction.update(_firestore.collection('requests').doc(requestId2), {
-            'chatId': chatId,
-            'status': 'matched',
-            'matchedWith': request1Data['userId'],
-            'matchedAt': FieldValue.serverTimestamp(),
+          'chatId': chatId,
+          'status': 'matched',
+          'matchedWith': request1Data['userId'],
+          'matchedAt': FieldValue.serverTimestamp(),
           });
 
-          // Create matched user info for both users
-          final matchedUserInfo1 = {
-            'matchedUserName': user2Data['name'] ?? 'Unknown',
-            'matchedUserAge': user2Data['age']?.toString() ?? 'Unknown',
-            'matchedUserDistance': distance.toStringAsFixed(1),
-            'matchedUserGender': user2Data['gender'] ?? 'Unknown',
-            'matchedUserProfileImage': user2Data['profileImage'] ?? '',
-            'chatId': chatId,
-          };
+      // Create matched user info for both users
+      final matchedUserInfo1 = {
+        'matchedUserName': user2Data['name'] ?? 'Unknown',
+        'matchedUserAge': user2Data['age']?.toString() ?? 'Unknown',
+        'matchedUserDistance': distance.toStringAsFixed(1),
+        'matchedUserGender': user2Data['gender'] ?? 'Unknown',
+        'matchedUserProfileImage': user2Data['profileImage'] ?? '',
+        'chatId': chatId,
+      };
 
-          final matchedUserInfo2 = {
-            'matchedUserName': user1Data['name'] ?? 'Unknown',
-            'matchedUserAge': user1Data['age']?.toString() ?? 'Unknown',
-            'matchedUserDistance': distance.toStringAsFixed(1),
-            'matchedUserGender': user1Data['gender'] ?? 'Unknown',
-            'matchedUserProfileImage': user1Data['profileImage'] ?? '',
-            'chatId': chatId,
-          };
+      final matchedUserInfo2 = {
+        'matchedUserName': user1Data['name'] ?? 'Unknown',
+        'matchedUserAge': user1Data['age']?.toString() ?? 'Unknown',
+        'matchedUserDistance': distance.toStringAsFixed(1),
+        'matchedUserGender': user1Data['gender'] ?? 'Unknown',
+        'matchedUserProfileImage': user1Data['profileImage'] ?? '',
+        'chatId': chatId,
+      };
 
-          // Call the onMatchFound callback for both users
-          if (onMatchFound != null) {
-            onMatchFound!(matchedUserInfo1);
-            onMatchFound!(matchedUserInfo2);
-          }
+      // Call the onMatchFound callback for both users
+      if (onMatchFound != null) {
+        onMatchFound!(matchedUserInfo1);
+        onMatchFound!(matchedUserInfo2);
+      }
         });
 
-        // Now try to delete the requests
-        try {
-          await Future.wait([
-            _firestore.collection('requests').doc(requestId1).delete(),
-            _firestore.collection('requests').doc(requestId2).delete()
-          ]);
-          _logger.info('Successfully deleted matched requests');
-        } catch (e) {
-          _logger.warning('Warning: Could not delete requests: $e');
-          // Continue even if deletion fails, as the requests are marked as matched
-        }
+      // Now try to delete the requests
+      try {
+        await Future.wait([
+          _firestore.collection('requests').doc(requestId1).delete(),
+          _firestore.collection('requests').doc(requestId2).delete()
+        ]);
+        _logger.info('Successfully deleted matched requests');
+      } catch (e) {
+        _logger.warning('Warning: Could not delete requests: $e');
+        // Continue even if deletion fails, as the requests are marked as matched
+      }
 
         // If we get here, the match was successful
-        _matchSubscription?.cancel();
-        _currentRequestId = null;
-        _logger.info('Match handling completed successfully');
+      _matchSubscription?.cancel();
+      _currentRequestId = null;
+      _logger.info('Match handling completed successfully');
         return; // Exit the retry loop on success
 
-      } catch (e) {
+    } catch (e) {
         retryCount++;
         if (e.toString().contains('permission-denied')) {
           _logger.warning('Permission denied while handling match (Attempt $retryCount). This might be due to concurrent updates.');
@@ -1138,8 +1279,8 @@ class RequestMatchingService {
             continue;
           }
         }
-        _logger.severe('Error handling match: $e');
-        rethrow;
+      _logger.severe('Error handling match: $e');
+      rethrow;
       }
     }
   }
@@ -1168,8 +1309,11 @@ class RequestMatchingService {
     }
   }
 
+  @override
   void dispose() {
     _matchSubscription?.cancel();
+    _batchTimer?.cancel();
     _currentRequestId = null;
+    _currentBatch.clear();
   }
 }

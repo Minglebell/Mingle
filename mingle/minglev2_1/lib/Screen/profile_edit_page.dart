@@ -272,6 +272,27 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 ),
                 child: ElevatedButton(
                   onPressed: () {
+                    if (!_areAllRequiredFieldsFilled(profile)) {
+                      DelightToastBar(
+                        autoDismiss: true,
+                        snackbarDuration: const Duration(seconds: 3),
+                        builder: (context) => const ToastCard(
+                          leading: Icon(
+                            Icons.warning,
+                            size: 24,
+                            color: Colors.orange,
+                          ),
+                          title: Text(
+                            'Please fill in all required fields',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ).show(context);
+                      return;
+                    }
                     profileNotifier.saveProfile();
                     DelightToastBar(
                       autoDismiss: true,
@@ -623,6 +644,28 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       return;
     }
 
+    // Check if the field is required and empty
+    if (currentPreferences.isEmpty && label != 'Bio') {
+      DelightToastBar(
+        autoDismiss: true,
+        snackbarDuration: const Duration(seconds: 3),
+        builder: (context) => ToastCard(
+          leading: const Icon(
+            Icons.warning,
+            size: 24,
+            color: Colors.orange,
+          ),
+          title: Text(
+            'Please select at least one option for $label',
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ).show(context);
+    }
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -646,7 +689,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
 
               return SizedBox(
                 width: double.maxFinite,
-                height: 200, // Fixed height for scrollable content
+                height: 200,
                 child: SingleChildScrollView(
                   child: Wrap(
                     spacing: 8.0,
@@ -667,17 +710,8 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                             selectedValue = selected ? value : null;
                           });
                         },
-                        selectedColor: const Color(0xFF6C9BCF),
-                        checkmarkColor: Colors.white,
-                        backgroundColor: Colors.grey[200],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(
-                            color: isSelected
-                                ? const Color(0xFF6C9BCF)
-                                : Colors.transparent,
-                          ),
-                        ),
+                        selectedColor: Colors.blue,
+                        backgroundColor: Colors.grey.shade200,
                       );
                     }).toList(),
                   ),
@@ -687,35 +721,66 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                "Cancel",
-                style: TextStyle(fontSize: 18, color: Colors.red),
-              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
                 if (selectedValue != null) {
                   notifier.addPreference(label.toLowerCase(), selectedValue!);
-                  Navigator.of(context).pop();
+                  Navigator.pop(context);
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Please select an option"),
-                      duration: Duration(seconds: 2),
-                      backgroundColor: Colors.red,
+                  DelightToastBar(
+                    autoDismiss: true,
+                    snackbarDuration: const Duration(seconds: 3),
+                    builder: (context) => const ToastCard(
+                      leading: Icon(
+                        Icons.warning,
+                        size: 24,
+                        color: Colors.orange,
+                      ),
+                      title: Text(
+                        'Please select an option',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
-                  );
+                  ).show(context);
                 }
               },
-              child: const Text(
-                "Add",
-                style: TextStyle(fontSize: 18, color: Color(0xFF6C9BCF)),
-              ),
+              child: const Text('Save'),
             ),
           ],
         );
       },
     );
+  }
+
+  // Add this method to check if all required fields are filled
+  bool _areAllRequiredFieldsFilled(Map<String, dynamic> profile) {
+    final requiredFields = [
+      'gender',
+      'religion',
+      'budget level',
+      'education level',
+      'relationship status',
+      'smoking',
+      'alcoholic',
+      'allergies',
+      'physical activity level',
+      'transportation',
+      'pet',
+      'personality',
+    ];
+
+    for (var field in requiredFields) {
+      final value = profile[field] as List<dynamic>?;
+      if (value == null || value.isEmpty) {
+        return false;
+      }
+    }
+    return true;
   }
 }

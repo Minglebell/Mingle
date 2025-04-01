@@ -1,0 +1,28 @@
+"Outdoor_Nature": [
+      "Parks", "Beaches", "Lakes", "Zoos", "Safari parks",
+      "Amusement parks", "Water parks",
+    ],
+    "Arts_Culture_Historical_Sites": [
+      "Museums", "Art galleries", "Historical landmarks", "Temples",
+    ],
+    "Entertainment_Recreation": [
+      "Movie theaters", "Bowling alleys", "Escape rooms", "Gaming centers",
+      "Live theaters", "Concert venues", "Karaoke bars", "Aquariums",
+      "Ice-skating rinks",
+    ],
+    "Dining_Cafes": [
+      "Thai restaurants", "Italian restaurants", "Japanese restaurants",
+      "Chinese restaurants", "Korean restaurants", "Indian restaurants",
+      "Vegan restaurants", "Buffet restaurants", "Seafood restaurants",
+      "Thai barbecue restaurants", "Korean barbecue restaurants",
+      "Japanese barbecue restaurants", "Thai-style hot pot restaurants",
+      "Chinese hot pot Restaurants", "Japanese hot pot restaurants",
+      "Northeastern Thai restaurants", "Steak restaurant", "Sushi restaurant",
+      "Dessert cafes", "Coffee shops"
+    ],
+    "Nightlife_Bars": [
+      "Bars", "Cocktail bars", "Pubs", "Wine bars",
+    ],
+    "Shopping": [
+      "Shopping malls", "Markets", "Night markets", "Floating markets",
+    ],

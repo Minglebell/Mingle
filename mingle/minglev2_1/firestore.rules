@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isParticipant(participants) {
+      return isAuthenticated() && request.auth.uid in participants;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        // Allow users to update their own profile
+        request.auth.uid == userId ||
+        // Allow updates to rating fields
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['averageRating', 'ratingCount'])) ||
+        // Allow chat-related updates
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chats']) &&
+         request.auth.uid in resource.data.chats &&
+         (request.resource.data.chats == null || request.auth.uid in request.resource.data.chats))
+      );
+      allow create, delete: if isOwner(userId);
+    }
+
+    // Ratings collection
+    match /ratings/{ratingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+        request.auth.uid == request.resource.data.fromUserId &&
+        request.auth.uid != request.resource.data.toUserId;
+      allow update: if isAuthenticated() && 
+        request.auth.uid == resource.data.fromUserId;
+      allow delete: if isAuthenticated() && 
+        request.auth.uid == resource.data.fromUserId;
+    }
+
+    // Chats collection
+    match /chats/{chatId} {
+      allow read: if isParticipant(resource.data.participants);
+      allow create: if isAuthenticated() && 
+        request.auth.uid in request.resource.data.participants;
+      allow update, delete: if isParticipant(resource.data.participants);
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read: if isParticipant(get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
+        allow create: if isAuthenticated() && 
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow update: if isAuthenticated() && (
+          // Allow sender to update their own messages
+          request.auth.uid == resource.data.senderId ||
+          // Allow participants to update read status
+          (isParticipant(get(/databases/$(database)/documents/chats/$(chatId)).data.participants) &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']))
+        );
+        allow delete: if isAuthenticated() && 
+          request.auth.uid == resource.data.senderId;
+      }
+    }
+
+    // Requests collection
+    match /requests/{requestId} {
+      allow read: if isAuthenticated() && (
+        // Allow users to read their own requests
+        request.auth.uid == resource.data.userId ||
+        // Allow users to read waiting requests for potential matches
+        (resource.data.status == 'waiting' && 
+         request.auth.uid != resource.data.userId) ||
+        // Allow users to read matched requests they're involved in
+        (resource.data.status == 'matched' && 
+         resource.data.chatId != null &&
+         request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.participants)
+      );
+      allow create: if isAuthenticated() && 
+        request.auth.uid == request.resource.data.userId;
+      allow update: if isAuthenticated() && (
+        // Allow users to update their own requests
+        request.auth.uid == resource.data.userId ||
+        // Allow users to update requests when they're matched
+        (resource.data.status == 'waiting' && 
+         request.resource.data.status == 'matched' &&
+         request.resource.data.chatId != null &&
+         request.auth.uid in [resource.data.userId, request.resource.data.matchedWith]) ||
+        // Allow batch updates during matching process
+        (resource.data.status == 'waiting' && 
+         request.resource.data.status == 'matched' &&
+         request.resource.data.chatId != null &&
+         request.resource.data.matchedWith != null &&
+         request.auth.uid in [resource.data.userId, request.resource.data.matchedWith])
+      );
+      allow delete: if isAuthenticated() && (
+        // Allow users to delete their own requests
+        request.auth.uid == resource.data.userId ||
+        // Allow users to delete matched requests they're involved in
+        (resource.data.status == 'matched' && 
+         resource.data.chatId != null &&
+         request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.participants) ||
+        // Allow batch deletions during matching process
+        (resource.data.status == 'matched' && 
+         request.auth.uid in [resource.data.userId, resource.data.matchedWith])
+      );
+    }
+  }
+}

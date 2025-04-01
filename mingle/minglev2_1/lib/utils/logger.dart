@@ -5,7 +5,7 @@ import 'package:logging/logging.dart';
 void setupLogger() {
   Logger.root.level = Level.ALL; // Set the logging level
   Logger.root.onRecord.listen((record) {
-    print('${record.level.name}: ${record.time}: ${record.message}');
+    logger.info('${record.level.name}: ${record.time}: ${record.message}');
     // You can add more output destinations here, such as writing to a file
     // or sending logs to a remote server.
   });

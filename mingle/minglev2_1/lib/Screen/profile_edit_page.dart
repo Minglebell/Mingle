@@ -537,6 +537,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         'Luxury (\$5000+)'
       ],
       'Education level': [
+        "High school or lower",
         'Bachelor\'s degree',
         'Master\'s degree',
         'Doctorate or higher'
@@ -563,7 +564,6 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
         'Avoidance'
       ],
       'Allergies': [
-        'None',
         'Milk',
         'Egg',
         'Wheat',

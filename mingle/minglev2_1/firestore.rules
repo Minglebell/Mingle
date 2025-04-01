@@ -14,6 +14,30 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid in participants;
     }
 
+    function isWaitingRequest() {
+      return resource.data.status == 'waiting';
+    }
+
+    function isMatchedRequest() {
+      return resource.data.status == 'matched';
+    }
+
+    function hasValidMatchData() {
+      return request.resource.data.status == 'matched' &&
+             request.resource.data.chatId != null &&
+             request.resource.data.matchedWith != null;
+    }
+
+    function isBatchUpdate() {
+      return isWaitingRequest() && 
+             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['batchId']) &&
+             request.resource.data.batchId != null;
+    }
+
+    function isRequestOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
     // Users collection
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -70,42 +94,40 @@ service cloud.firestore {
     match /requests/{requestId} {
       allow read: if isAuthenticated() && (
         // Allow users to read their own requests
-        request.auth.uid == resource.data.userId ||
+        isRequestOwner() ||
         // Allow users to read waiting requests for potential matches
-        (resource.data.status == 'waiting' && 
-         request.auth.uid != resource.data.userId) ||
+        (isWaitingRequest() && request.auth.uid != resource.data.userId) ||
         // Allow users to read matched requests they're involved in
-        (resource.data.status == 'matched' && 
+        (isMatchedRequest() && 
          resource.data.chatId != null &&
          request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.participants)
       );
+      
       allow create: if isAuthenticated() && 
         request.auth.uid == request.resource.data.userId;
+      
       allow update: if isAuthenticated() && (
         // Allow users to update their own requests
-        request.auth.uid == resource.data.userId ||
-        // Allow users to update requests when they're matched
-        (resource.data.status == 'waiting' && 
-         request.resource.data.status == 'matched' &&
-         request.resource.data.chatId != null &&
-         request.auth.uid in [resource.data.userId, request.resource.data.matchedWith]) ||
+        isRequestOwner() ||
         // Allow batch updates during matching process
-        (resource.data.status == 'waiting' && 
-         request.resource.data.status == 'matched' &&
-         request.resource.data.chatId != null &&
-         request.resource.data.matchedWith != null &&
-         request.auth.uid in [resource.data.userId, request.resource.data.matchedWith])
+        (isWaitingRequest() && hasValidMatchData() &&
+         request.auth.uid in [resource.data.userId, request.resource.data.matchedWith]) ||
+        // Allow batch ID updates for any waiting request
+        (isWaitingRequest() && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['batchId']) &&
+         request.resource.data.batchId != null)
       );
+      
       allow delete: if isAuthenticated() && (
         // Allow users to delete their own requests
-        request.auth.uid == resource.data.userId ||
-        // Allow users to delete matched requests they're involved in
-        (resource.data.status == 'matched' && 
-         resource.data.chatId != null &&
-         request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.participants) ||
+        isRequestOwner() ||
+        // Allow deletion of matched requests
+        (isMatchedRequest() && 
+         request.auth.uid in [resource.data.userId, resource.data.matchedWith]) ||
         // Allow batch deletions during matching process
-        (resource.data.status == 'matched' && 
-         request.auth.uid in [resource.data.userId, resource.data.matchedWith])
+        (isMatchedRequest() && 
+         resource.data.chatId != null &&
+         request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.participants)
       );
     }
   }

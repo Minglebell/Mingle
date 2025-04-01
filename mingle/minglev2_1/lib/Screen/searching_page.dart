@@ -11,6 +11,7 @@ import 'package:delightful_toast/toast/components/toast_card.dart';
 import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SearchingPage extends StatefulWidget {
   final String selectedGender;
@@ -91,35 +92,55 @@ class _SearchingPageState extends State<SearchingPage>
   }
 
   void _listenForMatches() {
+    _logger.info('Setting up match listener');
     // Set up a listener for match found events
     _matchingService.onMatchFound = (matchedUser) {
+      _logger.info('Received match found callback with chatId: ${matchedUser['chatId']}');
       if (mounted) {
         _onMatchFound(matchedUser);
+      } else {
+        _logger.warning('Widget not mounted when match found callback received');
       }
     };
   }
 
   void _onMatchFound(Map<String, dynamic> matchedUser) {
-    if (!mounted) return;
+    if (!mounted) {
+      _logger.warning('Widget not mounted in _onMatchFound');
+      return;
+    }
+
+    _logger.info('Processing match found for user: ${matchedUser['matchedUserName']}');
 
     // Check if this match is for the current user
-    if (matchedUser['chatId'] != null) {
-      // Clear SharedPreferences only after a successful match
-      _clearPreferences();
+    if (matchedUser['chatId'] != null && matchedUser['userId'] != null) {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId == matchedUser['userId']) {
+        _logger.info('Valid match found with chatId: ${matchedUser['chatId']} for current user');
+        
+        // Clear SharedPreferences only after a successful match
+        _clearPreferences();
 
-      setState(() {
-        _isSearching = false;
-        _matchFound = true;
-        _matchedUser = {
-          'name': matchedUser['matchedUserName'] ?? 'Unknown',
-          'age': matchedUser['matchedUserAge'] ?? 'Unknown',
-          'distance': matchedUser['matchedUserDistance'] ?? '0',
-          'gender': matchedUser['matchedUserGender'] ?? 'Unknown',
-          'profileImage': matchedUser['matchedUserProfileImage'] ?? '',
-          'chatId': matchedUser['chatId'],
-        };
-        _controller.stop(); // Stop the searching animation
-      });
+        setState(() {
+          _isSearching = false;
+          _matchFound = true;
+          _matchedUser = {
+            'name': matchedUser['matchedUserName'] ?? 'Unknown',
+            'age': matchedUser['matchedUserAge'] ?? 'Unknown',
+            'distance': matchedUser['matchedUserDistance'] ?? '0',
+            'gender': matchedUser['matchedUserGender'] ?? 'Unknown',
+            'profileImage': matchedUser['matchedUserProfileImage'] ?? '',
+            'chatId': matchedUser['chatId'],
+          };
+          _controller.stop(); // Stop the searching animation
+        });
+        
+        _logger.info('Match found UI state updated successfully');
+      } else {
+        _logger.info('Match found but not for current user. Current user: $currentUserId, Match user: ${matchedUser['userId']}');
+      }
+    } else {
+      _logger.warning('Received match callback without chatId or userId');
     }
   }
 

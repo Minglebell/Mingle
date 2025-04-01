@@ -47,6 +47,7 @@ class _SearchingPageState extends State<SearchingPage>
   Map<String, dynamic>? _matchedUser;
   bool _matchFound = false;
   final _logger = Logger('SearchingPage');
+  bool _hasProcessedMatch = false;
 
   @override
   void initState() {
@@ -101,9 +102,18 @@ class _SearchingPageState extends State<SearchingPage>
 
   void _onMatchFound(Map<String, dynamic> matchedUser) {
     if (!mounted) return;
+    
+    // Add early return if we've already processed a match
+    if (_hasProcessedMatch) {
+      _logger.info('Match already processed, ignoring duplicate match notification');
+      return;
+    }
 
     // Check if this match is for the current user
     if (matchedUser['chatId'] != null) {
+      // Set the flag to prevent processing multiple matches
+      _hasProcessedMatch = true;
+      
       // Clear SharedPreferences only after a successful match
       _clearPreferences();
 
@@ -117,9 +127,16 @@ class _SearchingPageState extends State<SearchingPage>
           'gender': matchedUser['matchedUserGender'] ?? 'Unknown',
           'profileImage': matchedUser['matchedUserProfileImage'] ?? '',
           'chatId': matchedUser['chatId'],
+          'userId': matchedUser['matchedUserId'], // Add this line to store the matched user's ID
         };
         _controller.stop(); // Stop the searching animation
       });
+
+      // Cancel any existing request after successful match
+      if (_currentRequestId != null) {
+        _matchingService.cancelRequest(_currentRequestId!);
+        _currentRequestId = null;
+      }
     }
   }
 
@@ -182,8 +199,8 @@ class _SearchingPageState extends State<SearchingPage>
   @override
   void dispose() {
     _controller.dispose();
-    // Cancel the request if it exists
-    if (_currentRequestId != null) {
+    // Cancel the request if it exists and we haven't found a match
+    if (_currentRequestId != null && !_hasProcessedMatch) {
       _matchingService.cancelRequest(_currentRequestId!);
     }
     super.dispose();

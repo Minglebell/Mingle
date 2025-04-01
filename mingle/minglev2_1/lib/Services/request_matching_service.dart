@@ -1144,144 +1144,82 @@ class RequestMatchingService {
   }
 
   // Handle match between two users
-  Future<void> _handleMatch(String requestId1, String requestId2) async {
-    int retryCount = 0;
-    const maxRetries = 3;
+  Future<void> _handleMatch(String user1Id, String user2Id) async {
+    final batch = _firestore.batch();
+    final chatId = _createChatId(user1Id, user2Id);
     
-    while (retryCount < maxRetries) {
     try {
-        _logger.info('Handling match between requests: $requestId1 and $requestId2 (Attempt ${retryCount + 1})');
-
-        // Use a transaction to ensure atomic updates
-        await _firestore.runTransaction((transaction) async {
-      // Get both requests
-          final request1Doc = await transaction.get(_firestore.collection('requests').doc(requestId1));
-          final request2Doc = await transaction.get(_firestore.collection('requests').doc(requestId2));
-
-      if (!request1Doc.exists || !request2Doc.exists) {
-        _logger.warning('One or both requests no longer exist');
+      // Get both users' requests in a transaction to ensure atomicity
+      final matchResult = await _firestore.runTransaction((transaction) async {
+        final request1Doc = await transaction.get(_firestore.collection('requests').doc(user1Id));
+        final request2Doc = await transaction.get(_firestore.collection('requests').doc(user2Id));
+        
+        // Verify both requests are still valid and waiting
+        if (!request1Doc.exists || !request2Doc.exists ||
+            request1Doc.data()?['status'] != 'waiting' ||
+            request2Doc.data()?['status'] != 'waiting') {
+          return null;
+        }
+        
+        // Update both requests status atomically
+        transaction.update(request1Doc.reference, {'status': 'matched', 'matchedWith': user2Id});
+        transaction.update(request2Doc.reference, {'status': 'matched', 'matchedWith': user1Id});
+        
+        return {
+          'user1': request1Doc.data(),
+          'user2': request2Doc.data(),
+        };
+      });
+      
+      // If transaction failed or requests were invalid, return early
+      if (matchResult == null) {
+        _logger.warning('Match handling failed: One or both requests are no longer valid');
         return;
       }
 
-      final request1Data = request1Doc.data() as Map<String, dynamic>;
-      final request2Data = request2Doc.data() as Map<String, dynamic>;
-
-          // Double check both requests are still waiting
-          if (request1Data['status'] != 'waiting' || request2Data['status'] != 'waiting') {
-            _logger.warning('One or both requests are no longer waiting');
-            return;
-          }
-
-      // Get both users' information
-          final user1Doc = await transaction.get(_firestore.collection('users').doc(request1Data['userId']));
-          final user2Doc = await transaction.get(_firestore.collection('users').doc(request2Data['userId']));
-
-          if (!user1Doc.exists || !user2Doc.exists) {
-            _logger.warning('One or both user profiles no longer exist');
-            return;
-          }
-
-      final user1Data = user1Doc.data() as Map<String, dynamic>;
-      final user2Data = user2Doc.data() as Map<String, dynamic>;
-
-      // Calculate distance between users
-      final distance = _calculateDistance(
-        request1Data['location']['latitude'],
-        request1Data['location']['longitude'],
-        request2Data['location']['latitude'],
-        request2Data['location']['longitude'],
-      );
-
-      // Create a chat between the matched users
-          final chatId = _createChatId(request1Data['userId'], request2Data['userId']);
-      _logger.info('Creating chat with ID: $chatId');
-
-      // Create the chat first with match details including timeRange
-          transaction.set(_firestore.collection('chats').doc(chatId), {
-        'participants': [request1Data['userId'], request2Data['userId']],
+      // Create chat document
+      final chatRef = _firestore.collection('chats').doc(chatId);
+      batch.set(chatRef, {
+        'participants': [user1Id, user2Id],
         'createdAt': FieldValue.serverTimestamp(),
-        'lastMessage': null,
         'lastMessageTime': null,
-        'matchDetails': {
-          'place': request1Data['place'],
-          'category': request1Data['category'],
-          'scheduledTime': request1Data['scheduledTime'],
-          'timeRange': request1Data['timeRange'],
-        },
+        'lastMessage': null,
       });
 
-      // Update both requests with the chat ID and match status
-          transaction.update(_firestore.collection('requests').doc(requestId1), {
-          'chatId': chatId,
-          'status': 'matched',
-          'matchedWith': request2Data['userId'],
-          'matchedAt': FieldValue.serverTimestamp(),
-          });
-
-          transaction.update(_firestore.collection('requests').doc(requestId2), {
-          'chatId': chatId,
-          'status': 'matched',
-          'matchedWith': request1Data['userId'],
-          'matchedAt': FieldValue.serverTimestamp(),
-          });
-
-      // Create matched user info for both users
-      final matchedUserInfo1 = {
-        'matchedUserName': user2Data['name'] ?? 'Unknown',
-        'matchedUserAge': user2Data['age']?.toString() ?? 'Unknown',
-        'matchedUserDistance': distance.toStringAsFixed(1),
-        'matchedUserGender': user2Data['gender'] ?? 'Unknown',
-        'matchedUserProfileImage': user2Data['profileImage'] ?? '',
-        'chatId': chatId,
-      };
-
-      final matchedUserInfo2 = {
-        'matchedUserName': user1Data['name'] ?? 'Unknown',
-        'matchedUserAge': user1Data['age']?.toString() ?? 'Unknown',
-        'matchedUserDistance': distance.toStringAsFixed(1),
-        'matchedUserGender': user1Data['gender'] ?? 'Unknown',
-        'matchedUserProfileImage': user1Data['profileImage'] ?? '',
-        'chatId': chatId,
-      };
-
-      // Call the onMatchFound callback for both users
-      if (onMatchFound != null) {
-        onMatchFound!(matchedUserInfo1);
-        onMatchFound!(matchedUserInfo2);
-      }
-        });
-
-      // Now try to delete the requests
-      try {
-        await Future.wait([
-          _firestore.collection('requests').doc(requestId1).delete(),
-          _firestore.collection('requests').doc(requestId2).delete()
-        ]);
-        _logger.info('Successfully deleted matched requests');
-      } catch (e) {
-        _logger.warning('Warning: Could not delete requests: $e');
-        // Continue even if deletion fails, as the requests are marked as matched
-      }
-
-        // If we get here, the match was successful
-      _matchSubscription?.cancel();
-      _currentRequestId = null;
-      _logger.info('Match handling completed successfully');
-        return; // Exit the retry loop on success
-
+      // Execute all updates atomically
+      await batch.commit();
+      
+      // Notify both users of the match
+      _notifyMatch(user1Id, user2Id, chatId);
+      _notifyMatch(user2Id, user1Id, chatId);
+      
     } catch (e) {
-        retryCount++;
-        if (e.toString().contains('permission-denied')) {
-          _logger.warning('Permission denied while handling match (Attempt $retryCount). This might be due to concurrent updates.');
-          if (retryCount < maxRetries) {
-            // Wait before retrying with exponential backoff
-            await Future.delayed(Duration(milliseconds: 500 * retryCount));
-            continue;
-          }
-        }
-      _logger.severe('Error handling match: $e');
+      _logger.severe('Error in handling match: $e');
       rethrow;
+    }
+  }
+
+  void _notifyMatch(String userId, String matchedUserId, String chatId) async {
+    try {
+      // Get matched user data
+      final matchedUserDoc = await _firestore.collection('users').doc(matchedUserId).get();
+      final matchedUserData = matchedUserDoc.data() ?? {};
+
+      // Only notify if the user's request is still active
+      final userRequest = await _firestore.collection('requests').doc(userId).get();
+      if (userRequest.exists && userRequest.data()?['status'] == 'matched') {
+        onMatchFound?.call({
+          'matchedUserId': matchedUserId,
+          'matchedUserName': matchedUserData['name'],
+          'matchedUserAge': matchedUserData['age'],
+          'matchedUserGender': matchedUserData['gender'],
+          'matchedUserDistance': matchedUserData['distance'],
+          'matchedUserProfileImage': matchedUserData['profileImage'],
+          'chatId': chatId,
+        });
       }
+    } catch (e) {
+      _logger.severe('Error in notifying match: $e');
     }
   }
 
